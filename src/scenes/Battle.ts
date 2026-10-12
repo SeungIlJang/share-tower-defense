@@ -5,6 +5,7 @@ import stagesData from '../data/stages.json';
 import type { UnitStats, EnemyStats, StageData } from '../types';
 import { Unit } from '../entities/Unit';
 import { Enemy } from '../entities/Enemy';
+import { Projectile } from '../entities/Projectile';
 import { Base } from '../entities/Base';
 import { Pool } from '../utils/pool';
 import { ResourceSystem } from '../systems/resources';
@@ -28,9 +29,12 @@ export class BattleScene extends Phaser.Scene {
 
   private unitPool!: Pool<Unit>;
   private enemyPool!: Pool<Enemy>;
+  private projPool!: Pool<Projectile>;
   private units: Unit[] = [];
   private enemies: Enemy[] = [];
+  private projectiles: Projectile[] = [];
   private over = false;
+  private static readonly RANGED = 100; // 사거리 이 이상이면 투사체 발사
 
   constructor() {
     super('Battle');
@@ -44,6 +48,7 @@ export class BattleScene extends Phaser.Scene {
     this.over = false;
     this.units = [];
     this.enemies = [];
+    this.projectiles = [];
 
     // 배경 + 레인
     this.add.rectangle(640, 360, 1280, 720, 0x121826).setDepth(-10);
@@ -63,6 +68,10 @@ export class BattleScene extends Phaser.Scene {
     this.enemyPool = new Pool<Enemy>(
       () => new Enemy(this),
       (e) => e.deactivate()
+    );
+    this.projPool = new Pool<Projectile>(
+      () => new Projectile(this),
+      (p) => p.deactivate()
     );
 
     this.hud = new Hud(this, UNITS, (type) => this.trySpawnUnit(type));
@@ -145,6 +154,12 @@ export class BattleScene extends Phaser.Scene {
       }
     }
 
+    // 투사체 이동/명중
+    for (const p of this.projectiles) {
+      if (p.active && p.update(dt)) this.projPool.release(p);
+    }
+    this.projectiles = this.projectiles.filter((p) => p.active);
+
     this.cleanupDead();
     this.hud.update(
       this.resources.amount,
@@ -157,7 +172,16 @@ export class BattleScene extends Phaser.Scene {
 
   private attack(att: Unit | Enemy, def: Unit | Enemy): void {
     if (att.cooldown > 0) return;
-    def.takeDamage(computeDamage(att.stats.atk, def.stats.def));
+    const dmg = computeDamage(att.stats.atk, def.stats.def);
+    if (att.stats.range >= BattleScene.RANGED) {
+      // 원거리: 화살(투사체) 발사 → 명중 시 데미지
+      const p = this.projPool.acquire();
+      const color = att.side === 'ally' ? 0xffe14d : 0xff9a4a;
+      p.spawn(att.x + (att.side === 'ally' ? 14 : -14), 486, def, dmg, color);
+      this.projectiles.push(p);
+    } else {
+      def.takeDamage(dmg); // 근접: 즉시
+    }
     att.cooldown = attackCooldown(att.stats.atkSpeed);
   }
 
