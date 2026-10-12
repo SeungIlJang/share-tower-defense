@@ -24,11 +24,7 @@ const UNITS = unitsData as Record<string, UnitStats>;
 const ENEMIES = enemiesData as Record<string, EnemyStats>;
 const STAGES = stagesData as StageData[];
 
-const LANE_Y = 740; // 세로 레이아웃: 전장 레인 Y
-const SCREEN_W = 720;
-const SCREEN_H = 1280;
-const CX = SCREEN_W / 2; // 360
-const CY = SCREEN_H / 2; // 640
+const LANE_Y = 500;
 
 export class BattleScene extends Phaser.Scene {
   private stage!: StageData;
@@ -96,14 +92,12 @@ export class BattleScene extends Phaser.Scene {
     this.levelUp = new LevelUpOverlay(this);
 
     // 배경 + 레인
-    this.add.rectangle(CX, CY, SCREEN_W, SCREEN_H, 0x121826).setDepth(-10);
-    // 하늘(상단) 그라데이션 느낌
-    this.add.rectangle(CX, 420, SCREEN_W, 660, 0x16203a).setDepth(-9);
-    this.add.rectangle(CX, LANE_Y + 40, SCREEN_W, 120, 0x1d2740).setDepth(-5);
-    this.add.rectangle(CX, LANE_Y + 2, SCREEN_W, 3, 0x33406a).setDepth(-4);
+    this.add.rectangle(640, 360, 1280, 720, 0x121826).setDepth(-10);
+    this.add.rectangle(640, LANE_Y + 40, 1280, 90, 0x1d2740).setDepth(-5);
+    this.add.rectangle(640, LANE_Y + 2, 1280, 3, 0x33406a).setDepth(-4);
 
-    this.playerBase = new Base(this, 66, LANE_Y - 10, this.stage.baseHp, 0x2f6fe0);
-    this.enemyBase = new Base(this, SCREEN_W - 66, LANE_Y - 10, this.stage.baseHp, 0xc0392b);
+    this.playerBase = new Base(this, 90, LANE_Y - 10, this.stage.baseHp, 0x2f6fe0);
+    this.enemyBase = new Base(this, 1190, LANE_Y - 10, this.stage.baseHp, 0xc0392b);
 
     this.energy = new ResourceSystem(40, 9, 100); // 소환 에너지(초당 9, 상한 100)
     this.runGold = 0;
@@ -136,17 +130,17 @@ export class BattleScene extends Phaser.Scene {
     );
 
     // 보스 HP 바(상단, 보스 등장 시만)
-    this.bossBarBg = this.add.rectangle(CX, 110, 500, 18, 0x000000, 0.6).setDepth(90).setVisible(false);
-    this.bossFill = this.add.rectangle(CX - 240, 110, 480, 12, 0xff3b3b).setOrigin(0, 0.5).setDepth(91).setVisible(false);
+    this.bossBarBg = this.add.rectangle(640, 60, 540, 18, 0x000000, 0.6).setDepth(90).setVisible(false);
+    this.bossFill = this.add.rectangle(640 - 260, 60, 520, 12, 0xff3b3b).setOrigin(0, 0.5).setDepth(91).setVisible(false);
     this.bossText = this.add
-      .text(CX, 110, '', { fontFamily: 'sans-serif', fontSize: '13px', fontStyle: 'bold', color: '#fff' })
+      .text(640, 60, '', { fontFamily: 'sans-serif', fontSize: '13px', fontStyle: 'bold', color: '#fff' })
       .setOrigin(0.5)
       .setDepth(92)
       .setVisible(false);
 
-    // ⏸️ 일시정지 버튼(우상단, 상단바 아래)
+    // ⏸️ 일시정지 버튼(우상단)
     const pauseBtn = this.add
-      .text(SCREEN_W - 10, 92, '⏸', { fontFamily: 'sans-serif', fontSize: '26px', color: '#cfe0ff', backgroundColor: '#1d2740', padding: { x: 10, y: 4 } })
+      .text(1250, 16, '⏸', { fontFamily: 'sans-serif', fontSize: '28px', color: '#cfe0ff', backgroundColor: '#1d2740', padding: { x: 10, y: 4 } })
       .setOrigin(1, 0)
       .setDepth(95)
       .setInteractive({ useHandCursor: true });
@@ -158,13 +152,13 @@ export class BattleScene extends Phaser.Scene {
     if (this.over || this.reviving || this.paused) return;
     this.paused = true;
     const layer = this.add.container(0, 0).setDepth(200);
-    const dim = this.add.rectangle(CX, CY, SCREEN_W, SCREEN_H, 0x000000, 0.65).setInteractive();
-    const panel = this.add.rectangle(CX, CY, 440, 340, 0x182238).setStrokeStyle(3, 0x3a7bff);
-    const title = this.add.text(CX, CY - 110, '⏸️ 일시정지', { fontFamily: 'sans-serif', fontSize: '34px', color: '#fff' }).setOrigin(0.5);
+    const dim = this.add.rectangle(640, 360, 1280, 720, 0x000000, 0.65).setInteractive();
+    const panel = this.add.rectangle(640, 360, 420, 320, 0x182238).setStrokeStyle(3, 0x3a7bff);
+    const title = this.add.text(640, 250, '⏸️ 일시정지', { fontFamily: 'sans-serif', fontSize: '34px', color: '#fff' }).setOrigin(0.5);
     layer.add([dim, panel, title]);
 
     const resume = this.add
-      .text(CX, CY - 30, '▶ 계속', { fontFamily: 'sans-serif', fontSize: '26px', color: '#fff', backgroundColor: '#2eae5a', padding: { x: 24, y: 10 } })
+      .text(640, 330, '▶ 계속', { fontFamily: 'sans-serif', fontSize: '26px', color: '#fff', backgroundColor: '#2eae5a', padding: { x: 24, y: 10 } })
       .setOrigin(0.5)
       .setInteractive({ useHandCursor: true });
     resume.on('pointerdown', () => {
@@ -174,7 +168,7 @@ export class BattleScene extends Phaser.Scene {
 
     const muted = this.sound.mute;
     const mute = this.add
-      .text(CX, CY + 40, muted ? '🔇 소리 꺼짐' : '🔊 소리 켜짐', { fontFamily: 'sans-serif', fontSize: '22px', color: '#ffd34d', backgroundColor: '#20304e', padding: { x: 20, y: 8 } })
+      .text(640, 395, muted ? '🔇 소리 꺼짐' : '🔊 소리 켜짐', { fontFamily: 'sans-serif', fontSize: '22px', color: '#ffd34d', backgroundColor: '#20304e', padding: { x: 20, y: 8 } })
       .setOrigin(0.5)
       .setInteractive({ useHandCursor: true });
     mute.on('pointerdown', () => {
@@ -183,7 +177,7 @@ export class BattleScene extends Phaser.Scene {
     });
 
     const quit = this.add
-      .text(CX, CY + 110, '🏳️ 나가기', { fontFamily: 'sans-serif', fontSize: '20px', color: '#8892b0' })
+      .text(640, 455, '🏳️ 나가기', { fontFamily: 'sans-serif', fontSize: '20px', color: '#8892b0' })
       .setOrigin(0.5)
       .setInteractive({ useHandCursor: true });
     quit.on('pointerdown', () => {
@@ -320,10 +314,10 @@ export class BattleScene extends Phaser.Scene {
     if (BOSS.has(type)) {
       this.cameras.main.shake(300, 0.012);
       const t = this.add
-        .text(CX, 320, '👑 보스 등장!', { fontFamily: 'sans-serif', fontSize: '40px', fontStyle: 'bold', color: '#ff5a6e' })
+        .text(640, 210, '👑 보스 등장!', { fontFamily: 'sans-serif', fontSize: '44px', fontStyle: 'bold', color: '#ff5a6e' })
         .setOrigin(0.5)
         .setDepth(95);
-      this.tweens.add({ targets: t, y: 270, alpha: 0, duration: 1600, onComplete: () => t.destroy() });
+      this.tweens.add({ targets: t, y: 170, alpha: 0, duration: 1600, onComplete: () => t.destroy() });
     }
   }
 
@@ -331,7 +325,7 @@ export class BattleScene extends Phaser.Scene {
     const boss = this.enemies.find((e) => e.active && BOSS.has(e.type));
     if (boss) {
       this.bossBarBg.setVisible(true);
-      this.bossFill.setVisible(true).setSize(480 * Math.max(0, boss.hp / boss.maxHp), 12);
+      this.bossFill.setVisible(true).setSize(520 * Math.max(0, boss.hp / boss.maxHp), 12);
       this.bossText.setVisible(true).setText(`👑 ${boss.stats.name}  ${Math.max(0, Math.ceil(boss.hp))}/${boss.maxHp}`);
     } else {
       this.bossBarBg.setVisible(false);
@@ -453,7 +447,7 @@ export class BattleScene extends Phaser.Scene {
       const onHit = isMage
         ? (x: number, d: number) => this.splash(x, Math.round(d * 0.6), att.side)
         : undefined;
-      p.spawn(att.x + (att.side === 'ally' ? 14 : -14), LANE_Y - 14, def, dmg, isMage ? 'orb' : 'arrow', onHit);
+      p.spawn(att.x + (att.side === 'ally' ? 14 : -14), 486, def, dmg, isMage ? 'orb' : 'arrow', onHit);
       this.projectiles.push(p);
     } else {
       def.takeDamage(dmg); // 근접: 즉시
@@ -527,14 +521,14 @@ export class BattleScene extends Phaser.Scene {
     if (this.reviving || this.revivedOnce) return;
     this.reviving = true; // 업데이트 정지
     const layer = this.add.container(0, 0).setDepth(200);
-    const dim = this.add.rectangle(CX, CY, SCREEN_W, SCREEN_H, 0x000000, 0.7).setInteractive();
-    const panel = this.add.rectangle(CX, CY, 500, 340, 0x241824).setStrokeStyle(3, 0xff5a6e);
-    const title = this.add.text(CX, CY - 110, '💔 기지 파괴!', { fontFamily: 'sans-serif', fontSize: '40px', color: '#ff5a6e' }).setOrigin(0.5);
-    const sub = this.add.text(CX, CY - 50, '광고를 보고 기지를 부활시킬까요?', { fontFamily: 'sans-serif', fontSize: '18px', color: '#cfd6e6' }).setOrigin(0.5);
+    const dim = this.add.rectangle(640, 360, 1280, 720, 0x000000, 0.7).setInteractive();
+    const panel = this.add.rectangle(640, 360, 480, 340, 0x241824).setStrokeStyle(3, 0xff5a6e);
+    const title = this.add.text(640, 250, '💔 기지 파괴!', { fontFamily: 'sans-serif', fontSize: '40px', color: '#ff5a6e' }).setOrigin(0.5);
+    const sub = this.add.text(640, 310, '광고를 보고 기지를 부활시킬까요?', { fontFamily: 'sans-serif', fontSize: '20px', color: '#cfd6e6' }).setOrigin(0.5);
     layer.add([dim, panel, title, sub]);
 
     const watch = this.add
-      .text(CX, CY + 20, '📺 광고 보고 부활', { fontFamily: 'sans-serif', fontSize: '26px', color: '#fff', backgroundColor: '#2eae5a', padding: { x: 24, y: 12 } })
+      .text(640, 380, '📺 광고 보고 부활', { fontFamily: 'sans-serif', fontSize: '26px', color: '#fff', backgroundColor: '#2eae5a', padding: { x: 24, y: 12 } })
       .setOrigin(0.5)
       .setInteractive({ useHandCursor: true });
     watch.on('pointerdown', () => {
@@ -550,7 +544,7 @@ export class BattleScene extends Phaser.Scene {
     });
 
     const give = this.add
-      .text(CX, CY + 110, '포기', { fontFamily: 'sans-serif', fontSize: '20px', color: '#8892b0' })
+      .text(640, 450, '포기', { fontFamily: 'sans-serif', fontSize: '20px', color: '#8892b0' })
       .setOrigin(0.5)
       .setInteractive({ useHandCursor: true });
     give.on('pointerdown', () => {
@@ -568,14 +562,14 @@ export class BattleScene extends Phaser.Scene {
     this.playerBase.heal(Math.round(this.playerBase.maxHp * 0.6));
     // 기지 근처 적들을 적 진영 쪽으로 밀어내 숨 돌릴 틈 제공
     for (const e of this.enemies) {
-      if (e.active) e.moveBy(180);
+      if (e.active) e.moveBy(260);
     }
     this.energy.add(60);
     const t = this.add
-      .text(CX, 560, '✨ 부활! ✨', { fontFamily: 'sans-serif', fontSize: '48px', fontStyle: 'bold', color: '#ffe14d' })
+      .text(640, 300, '✨ 부활! ✨', { fontFamily: 'sans-serif', fontSize: '48px', fontStyle: 'bold', color: '#ffe14d' })
       .setOrigin(0.5)
       .setDepth(120);
-    this.tweens.add({ targets: t, y: 500, alpha: 0, duration: 1200, onComplete: () => t.destroy() });
+    this.tweens.add({ targets: t, y: 240, alpha: 0, duration: 1200, onComplete: () => t.destroy() });
   }
 
   private end(win: boolean): void {

@@ -8,7 +8,7 @@ export class BootScene extends Phaser.Scene {
     super('Boot');
   }
   create(): void {
-    this.scale.lockOrientation('portrait');
+    this.scale.lockOrientation('landscape');
     // 저장(Preferences/localStorage) 로드 후 진행 — 메타 골드/진행도 준비
     void (async () => {
       await meta.init();

@@ -15,18 +15,17 @@ export class UpgradeScene extends Phaser.Scene {
   }
 
   create(): void {
-    this.add.rectangle(360, 640, 720, 1280, 0x0d1018).setDepth(-5);
     this.add
-      .text(360, 90, '🔧 유닛 강화', { fontFamily: 'sans-serif', fontSize: '40px', color: '#ffd34d' })
+      .text(640, 54, '🔧 유닛 강화', { fontFamily: 'sans-serif', fontSize: '40px', color: '#ffd34d' })
       .setOrigin(0.5);
     this.goldText = this.add
-      .text(360, 150, '', { fontFamily: 'sans-serif', fontSize: '22px', color: '#ffe14d' })
+      .text(640, 100, '', { fontFamily: 'sans-serif', fontSize: '22px', color: '#ffe14d' })
       .setOrigin(0.5);
     this.layer = this.add.container(0, 0);
     this.render();
 
     const back = this.add
-      .text(360, 1190, '← 스테이지 선택', {
+      .text(640, 668, '← 스테이지 선택', {
         fontFamily: 'sans-serif',
         fontSize: '22px',
         color: '#fff',
@@ -46,28 +45,27 @@ export class UpgradeScene extends Phaser.Scene {
     keys.forEach((key, i) => {
       const u = UNITS[key];
       const lv = meta.level(key);
-      const y = 240 + i * 150;
+      const y = 170 + i * 110;
       const canUp = meta.canUpgrade(key);
       const cost = meta.nextCost(key);
 
-      const row = this.add.rectangle(360, y, 660, 128, 0x1a2338).setStrokeStyle(2, 0x33406a);
-      const name = this.add.text(70, y - 34, `${u.name}  Lv.${lv}`, {
+      const row = this.add.rectangle(640, y, 760, 92, 0x1a2338).setStrokeStyle(2, 0x33406a);
+      const name = this.add.text(300, y - 22, `${u.name}  Lv.${lv}`, {
         fontFamily: 'sans-serif',
-        fontSize: '26px',
+        fontSize: '24px',
         color: '#fff',
       });
-      const stat = this.add.text(70, y + 6, `❤️ ${scaleStat(u.hp, lv)}  ⚔️ ${scaleStat(u.atk, lv)}\n→ Lv.${lv + 1}: ❤️ ${scaleStat(u.hp, lv + 1)} ⚔️ ${scaleStat(u.atk, lv + 1)}`, {
+      const stat = this.add.text(300, y + 10, `❤️ ${scaleStat(u.hp, lv)}  ⚔️ ${scaleStat(u.atk, lv)}  →  Lv.${lv + 1}: ❤️ ${scaleStat(u.hp, lv + 1)} ⚔️ ${scaleStat(u.atk, lv + 1)}`, {
         fontFamily: 'sans-serif',
-        fontSize: '16px',
+        fontSize: '15px',
         color: '#9fb3d0',
-        lineSpacing: 4,
       });
       const btn = this.add
-        .rectangle(600, y, 150, 84, canUp ? 0x2f7a4d : 0x3a3f55)
+        .rectangle(880, y, 150, 60, canUp ? 0x2f7a4d : 0x3a3f55)
         .setStrokeStyle(2, canUp ? 0x5cff9e : 0x555)
         .setInteractive({ useHandCursor: true });
       const btnText = this.add
-        .text(600, y, `강화\n🪙${cost}`, {
+        .text(880, y, `강화\n🪙${cost}`, {
           fontFamily: 'sans-serif',
           fontSize: '16px',
           color: '#fff',
