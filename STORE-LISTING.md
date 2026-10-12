@@ -5,7 +5,7 @@
 - 서명 키: `C:\dev\keystores\linedefense-upload.jks` (alias `linedefense`) — ⚠️ repo에 커밋 금지, 백업 필수
 - 아이콘 512: `store-assets/icon-512.png` · 피처: `store-assets/feature-1024x500.png` · 스크린샷: `store-assets/shot*.png`
 - 개인정보처리방침 URL: `https://seungiljang.github.io/games/linedefense-privacy.html`
-- 빌드: 번들형(웹을 앱에 내장, OTA 아님) → 게임 수정 시 재빌드 필요
+- 빌드: OTA형(앱이 seungiljang.github.io/games/linedefense/ 로드) → 게임 수정은 games 레포 푸시로 즉시 반영
 - ⚠️ 광고: 현재 **테스트 광고(구글 테스트 ID, `src/systems/ads.ts` USE_TEST_ADS=true)**. 실수익화하려면 AdMob에 "라인 디펜스" 앱 생성 → 실제 리워드 광고단위 ID를 `PROD_REWARD_ANDROID`에 넣고 `USE_TEST_ADS=false`로 바꾼 뒤 재빌드.
 - ⚠️ 데이터 안전성(Play Console): 광고 식별자 수집 "예"(AdMob), 개인식별정보 수집 "아니오"로 신고.
 
@@ -42,7 +42,7 @@
 
 지금 바로 라인을 지켜라! ⚔️🛡️
 
-* 인터넷 연결 없이도 즐길 수 있어요.
+* 온라인 연결이 필요합니다.
 
 ---
 
@@ -72,7 +72,7 @@ Upgrade your units mid-battle with gold, and pick a skill on every level-up to s
 
 Hold the line now! ⚔️🛡️
 
-* Playable offline.
+* Requires an internet connection.
 
 ---
 
