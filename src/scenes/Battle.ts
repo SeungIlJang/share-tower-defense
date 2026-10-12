@@ -228,7 +228,10 @@ export class BattleScene extends Phaser.Scene {
 
   private end(win: boolean): void {
     this.over = true;
-    if (win) meta.addGold(80 + this.stage.id * 40); // 승리 보상(강화용 메타 골드)
+    if (win) {
+      meta.addGold(80 + this.stage.id * 40); // 승리 보상(강화용 메타 골드)
+      meta.clearStage(this.stage.id); // 다음 스테이지 해금
+    }
     this.time.delayedCall(600, () => this.scene.start('Result', { win, stageId: this.stage.id }));
   }
 }

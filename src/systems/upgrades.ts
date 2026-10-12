@@ -27,9 +27,22 @@ const KEY = 'ld_meta_v1';
 export class MetaProgress {
   gold = 0;
   levels: Record<string, number> = {};
+  clearedMax = 0; // 클리어한 최고 스테이지 id
 
   constructor() {
     this.load();
+  }
+
+  /** 스테이지 잠금 해제 여부 — 1관문은 항상 열림, 그 외는 직전 스테이지 클리어 필요 */
+  isUnlocked(id: number): boolean {
+    return id <= this.clearedMax + 1;
+  }
+
+  clearStage(id: number): void {
+    if (id > this.clearedMax) {
+      this.clearedMax = id;
+      this.save();
+    }
   }
 
   level(type: string): number {
@@ -62,9 +75,14 @@ export class MetaProgress {
     try {
       const raw = localStorage.getItem(KEY);
       if (raw) {
-        const obj = JSON.parse(raw) as { gold?: number; levels?: Record<string, number> };
+        const obj = JSON.parse(raw) as {
+          gold?: number;
+          levels?: Record<string, number>;
+          clearedMax?: number;
+        };
         this.gold = obj.gold ?? 0;
         this.levels = obj.levels ?? {};
+        this.clearedMax = obj.clearedMax ?? 0;
       }
     } catch {
       /* ignore */
@@ -73,7 +91,10 @@ export class MetaProgress {
 
   private save(): void {
     try {
-      localStorage.setItem(KEY, JSON.stringify({ gold: this.gold, levels: this.levels }));
+      localStorage.setItem(
+        KEY,
+        JSON.stringify({ gold: this.gold, levels: this.levels, clearedMax: this.clearedMax })
+      );
     } catch {
       /* ignore */
     }
