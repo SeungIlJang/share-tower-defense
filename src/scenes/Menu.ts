@@ -1,76 +1,78 @@
 import Phaser from 'phaser';
 import { meta } from '../systems/upgrades';
 
+const W = 720;
+
 export class MenuScene extends Phaser.Scene {
   constructor() {
     super('Menu');
   }
   create(): void {
+    this.add.rectangle(W / 2, 640, W, 1280, 0x0d1018).setDepth(-5);
     this.add
-      .text(640, 230, '라인 디펜스', { fontFamily: 'sans-serif', fontSize: '64px', color: '#7cf6ff' })
+      .text(W / 2, 360, '라인 디펜스', { fontFamily: 'sans-serif', fontSize: '60px', color: '#7cf6ff' })
       .setOrigin(0.5);
     this.add
-      .text(640, 310, 'LINE DEFENSE · 프로토타입 v1.4 · 📺광고·부활·일시정지', {
+      .text(W / 2, 430, 'LINE DEFENSE · v1.5 · 📱세로 전체화면', {
         fontFamily: 'sans-serif',
-        fontSize: '20px',
+        fontSize: '18px',
         color: '#8892b0',
       })
       .setOrigin(0.5);
     const btn = this.add
-      .text(640, 430, '▶ 시작', { fontFamily: 'sans-serif', fontSize: '40px', color: '#fff', backgroundColor: '#3a7bff', padding: { x: 36, y: 16 } })
+      .text(W / 2, 600, '▶ 시작', { fontFamily: 'sans-serif', fontSize: '42px', color: '#fff', backgroundColor: '#3a7bff', padding: { x: 44, y: 18 } })
       .setOrigin(0.5)
       .setInteractive({ useHandCursor: true });
     btn.on('pointerdown', () => this.scene.start('StageSelect'));
+
     const up = this.add
-      .text(500, 530, '🔧 유닛 강화', {
+      .text(W / 2 - 120, 760, '🔧 유닛 강화', {
         fontFamily: 'sans-serif',
         fontSize: '24px',
         color: '#ffd34d',
         backgroundColor: '#20304e',
-        padding: { x: 20, y: 10 },
+        padding: { x: 20, y: 12 },
       })
       .setOrigin(0.5)
       .setInteractive({ useHandCursor: true });
     up.on('pointerdown', () => this.scene.start('Upgrade'));
 
     const reward = this.add
-      .text(780, 530, '🎁 보상', {
+      .text(W / 2 + 120, 760, '🎁 보상', {
         fontFamily: 'sans-serif',
         fontSize: '24px',
         color: '#5cff9e',
         backgroundColor: '#20304e',
-        padding: { x: 20, y: 10 },
+        padding: { x: 20, y: 12 },
       })
       .setOrigin(0.5)
       .setInteractive({ useHandCursor: true });
     reward.on('pointerdown', () => this.openRewards());
 
-    // 받을 게 있으면 뱃지 + 자동 오픈
     if (meta.canClaimDaily() || meta.pendingIdle() > 0) {
-      const badge = this.add.circle(812, 512, 9, 0xff4d6a).setDepth(5);
-      this.add.text(812, 512, '!', { fontFamily: 'sans-serif', fontSize: '14px', color: '#fff' }).setOrigin(0.5).setDepth(6);
-      void badge;
+      this.add.circle(W / 2 + 196, 738, 10, 0xff4d6a).setDepth(5);
+      this.add.text(W / 2 + 196, 738, '!', { fontFamily: 'sans-serif', fontSize: '15px', color: '#fff' }).setOrigin(0.5).setDepth(6);
       this.time.delayedCall(250, () => this.openRewards());
     }
   }
 
   private openRewards(): void {
+    const CX = W / 2;
+    const CY = 640;
     const layer = this.add.container(0, 0).setDepth(100);
-    const dim = this.add.rectangle(640, 360, 1280, 720, 0x000000, 0.6).setInteractive();
-    const panel = this.add.rectangle(640, 360, 560, 420, 0x182238).setStrokeStyle(3, 0x3a7bff);
-    const title = this.add.text(640, 190, '🎁 보상', { fontFamily: 'sans-serif', fontSize: '36px', color: '#fff' }).setOrigin(0.5);
-    const goldLbl = this.add.text(640, 236, `보유 골드 🪙 ${meta.gold}`, { fontFamily: 'sans-serif', fontSize: '20px', color: '#ffd34d' }).setOrigin(0.5);
+    const dim = this.add.rectangle(CX, CY, W, 1280, 0x000000, 0.6).setInteractive();
+    const panel = this.add.rectangle(CX, CY, 600, 440, 0x182238).setStrokeStyle(3, 0x3a7bff);
+    const title = this.add.text(CX, CY - 180, '🎁 보상', { fontFamily: 'sans-serif', fontSize: '36px', color: '#fff' }).setOrigin(0.5);
+    const goldLbl = this.add.text(CX, CY - 132, `보유 골드 🪙 ${meta.gold}`, { fontFamily: 'sans-serif', fontSize: '20px', color: '#ffd34d' }).setOrigin(0.5);
     layer.add([dim, panel, title, goldLbl]);
 
     // 일일 보상
-    const dailyY = 310;
-    const dailyCard = this.add.rectangle(640, dailyY, 480, 90, 0x213458).setStrokeStyle(2, 0x2c4270);
-    const dailyTitle = this.add.text(430, dailyY - 22, `📅 일일 출석 (연속 ${meta.streak + (meta.canClaimDaily() ? 1 : 0)}일)`, { fontFamily: 'sans-serif', fontSize: '18px', color: '#cfe0ff' }).setOrigin(0, 0.5);
-    layer.add([dailyCard, dailyTitle]);
-
-    const dailyBtn = this.add.text(760, dailyY, '', { fontFamily: 'sans-serif', fontSize: '20px', padding: { x: 16, y: 8 } }).setOrigin(0.5);
-    const dailyDesc = this.add.text(430, dailyY + 16, '', { fontFamily: 'sans-serif', fontSize: '15px', color: '#8ea0c0' }).setOrigin(0, 0.5);
-    layer.add([dailyBtn, dailyDesc]);
+    const dailyY = CY - 55;
+    const dailyCard = this.add.rectangle(CX, dailyY, 520, 96, 0x213458).setStrokeStyle(2, 0x2c4270);
+    const dailyTitle = this.add.text(CX - 240, dailyY - 24, `📅 일일 출석 (연속 ${meta.streak + (meta.canClaimDaily() ? 1 : 0)}일)`, { fontFamily: 'sans-serif', fontSize: '18px', color: '#cfe0ff' }).setOrigin(0, 0.5);
+    const dailyBtn = this.add.text(CX + 190, dailyY, '', { fontFamily: 'sans-serif', fontSize: '20px', padding: { x: 16, y: 8 } }).setOrigin(0.5);
+    const dailyDesc = this.add.text(CX - 240, dailyY + 18, '', { fontFamily: 'sans-serif', fontSize: '15px', color: '#8ea0c0' }).setOrigin(0, 0.5);
+    layer.add([dailyCard, dailyTitle, dailyBtn, dailyDesc]);
     const refreshDaily = (): void => {
       if (meta.canClaimDaily()) {
         dailyDesc.setText('오늘 보상을 받으세요!');
@@ -83,7 +85,7 @@ export class MenuScene extends Phaser.Scene {
     dailyBtn.on('pointerdown', () => {
       const got = meta.claimDaily();
       if (got > 0) {
-        this.floatGold(640, dailyY, got);
+        this.floatGold(CX, dailyY, got);
         goldLbl.setText(`보유 골드 🪙 ${meta.gold}`);
         dailyTitle.setText(`📅 일일 출석 (연속 ${meta.streak}일)`);
         refreshDaily();
@@ -92,14 +94,12 @@ export class MenuScene extends Phaser.Scene {
     refreshDaily();
 
     // 방치 보상
-    const idleY = 430;
-    const idleCard = this.add.rectangle(640, idleY, 480, 90, 0x213458).setStrokeStyle(2, 0x2c4270);
-    const idleTitle = this.add.text(430, idleY - 22, '💤 방치 보상 (최대 8시간)', { fontFamily: 'sans-serif', fontSize: '18px', color: '#cfe0ff' }).setOrigin(0, 0.5);
-    layer.add([idleCard, idleTitle]);
-
-    const idleBtn = this.add.text(760, idleY, '', { fontFamily: 'sans-serif', fontSize: '20px', padding: { x: 16, y: 8 } }).setOrigin(0.5);
-    const idleDesc = this.add.text(430, idleY + 16, '', { fontFamily: 'sans-serif', fontSize: '15px', color: '#8ea0c0' }).setOrigin(0, 0.5);
-    layer.add([idleBtn, idleDesc]);
+    const idleY = CY + 75;
+    const idleCard = this.add.rectangle(CX, idleY, 520, 96, 0x213458).setStrokeStyle(2, 0x2c4270);
+    const idleTitle = this.add.text(CX - 240, idleY - 24, '💤 방치 보상 (최대 8시간)', { fontFamily: 'sans-serif', fontSize: '18px', color: '#cfe0ff' }).setOrigin(0, 0.5);
+    const idleBtn = this.add.text(CX + 190, idleY, '', { fontFamily: 'sans-serif', fontSize: '20px', padding: { x: 16, y: 8 } }).setOrigin(0.5);
+    const idleDesc = this.add.text(CX - 240, idleY + 18, '', { fontFamily: 'sans-serif', fontSize: '15px', color: '#8ea0c0' }).setOrigin(0, 0.5);
+    layer.add([idleCard, idleTitle, idleBtn, idleDesc]);
     const refreshIdle = (): void => {
       const pend = meta.pendingIdle();
       if (pend > 0) {
@@ -113,14 +113,14 @@ export class MenuScene extends Phaser.Scene {
     idleBtn.on('pointerdown', () => {
       const got = meta.claimIdle();
       if (got > 0) {
-        this.floatGold(640, idleY, got);
+        this.floatGold(CX, idleY, got);
         goldLbl.setText(`보유 골드 🪙 ${meta.gold}`);
         refreshIdle();
       }
     });
     refreshIdle();
 
-    const close = this.add.text(888, 174, '✕', { fontFamily: 'sans-serif', fontSize: '28px', color: '#fff' }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+    const close = this.add.text(CX + 272, CY - 196, '✕', { fontFamily: 'sans-serif', fontSize: '28px', color: '#fff' }).setOrigin(0.5).setInteractive({ useHandCursor: true });
     close.on('pointerdown', () => layer.destroy());
     dim.on('pointerdown', () => layer.destroy());
     layer.add(close);

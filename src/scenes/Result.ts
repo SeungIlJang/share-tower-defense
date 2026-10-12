@@ -8,6 +8,8 @@ interface ResultData {
   earned: number;
 }
 
+const W = 720;
+
 export class ResultScene extends Phaser.Scene {
   private resultData!: ResultData;
   constructor() {
@@ -18,32 +20,31 @@ export class ResultScene extends Phaser.Scene {
   }
   create(): void {
     const { win, earned } = this.resultData;
+    this.add.rectangle(W / 2, 640, W, 1280, 0x0d1018).setDepth(-5);
     this.add
-      .text(640, 170, win ? '🏆 승리!' : '💀 패배', {
+      .text(W / 2, 380, win ? '🏆 승리!' : '💀 패배', {
         fontFamily: 'sans-serif',
-        fontSize: '72px',
+        fontSize: '76px',
         color: win ? '#5cff9e' : '#ff5a6e',
       })
       .setOrigin(0.5);
 
-    // 보상 요약
     const goldLine = this.add
-      .text(640, 290, win ? `획득 골드 🪙 ${earned}` : '보상 없음', {
+      .text(W / 2, 520, win ? `획득 골드 🪙 ${earned}` : '보상 없음', {
         fontFamily: 'sans-serif',
-        fontSize: '30px',
+        fontSize: '32px',
         color: '#ffd34d',
       })
       .setOrigin(0.5);
     this.add
-      .text(640, 335, `보유 골드 🪙 ${meta.gold}`, { fontFamily: 'sans-serif', fontSize: '20px', color: '#8ea0c0' })
+      .text(W / 2, 572, `보유 골드 🪙 ${meta.gold}`, { fontFamily: 'sans-serif', fontSize: '20px', color: '#8ea0c0' })
       .setOrigin(0.5);
 
-    let y = 410;
-    // 📺 광고로 골드 2배 (승리 + 획득 골드 있을 때만)
+    let y = 680;
     if (win && earned > 0) {
       let doubled = false;
       const dbl = this.add
-        .text(640, y, '📺 광고 보고 골드 2배', { fontFamily: 'sans-serif', fontSize: '26px', color: '#fff', backgroundColor: '#8a5cff', padding: { x: 22, y: 11 } })
+        .text(W / 2, y, '📺 광고 보고 골드 2배', { fontFamily: 'sans-serif', fontSize: '26px', color: '#fff', backgroundColor: '#8a5cff', padding: { x: 24, y: 13 } })
         .setOrigin(0.5)
         .setInteractive({ useHandCursor: true });
       dbl.on('pointerdown', () => {
@@ -52,26 +53,26 @@ export class ResultScene extends Phaser.Scene {
         void showRewarded().then((ok) => {
           if (ok) {
             doubled = true;
-            meta.addGold(earned); // 추가 지급 = 2배
+            meta.addGold(earned);
             goldLine.setText(`획득 골드 🪙 ${earned * 2} (2배!)`);
             dbl.setText('✅ 2배 완료').setBackgroundColor('#2a3550').setColor('#9fe0b5');
-            this.floatGold(640, y, earned);
+            this.floatGold(W / 2, y, earned);
           } else {
             dbl.setText('📺 광고 보고 골드 2배').setInteractive({ useHandCursor: true });
           }
         });
       });
-      y += 80;
+      y += 110;
     }
 
     const retry = this.add
-      .text(500, y, '다시', { fontFamily: 'sans-serif', fontSize: '28px', color: '#fff', backgroundColor: '#3a7bff', padding: { x: 26, y: 12 } })
+      .text(W / 2, y, '🔄 다시', { fontFamily: 'sans-serif', fontSize: '28px', color: '#fff', backgroundColor: '#3a7bff', padding: { x: 30, y: 14 } })
       .setOrigin(0.5)
       .setInteractive({ useHandCursor: true });
     retry.on('pointerdown', () => this.scene.start('Battle', { stageId: this.resultData.stageId }));
 
     const sel = this.add
-      .text(780, y, '스테이지 선택', { fontFamily: 'sans-serif', fontSize: '24px', color: '#fff', backgroundColor: '#20304e', padding: { x: 20, y: 12 } })
+      .text(W / 2, y + 90, '스테이지 선택', { fontFamily: 'sans-serif', fontSize: '24px', color: '#fff', backgroundColor: '#20304e', padding: { x: 22, y: 12 } })
       .setOrigin(0.5)
       .setInteractive({ useHandCursor: true });
     sel.on('pointerdown', () => this.scene.start('StageSelect'));
