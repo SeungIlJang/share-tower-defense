@@ -16,7 +16,7 @@ import { xpToNext, hasteMult, mimicMult, magicMult, anyUpgradable } from '../sys
 import { Hud } from '../ui/Hud';
 import { LevelUpOverlay } from '../ui/LevelUp';
 
-const PROD_TYPES = ['goblin', 'wolf']; // 적 기지가 계속 생산하는 병력
+const PROD_TYPES = ['goblin', 'wolf', 'slime', 'bat']; // 적 기지가 계속 생산하는 병력
 
 const UNITS = unitsData as Record<string, UnitStats>;
 const ENEMIES = enemiesData as Record<string, EnemyStats>;
@@ -257,9 +257,27 @@ export class BattleScene extends Phaser.Scene {
     } else {
       def.takeDamage(dmg); // 근접: 즉시
     }
+    att.lunge(); // 공격 찌르기 모션
     let cd = attackCooldown(att.stats.atkSpeed);
     if (att.side === 'ally') cd *= hasteMult(this.skills.haste ?? 0); // 신속 오라
     att.cooldown = cd;
+  }
+
+  private puff(x: number, color: number): void {
+    const y = LANE_Y - 10;
+    for (let i = 0; i < 8; i++) {
+      const a = Math.random() * Math.PI * 2;
+      const sp = 28 + Math.random() * 46;
+      const c = this.add.circle(x, y, 3 + Math.random() * 2, color).setDepth(60);
+      this.tweens.add({
+        targets: c,
+        x: x + Math.cos(a) * sp,
+        y: y + Math.sin(a) * sp - 10,
+        alpha: 0,
+        duration: 380,
+        onComplete: () => c.destroy(),
+      });
+    }
   }
 
   private cleanupDead(): void {
@@ -267,11 +285,15 @@ export class BattleScene extends Phaser.Scene {
       if (e.active && e.hp <= 0) {
         this.runGold += e.reward;
         this.gainXp(e.reward);
+        this.puff(e.x, 0xff8a6a);
         this.enemyPool.release(e);
       }
     }
     for (const u of this.units) {
-      if (u.active && u.hp <= 0) this.unitPool.release(u);
+      if (u.active && u.hp <= 0) {
+        this.puff(u.x, 0x8ab4ff);
+        this.unitPool.release(u);
+      }
     }
     this.enemies = this.enemies.filter((e) => e.active);
     this.units = this.units.filter((u) => u.active);

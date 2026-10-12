@@ -15,6 +15,8 @@ const UNIT_COLORS: Record<string, number> = {
   soldier: 0x4a9eff,
   archer: 0x5cff9e,
   knight: 0xb98cff,
+  spear: 0x4ad0e0,
+  mage: 0xd58cff,
 };
 
 /** 전투 HUD — 상단(LV·VS라인·골드) + 하단 9슬롯 유닛바 + 에너지/식량 바 */
