@@ -349,10 +349,13 @@ export class BattleScene extends Phaser.Scene {
     if (att.cooldown > 0) return;
     const dmg = computeDamage(att.stats.atk, def.stats.def);
     if (att.stats.range >= BattleScene.RANGED) {
-      // 원거리: 화살(투사체) 발사 → 명중 시 데미지
+      // 원거리: 궁수=화살(직선·빠름), 마법사=마법 구슬(느림·명중 시 광역)
       const p = this.projPool.acquire();
-      const color = att.side === 'ally' ? 0xffe14d : 0xff9a4a;
-      p.spawn(att.x + (att.side === 'ally' ? 14 : -14), 486, def, dmg, color);
+      const isMage = att.type === 'mage';
+      const onHit = isMage
+        ? (x: number, d: number) => this.splash(x, Math.round(d * 0.6), att.side)
+        : undefined;
+      p.spawn(att.x + (att.side === 'ally' ? 14 : -14), 486, def, dmg, isMage ? 'orb' : 'arrow', onHit);
       this.projectiles.push(p);
     } else {
       def.takeDamage(dmg); // 근접: 즉시
@@ -361,6 +364,16 @@ export class BattleScene extends Phaser.Scene {
     let cd = attackCooldown(att.stats.atkSpeed);
     if (att.side === 'ally') cd *= hasteMult(this.skills.haste ?? 0); // 신속 오라
     att.cooldown = cd;
+  }
+
+  /** 마법 구슬 광역 피해 — 명중 지점 주변 적(또는 아군)에게 추가 피해 + 폭발 이펙트 */
+  private splash(x: number, dmg: number, side: 'ally' | 'enemy'): void {
+    const list = side === 'ally' ? this.enemies : this.units;
+    for (const o of list) {
+      if (o.active && Math.abs(o.x - x) <= 64) o.takeDamage(dmg);
+    }
+    const fx = this.add.circle(x, LANE_Y - 10, 14, 0xb98cff, 0.5).setDepth(55);
+    this.tweens.add({ targets: fx, scale: 3.4, alpha: 0, duration: 300, onComplete: () => fx.destroy() });
   }
 
   private puff(x: number, color: number): void {
