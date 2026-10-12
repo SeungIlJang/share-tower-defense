@@ -1,0 +1,5 @@
+{
+  "goblin": { "name": "고블린", "hp": 90,  "atk": 12, "def": 2, "atkSpeed": 1.0, "range": 40, "speed": 54, "reward": 14 },
+  "orc":    { "name": "오크",   "hp": 220, "atk": 24, "def": 7, "atkSpeed": 0.8, "range": 44, "speed": 40, "reward": 30 },
+  "wolf":   { "name": "늑대",   "hp": 60,  "atk": 10, "def": 1, "atkSpeed": 1.4, "range": 38, "speed": 95, "reward": 10 }
+}

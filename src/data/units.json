@@ -1,0 +1,5 @@
+{
+  "soldier": { "name": "병사", "hp": 120, "atk": 16, "def": 6, "atkSpeed": 1.0, "range": 44, "speed": 70, "cost": 50 },
+  "archer":  { "name": "궁수", "hp": 70,  "atk": 24, "def": 2, "atkSpeed": 1.3, "range": 180, "speed": 62, "cost": 90 },
+  "knight":  { "name": "기사", "hp": 240, "atk": 22, "def": 12, "atkSpeed": 0.8, "range": 46, "speed": 56, "cost": 150 }
+}

@@ -1,0 +1,12 @@
+node_modules/
+dist/
+android/
+ios/
+*.log
+.DS_Store
+# secrets / signing keys — never commit
+*.jks
+*.keystore
+keystore.properties
+key-info.txt
+.env
