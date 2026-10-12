@@ -12,7 +12,9 @@ import { ResourceSystem } from '../systems/resources';
 import { WaveSystem } from '../systems/waves';
 import { computeDamage, attackCooldown, inRange } from '../systems/combat';
 import { meta, applyUpgrade } from '../systems/upgrades';
+import { xpToNext, hasteMult, mimicMult, magicMult, anyUpgradable } from '../systems/skills';
 import { Hud } from '../ui/Hud';
+import { LevelUpOverlay } from '../ui/LevelUp';
 
 const PROD_TYPES = ['goblin', 'wolf']; // 적 기지가 계속 생산하는 병력
 
@@ -39,6 +41,13 @@ export class BattleScene extends Phaser.Scene {
   private enemies: Enemy[] = [];
   private projectiles: Projectile[] = [];
   private over = false;
+  // 레벨업 스킬(한 판 로그라이트)
+  private level = 1;
+  private xp = 0;
+  private xpNext = xpToNext(1);
+  private skills: Record<string, number> = {};
+  private picking = false;
+  private levelUp!: LevelUpOverlay;
   private prodTimer = 0; // 적 기지 생산 타이머
   private prodInterval = 4; // 생산 간격(초)
   private prodIdx = 0;
@@ -57,6 +66,12 @@ export class BattleScene extends Phaser.Scene {
     this.units = [];
     this.enemies = [];
     this.projectiles = [];
+    this.level = 1;
+    this.xp = 0;
+    this.xpNext = xpToNext(1);
+    this.skills = {};
+    this.picking = false;
+    this.levelUp = new LevelUpOverlay(this);
 
     // 배경 + 레인
     this.add.rectangle(640, 360, 1280, 720, 0x121826).setDepth(-10);
@@ -100,12 +115,30 @@ export class BattleScene extends Phaser.Scene {
     const base = UNITS[type];
     if (!base) return;
     if (this.usedFood() + base.pop > this.foodMax) return; // 인구(식량) 초과
-    if (!this.energy.spend(base.cost)) return; // 에너지 부족
+    const energyCost = Math.round(base.cost * magicMult(this.skills.magic ?? 0)); // 마법 숙련
+    if (!this.energy.spend(energyCost)) return; // 에너지 부족
     const stats = applyUpgrade(base, meta.level(type)); // 영구 강화 적용
     const u = this.unitPool.acquire();
     u.spawn(this.playerBase.x + 50, LANE_Y, stats, type, 'ally');
     u.pop = base.pop;
     this.units.push(u);
+  }
+
+  private gainXp(base: number): void {
+    this.xp += Math.round(base * mimicMult(this.skills.mimic ?? 0));
+    while (this.xp >= this.xpNext && !this.picking) {
+      this.xp -= this.xpNext;
+      this.level++;
+      this.xpNext = xpToNext(this.level);
+      if (anyUpgradable(this.skills)) {
+        this.picking = true;
+        this.levelUp.show(this.skills, (key) => {
+          this.skills[key] = (this.skills[key] ?? 0) + 1;
+          this.picking = false;
+        });
+        break; // 한 번에 한 레벨만 선택(나머지는 선택 후 이어서)
+      }
+    }
   }
 
   private linePos(): number {
@@ -139,7 +172,7 @@ export class BattleScene extends Phaser.Scene {
   }
 
   update(_time: number, deltaMs: number): void {
-    if (this.over) return;
+    if (this.over || this.picking) return; // 스킬 선택 중엔 전투 정지
     const dt = Math.min(0.05, deltaMs / 1000);
 
     this.energy.update(dt);
@@ -201,7 +234,7 @@ export class BattleScene extends Phaser.Scene {
 
     this.cleanupDead();
     this.hud.update({
-      lv: this.stage.id,
+      lv: this.level,
       gold: this.runGold,
       energy: this.energy.amount,
       energyMax: this.energy.max,
@@ -224,13 +257,16 @@ export class BattleScene extends Phaser.Scene {
     } else {
       def.takeDamage(dmg); // 근접: 즉시
     }
-    att.cooldown = attackCooldown(att.stats.atkSpeed);
+    let cd = attackCooldown(att.stats.atkSpeed);
+    if (att.side === 'ally') cd *= hasteMult(this.skills.haste ?? 0); // 신속 오라
+    att.cooldown = cd;
   }
 
   private cleanupDead(): void {
     for (const e of this.enemies) {
       if (e.active && e.hp <= 0) {
         this.runGold += e.reward;
+        this.gainXp(e.reward);
         this.enemyPool.release(e);
       }
     }
@@ -249,6 +285,8 @@ export class BattleScene extends Phaser.Scene {
 
   private end(win: boolean): void {
     this.over = true;
+    this.picking = false;
+    this.levelUp.hide();
     if (win) {
       meta.addGold(this.runGold + 60 + this.stage.id * 30); // 처치 골드 + 승리 보너스(강화용)
       meta.clearStage(this.stage.id); // 다음 스테이지 해금
