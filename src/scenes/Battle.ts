@@ -111,17 +111,35 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private trySpawnUnit(type: string): void {
-    if (this.over) return;
+    if (this.over || this.picking) return;
     const base = UNITS[type];
     if (!base) return;
-    if (this.usedFood() + base.pop > this.foodMax) return; // 인구(식량) 초과
+    if (this.usedFood() + base.pop > this.foodMax) {
+      this.hud.deny(type, 'food'); // 인구 초과 안내
+      return;
+    }
     const energyCost = Math.round(base.cost * magicMult(this.skills.magic ?? 0)); // 마법 숙련
-    if (!this.energy.spend(energyCost)) return; // 에너지 부족
+    if (!this.energy.spend(energyCost)) {
+      this.hud.deny(type, 'energy'); // 에너지 부족 안내
+      return;
+    }
     const stats = applyUpgrade(base, meta.level(type)); // 영구 강화 적용
     const u = this.unitPool.acquire();
     u.spawn(this.playerBase.x + 50, LANE_Y, stats, type, 'ally');
     u.pop = base.pop;
     this.units.push(u);
+    this.hud.hideHint(); // 첫 소환하면 가이드 제거
+  }
+
+  private affordMap(): Record<string, boolean> {
+    const m: Record<string, boolean> = {};
+    const food = this.usedFood();
+    for (const k of Object.keys(UNITS)) {
+      const u = UNITS[k];
+      const ec = Math.round(u.cost * magicMult(this.skills.magic ?? 0));
+      m[k] = this.energy.amount >= ec && food + u.pop <= this.foodMax;
+    }
+    return m;
   }
 
   private gainXp(base: number): void {
@@ -241,6 +259,7 @@ export class BattleScene extends Phaser.Scene {
       food: this.usedFood(),
       foodMax: this.foodMax,
       linePos: this.linePos(),
+      afford: this.affordMap(),
     });
     this.checkEnd();
   }
