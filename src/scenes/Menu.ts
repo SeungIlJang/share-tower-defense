@@ -7,10 +7,10 @@ export class MenuScene extends Phaser.Scene {
   }
   create(): void {
     this.add
-      .text(640, 230, '라인 디펜스', { fontFamily: 'sans-serif', fontSize: '64px', color: '#7cf6ff' })
+      .text(640, 230, '모두의 타워디펜스', { fontFamily: 'sans-serif', fontSize: '58px', fontStyle: 'bold', color: '#7cf6ff' })
       .setOrigin(0.5);
     this.add
-      .text(640, 310, 'LINE DEFENSE · v1.6 · 🔄가로 자동전환', {
+      .text(640, 306, 'TOWER DEFENSE · v1.7 · ⏱️리듬 소환', {
         fontFamily: 'sans-serif',
         fontSize: '20px',
         color: '#8892b0',
