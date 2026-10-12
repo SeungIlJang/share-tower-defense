@@ -18,6 +18,20 @@ export function applyUpgrade(stats: UnitStats, level: number): UnitStats {
   return { ...stats, hp: scaleStat(stats.hp, level), atk: scaleStat(stats.atk, level) };
 }
 
+/** 일일 보상 금액(연속 출석 streak 반영, day1=50 → 7일+ 200 캡) */
+export function dailyAmount(streak: number): number {
+  return 50 + Math.min(streak, 6) * 25;
+}
+
+/** 방치(오프라인) 보상 — 경과시간 × 시간당, 상한 캡 */
+export function idleAmount(elapsedMs: number, goldPerHour: number, capHours: number): number {
+  const ms = Math.min(Math.max(0, elapsedMs), capHours * 3600_000);
+  return Math.floor((ms / 3600_000) * goldPerHour);
+}
+
+const IDLE_PER_HOUR = 60;
+const IDLE_CAP_HOURS = 8;
+
 /**
  * 메타 진행도(영구) — 유닛 레벨 + 메타 골드.
  * 프로토타입은 localStorage, 네이티브 전환 시 @capacitor/preferences로 교체 예정.
@@ -28,9 +42,57 @@ export class MetaProgress {
   gold = 0;
   levels: Record<string, number> = {};
   clearedMax = 0; // 클리어한 최고 스테이지 id
+  lastDaily = -1; // 마지막 일일보상 수령 day index
+  streak = 0; // 연속 출석
+  lastSeen = 0; // 마지막 접속(ms) — 방치 보상 기준
 
   constructor() {
     this.load();
+    if (this.lastSeen === 0) {
+      this.lastSeen = Date.now();
+      this.save();
+    }
+  }
+
+  private dayIndex(): number {
+    return Math.floor(Date.now() / 86_400_000);
+  }
+
+  /** 오늘 일일보상 받을 수 있나 */
+  canClaimDaily(): boolean {
+    return this.dayIndex() > this.lastDaily;
+  }
+
+  /** 일일보상 수령 → 금액 반환(0=이미 받음) */
+  claimDaily(): number {
+    if (!this.canClaimDaily()) return 0;
+    const consecutive = this.lastDaily >= 0 && this.dayIndex() === this.lastDaily + 1;
+    this.streak = consecutive ? this.streak + 1 : 0;
+    this.lastDaily = this.dayIndex();
+    const amt = dailyAmount(this.streak);
+    this.gold += amt;
+    this.save();
+    return amt;
+  }
+
+  /** 방치 보상 대기 금액(미수령분) */
+  pendingIdle(): number {
+    return idleAmount(Date.now() - this.lastSeen, IDLE_PER_HOUR, IDLE_CAP_HOURS);
+  }
+
+  /** 방치 보상 수령 → 금액 반환, 타이머 리셋 */
+  claimIdle(): number {
+    const amt = this.pendingIdle();
+    if (amt > 0) this.gold += amt;
+    this.lastSeen = Date.now();
+    this.save();
+    return amt;
+  }
+
+  /** 접속/플레이 시각 갱신(방치 타이머 리셋) */
+  touchSeen(): void {
+    this.lastSeen = Date.now();
+    this.save();
   }
 
   /** 스테이지 잠금 해제 여부 — 1관문은 항상 열림, 그 외는 직전 스테이지 클리어 필요 */
@@ -79,10 +141,16 @@ export class MetaProgress {
           gold?: number;
           levels?: Record<string, number>;
           clearedMax?: number;
+          lastDaily?: number;
+          streak?: number;
+          lastSeen?: number;
         };
         this.gold = obj.gold ?? 0;
         this.levels = obj.levels ?? {};
         this.clearedMax = obj.clearedMax ?? 0;
+        this.lastDaily = obj.lastDaily ?? -1;
+        this.streak = obj.streak ?? 0;
+        this.lastSeen = obj.lastSeen ?? 0;
       }
     } catch {
       /* ignore */
@@ -93,7 +161,14 @@ export class MetaProgress {
     try {
       localStorage.setItem(
         KEY,
-        JSON.stringify({ gold: this.gold, levels: this.levels, clearedMax: this.clearedMax })
+        JSON.stringify({
+          gold: this.gold,
+          levels: this.levels,
+          clearedMax: this.clearedMax,
+          lastDaily: this.lastDaily,
+          streak: this.streak,
+          lastSeen: this.lastSeen,
+        })
       );
     } catch {
       /* ignore */
