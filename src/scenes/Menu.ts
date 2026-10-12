@@ -10,7 +10,7 @@ export class MenuScene extends Phaser.Scene {
       .text(640, 230, '라인 디펜스', { fontFamily: 'sans-serif', fontSize: '64px', color: '#7cf6ff' })
       .setOrigin(0.5);
     this.add
-      .text(640, 310, 'LINE DEFENSE · 프로토타입 v1.3 · 🎁일일·방치 보상', {
+      .text(640, 310, 'LINE DEFENSE · 프로토타입 v1.4 · 📺광고·부활·일시정지', {
         fontFamily: 'sans-serif',
         fontSize: '20px',
         color: '#8892b0',

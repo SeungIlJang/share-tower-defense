@@ -20,6 +20,12 @@ export class Base {
     this.hpBar.setSize(Math.max(0, (this.hp / this.maxHp) * 60), 8);
   }
 
+  /** 회복/부활 — HP 되살리고 바 갱신 */
+  heal(amount: number): void {
+    this.hp = Math.min(this.maxHp, this.hp + amount);
+    this.hpBar.setSize(Math.max(0, (this.hp / this.maxHp) * 60), 8);
+  }
+
   get destroyed(): boolean {
     return this.hp <= 0;
   }

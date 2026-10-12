@@ -1,4 +1,5 @@
 import type { UnitStats } from '../types';
+import { storageGet, storageSet } from './storage';
 
 /** 강화 순수 계산 (Vitest 검증) */
 
@@ -34,7 +35,8 @@ const IDLE_CAP_HOURS = 8;
 
 /**
  * 메타 진행도(영구) — 유닛 레벨 + 메타 골드.
- * 프로토타입은 localStorage, 네이티브 전환 시 @capacitor/preferences로 교체 예정.
+ * 저장은 storage.ts 통해 네이티브=Preferences / 웹=localStorage 자동 선택.
+ * 상태는 메모리에 동기 유지, init()로 1회 비동기 로드(Boot에서 await).
  */
 const KEY = 'ld_meta_v1';
 
@@ -45,13 +47,16 @@ export class MetaProgress {
   lastDaily = -1; // 마지막 일일보상 수령 day index
   streak = 0; // 연속 출석
   lastSeen = 0; // 마지막 접속(ms) — 방치 보상 기준
+  private ready = false;
 
-  constructor() {
-    this.load();
-    if (this.lastSeen === 0) {
-      this.lastSeen = Date.now();
-      this.save();
-    }
+  /** 저장소에서 1회 로드(Boot에서 await). 비동기 저장소 대응. */
+  async init(): Promise<void> {
+    if (this.ready) return;
+    const raw = await storageGet(KEY);
+    this.parse(raw);
+    if (this.lastSeen === 0) this.lastSeen = Date.now();
+    this.ready = true;
+    this.save();
   }
 
   private dayIndex(): number {
@@ -133,46 +138,40 @@ export class MetaProgress {
     this.save();
   }
 
-  private load(): void {
+  private parse(raw: string | null): void {
+    if (!raw) return;
     try {
-      const raw = localStorage.getItem(KEY);
-      if (raw) {
-        const obj = JSON.parse(raw) as {
-          gold?: number;
-          levels?: Record<string, number>;
-          clearedMax?: number;
-          lastDaily?: number;
-          streak?: number;
-          lastSeen?: number;
-        };
-        this.gold = obj.gold ?? 0;
-        this.levels = obj.levels ?? {};
-        this.clearedMax = obj.clearedMax ?? 0;
-        this.lastDaily = obj.lastDaily ?? -1;
-        this.streak = obj.streak ?? 0;
-        this.lastSeen = obj.lastSeen ?? 0;
-      }
+      const obj = JSON.parse(raw) as {
+        gold?: number;
+        levels?: Record<string, number>;
+        clearedMax?: number;
+        lastDaily?: number;
+        streak?: number;
+        lastSeen?: number;
+      };
+      this.gold = obj.gold ?? 0;
+      this.levels = obj.levels ?? {};
+      this.clearedMax = obj.clearedMax ?? 0;
+      this.lastDaily = obj.lastDaily ?? -1;
+      this.streak = obj.streak ?? 0;
+      this.lastSeen = obj.lastSeen ?? 0;
     } catch {
       /* ignore */
     }
   }
 
   private save(): void {
-    try {
-      localStorage.setItem(
-        KEY,
-        JSON.stringify({
-          gold: this.gold,
-          levels: this.levels,
-          clearedMax: this.clearedMax,
-          lastDaily: this.lastDaily,
-          streak: this.streak,
-          lastSeen: this.lastSeen,
-        })
-      );
-    } catch {
-      /* ignore */
-    }
+    storageSet(
+      KEY,
+      JSON.stringify({
+        gold: this.gold,
+        levels: this.levels,
+        clearedMax: this.clearedMax,
+        lastDaily: this.lastDaily,
+        streak: this.streak,
+        lastSeen: this.lastSeen,
+      })
+    );
   }
 }
 

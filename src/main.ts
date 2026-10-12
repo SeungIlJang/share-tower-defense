@@ -32,4 +32,6 @@ const config: Phaser.Types.Core.GameConfig = {
   ],
 };
 
-new Phaser.Game(config);
+const game = new Phaser.Game(config);
+// 디버그/헤드리스 테스트용 핸들(프로덕션 무해)
+(globalThis as unknown as { __LD?: Phaser.Game }).__LD = game;

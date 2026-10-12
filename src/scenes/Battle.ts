@@ -15,6 +15,7 @@ import { meta, applyUpgrade } from '../systems/upgrades';
 import { xpToNext, hasteMult, mimicMult, magicMult, anyUpgradable } from '../systems/skills';
 import { Hud } from '../ui/Hud';
 import { LevelUpOverlay } from '../ui/LevelUp';
+import { showRewarded } from '../systems/ads';
 
 const PROD_TYPES = ['goblin', 'wolf', 'slime', 'bat']; // 적 기지가 계속 생산하는 병력
 const BOSS = new Set(['ogre']); // 보스 타입
@@ -46,6 +47,9 @@ export class BattleScene extends Phaser.Scene {
   private enemies: Enemy[] = [];
   private projectiles: Projectile[] = [];
   private over = false;
+  private paused = false; // ⏸️ 일시정지
+  private reviving = false; // 부활 제안 중(업데이트 정지)
+  private revivedOnce = false; // 한 판에 광고 부활 1회
   // 레벨업 스킬(한 판 로그라이트)
   private level = 1;
   private xp = 0;
@@ -74,6 +78,9 @@ export class BattleScene extends Phaser.Scene {
   create(): void {
     meta.touchSeen(); // 전투 진입 = 접속, 방치 타이머 리셋
     this.over = false;
+    this.paused = false;
+    this.reviving = false;
+    this.revivedOnce = false;
     this.units = [];
     this.enemies = [];
     this.projectiles = [];
@@ -130,6 +137,55 @@ export class BattleScene extends Phaser.Scene {
       .setOrigin(0.5)
       .setDepth(92)
       .setVisible(false);
+
+    // ⏸️ 일시정지 버튼(우상단)
+    const pauseBtn = this.add
+      .text(1250, 16, '⏸', { fontFamily: 'sans-serif', fontSize: '28px', color: '#cfe0ff', backgroundColor: '#1d2740', padding: { x: 10, y: 4 } })
+      .setOrigin(1, 0)
+      .setDepth(95)
+      .setInteractive({ useHandCursor: true });
+    pauseBtn.on('pointerdown', () => this.openPause());
+  }
+
+  /** ⏸️ 일시정지 오버레이 — 계속 / 음소거 / 나가기 */
+  private openPause(): void {
+    if (this.over || this.reviving || this.paused) return;
+    this.paused = true;
+    const layer = this.add.container(0, 0).setDepth(200);
+    const dim = this.add.rectangle(640, 360, 1280, 720, 0x000000, 0.65).setInteractive();
+    const panel = this.add.rectangle(640, 360, 420, 320, 0x182238).setStrokeStyle(3, 0x3a7bff);
+    const title = this.add.text(640, 250, '⏸️ 일시정지', { fontFamily: 'sans-serif', fontSize: '34px', color: '#fff' }).setOrigin(0.5);
+    layer.add([dim, panel, title]);
+
+    const resume = this.add
+      .text(640, 330, '▶ 계속', { fontFamily: 'sans-serif', fontSize: '26px', color: '#fff', backgroundColor: '#2eae5a', padding: { x: 24, y: 10 } })
+      .setOrigin(0.5)
+      .setInteractive({ useHandCursor: true });
+    resume.on('pointerdown', () => {
+      this.paused = false;
+      layer.destroy();
+    });
+
+    const muted = this.sound.mute;
+    const mute = this.add
+      .text(640, 395, muted ? '🔇 소리 꺼짐' : '🔊 소리 켜짐', { fontFamily: 'sans-serif', fontSize: '22px', color: '#ffd34d', backgroundColor: '#20304e', padding: { x: 20, y: 8 } })
+      .setOrigin(0.5)
+      .setInteractive({ useHandCursor: true });
+    mute.on('pointerdown', () => {
+      this.sound.mute = !this.sound.mute;
+      mute.setText(this.sound.mute ? '🔇 소리 꺼짐' : '🔊 소리 켜짐');
+    });
+
+    const quit = this.add
+      .text(640, 455, '🏳️ 나가기', { fontFamily: 'sans-serif', fontSize: '20px', color: '#8892b0' })
+      .setOrigin(0.5)
+      .setInteractive({ useHandCursor: true });
+    quit.on('pointerdown', () => {
+      this.paused = false;
+      layer.destroy();
+      this.scene.start('StageSelect');
+    });
+    layer.add([resume, mute, quit]);
   }
 
   private usedFood(): number {
@@ -293,7 +349,7 @@ export class BattleScene extends Phaser.Scene {
   }
 
   update(_time: number, deltaMs: number): void {
-    if (this.over || this.picking) return; // 스킬 선택 중엔 전투 정지
+    if (this.over || this.picking || this.paused || this.reviving) return; // 정지 상태
     const dt = Math.min(0.05, deltaMs / 1000);
 
     // ⏱️ 리듬 바 진행(0↔1 핑퐁)
@@ -450,18 +506,81 @@ export class BattleScene extends Phaser.Scene {
 
   private checkEnd(): void {
     // 승리 = 적 생산기지 파괴 / 패배 = 우리 기지 파괴
-    if (this.playerBase.destroyed) return this.end(false);
     if (this.enemyBase.destroyed) return this.end(true);
+    if (this.playerBase.destroyed) {
+      if (!this.revivedOnce) {
+        this.offerRevive(); // 광고 보고 부활 1회 제안
+        return;
+      }
+      return this.end(false);
+    }
+  }
+
+  /** 💔 기지 파괴 → 광고 보고 부활 제안(한 판 1회) */
+  private offerRevive(): void {
+    if (this.reviving || this.revivedOnce) return;
+    this.reviving = true; // 업데이트 정지
+    const layer = this.add.container(0, 0).setDepth(200);
+    const dim = this.add.rectangle(640, 360, 1280, 720, 0x000000, 0.7).setInteractive();
+    const panel = this.add.rectangle(640, 360, 480, 340, 0x241824).setStrokeStyle(3, 0xff5a6e);
+    const title = this.add.text(640, 250, '💔 기지 파괴!', { fontFamily: 'sans-serif', fontSize: '40px', color: '#ff5a6e' }).setOrigin(0.5);
+    const sub = this.add.text(640, 310, '광고를 보고 기지를 부활시킬까요?', { fontFamily: 'sans-serif', fontSize: '20px', color: '#cfd6e6' }).setOrigin(0.5);
+    layer.add([dim, panel, title, sub]);
+
+    const watch = this.add
+      .text(640, 380, '📺 광고 보고 부활', { fontFamily: 'sans-serif', fontSize: '26px', color: '#fff', backgroundColor: '#2eae5a', padding: { x: 24, y: 12 } })
+      .setOrigin(0.5)
+      .setInteractive({ useHandCursor: true });
+    watch.on('pointerdown', () => {
+      watch.disableInteractive().setText('⏳ 광고…');
+      void showRewarded().then((ok) => {
+        layer.destroy();
+        if (ok) this.doRevive();
+        else {
+          this.reviving = false;
+          this.end(false);
+        }
+      });
+    });
+
+    const give = this.add
+      .text(640, 450, '포기', { fontFamily: 'sans-serif', fontSize: '20px', color: '#8892b0' })
+      .setOrigin(0.5)
+      .setInteractive({ useHandCursor: true });
+    give.on('pointerdown', () => {
+      layer.destroy();
+      this.reviving = false;
+      this.end(false);
+    });
+    layer.add([watch, give]);
+  }
+
+  /** 부활 실행 — 기지 HP 복구 + 전장 적 밀어내기 */
+  private doRevive(): void {
+    this.revivedOnce = true;
+    this.reviving = false;
+    this.playerBase.heal(Math.round(this.playerBase.maxHp * 0.6));
+    // 기지 근처 적들을 적 진영 쪽으로 밀어내 숨 돌릴 틈 제공
+    for (const e of this.enemies) {
+      if (e.active) e.moveBy(260);
+    }
+    this.energy.add(60);
+    const t = this.add
+      .text(640, 300, '✨ 부활! ✨', { fontFamily: 'sans-serif', fontSize: '48px', fontStyle: 'bold', color: '#ffe14d' })
+      .setOrigin(0.5)
+      .setDepth(120);
+    this.tweens.add({ targets: t, y: 240, alpha: 0, duration: 1200, onComplete: () => t.destroy() });
   }
 
   private end(win: boolean): void {
     this.over = true;
     this.picking = false;
     this.levelUp.hide();
+    const earned = win ? this.runGold + 60 + this.stage.id * 30 : 0;
     if (win) {
-      meta.addGold(this.runGold + 60 + this.stage.id * 30); // 처치 골드 + 승리 보너스(강화용)
+      meta.addGold(earned); // 처치 골드 + 승리 보너스(강화용)
       meta.clearStage(this.stage.id); // 다음 스테이지 해금
     }
-    this.time.delayedCall(600, () => this.scene.start('Result', { win, stageId: this.stage.id }));
+    this.time.delayedCall(600, () => this.scene.start('Result', { win, stageId: this.stage.id, earned }));
   }
 }
