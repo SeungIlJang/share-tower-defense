@@ -12,6 +12,7 @@ export interface HudState {
   afford: Record<string, boolean>; // 유닛별 지금 소환 가능 여부
   beat: number; // ⏱️ 리듬 소환 마커 위치 0~1
   perfectWin: number; // 퍼펙트 허용 폭(중앙 ±)
+  upg: Record<string, { lv: number; cost: number; afford: boolean }>; // 전장 실시간 강화
 }
 
 const UNIT_COLORS: Record<string, number> = {
@@ -29,6 +30,9 @@ interface Slot {
   label: Phaser.GameObjects.Text;
   cost: Phaser.GameObjects.Text;
   icon: Phaser.GameObjects.Rectangle;
+  upBtn: Phaser.GameObjects.Rectangle;
+  upText: Phaser.GameObjects.Text;
+  lvText: Phaser.GameObjects.Text;
 }
 
 /** 전투 HUD — 상단(LV·VS·골드) + 하단 9슬롯 유닛바 + 에너지/식량 바 + 소환 가이드 */
@@ -56,7 +60,8 @@ export class Hud {
   constructor(
     scene: Phaser.Scene,
     units: Record<string, UnitStats>,
-    onSpawn: (type: string) => void
+    onSpawn: (type: string) => void,
+    onUpgrade: (type: string) => void
   ) {
     this.scene = scene;
     const d = 100;
@@ -105,7 +110,12 @@ export class Hud {
         scene.add.text(cx - 54, cy + 26, String(i + 1), { fontFamily: 'sans-serif', fontSize: '13px', color: '#8aa' }).setDepth(d + 1);
         rect.setInteractive({ useHandCursor: true });
         rect.on('pointerdown', () => onSpawn(key));
-        this.slots.push({ key, cx, rect, label, cost, icon });
+        // 🛠️ 전장 실시간 강화 버튼(카드 우상단) — 탭 영역이 카드보다 위라 소환과 분리됨
+        const upBtn = scene.add.rectangle(cx + 44, cy - 24, 40, 24, 0x2f7a4d).setStrokeStyle(1, 0x5cff9e).setDepth(d + 2).setInteractive({ useHandCursor: true });
+        const upText = scene.add.text(cx + 44, cy - 24, '⬆', { fontFamily: 'sans-serif', fontSize: '12px', fontStyle: 'bold', color: '#fff' }).setOrigin(0.5).setDepth(d + 3);
+        const lvText = scene.add.text(cx - 54, cy - 24, 'Lv1', { fontFamily: 'sans-serif', fontSize: '12px', fontStyle: 'bold', color: '#ffd34d' }).setDepth(d + 2);
+        upBtn.on('pointerdown', () => onUpgrade(key));
+        this.slots.push({ key, cx, rect, label, cost, icon, upBtn, upText, lvText });
       } else {
         scene.add.rectangle(cx, cy, slotW, 78, 0x20242e).setStrokeStyle(3, 0x3a3f4a).setDepth(d);
         scene.add.text(cx, cy, '🔒', { fontSize: '28px' }).setOrigin(0.5).setDepth(d + 1);
@@ -153,7 +163,7 @@ export class Hud {
     this.foodFill.setSize(396 * Phaser.Math.Clamp(s.food / s.foodMax, 0, 1), 18);
     this.foodText.setText(`${s.food} / ${s.foodMax}`);
     this.beatMark.setX(this.beatX + this.beatW * Phaser.Math.Clamp(s.beat, 0, 1));
-    // 소환 가능/불가 밝기
+    // 소환 가능/불가 밝기 + 전장 강화 버튼
     for (const slot of this.slots) {
       const ok = s.afford[slot.key] ?? true;
       const a = ok ? 1 : 0.4;
@@ -162,6 +172,12 @@ export class Hud {
       slot.label.setAlpha(a);
       slot.cost.setAlpha(ok ? 1 : 0.6);
       slot.cost.setColor(ok ? '#aef5b0' : '#ff9a9a');
+      const up = s.upg[slot.key];
+      if (up) {
+        slot.lvText.setText(`Lv${up.lv}`);
+        slot.upText.setText(`⬆${up.cost}`);
+        slot.upBtn.setAlpha(up.afford ? 1 : 0.4);
+      }
     }
   }
 }

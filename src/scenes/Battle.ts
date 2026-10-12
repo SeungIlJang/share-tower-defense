@@ -29,6 +29,7 @@ export class BattleScene extends Phaser.Scene {
   private energy!: ResourceSystem;
   private runGold = 0;
   private readonly foodMax = 40;
+  private battleUpg: Record<string, number> = {}; // 전장 실시간 강화 레벨
   private waves!: WaveSystem;
   private hud!: Hud;
   private playerBase!: Base;
@@ -88,6 +89,7 @@ export class BattleScene extends Phaser.Scene {
 
     this.energy = new ResourceSystem(40, 9, 100); // 소환 에너지(초당 9, 상한 100)
     this.runGold = 0;
+    this.battleUpg = {};
     this.waves = new WaveSystem(this.stage);
     this.prodInterval = Math.max(2.5, 4.5 - this.stage.id * 0.3);
     this.prodTimer = this.prodInterval;
@@ -108,7 +110,12 @@ export class BattleScene extends Phaser.Scene {
       (p) => p.deactivate()
     );
 
-    this.hud = new Hud(this, UNITS, (type) => this.trySpawnUnit(type));
+    this.hud = new Hud(
+      this,
+      UNITS,
+      (type) => this.trySpawnUnit(type),
+      (type) => this.doBattleUpgrade(type)
+    );
   }
 
   private usedFood(): number {
@@ -133,7 +140,8 @@ export class BattleScene extends Phaser.Scene {
     const m = applyUpgrade(base, meta.level(type)); // 영구 강화 적용
     const perfect = Math.abs(this.beat - 0.5) <= BattleScene.PERFECT_WIN; // ⏱️ 타이밍 명중
     const pm = perfect ? 1.3 : 1;
-    const stats = { ...m, hp: Math.round(m.hp * pm), atk: Math.round(m.atk * pm) };
+    const bm = 1 + (this.battleUpg[type] ?? 0) * 0.2; // 🛠️ 전장 강화
+    const stats = { ...m, hp: Math.round(m.hp * bm * pm), atk: Math.round(m.atk * bm * pm) };
     const u = this.unitPool.acquire();
     u.spawn(this.playerBase.x + 50, LANE_Y, stats, type, 'ally');
     u.pop = base.pop;
@@ -151,6 +159,44 @@ export class BattleScene extends Phaser.Scene {
       this.tweens.add({ targets: t, y: LANE_Y - 112, alpha: 0, duration: 700, onComplete: () => t.destroy() });
     }
     this.hud.hideHint(); // 첫 소환하면 가이드 제거
+  }
+
+  private upgCost(type: string): number {
+    return 40 + (this.battleUpg[type] ?? 0) * 30;
+  }
+
+  private doBattleUpgrade(type: string): void {
+    if (this.over || this.picking) return;
+    const cost = this.upgCost(type);
+    if (this.runGold < cost) return;
+    this.runGold -= cost;
+    const old = 1 + (this.battleUpg[type] ?? 0) * 0.2;
+    this.battleUpg[type] = (this.battleUpg[type] ?? 0) + 1;
+    const neu = 1 + this.battleUpg[type] * 0.2;
+    const r = neu / old;
+    // 이미 깔린 같은 종류 유닛도 즉시 강화
+    for (const u of this.units) {
+      if (u.active && u.type === type) {
+        u.maxHp = Math.round(u.maxHp * r);
+        u.hp = Math.round(u.hp * r);
+        u.stats = { ...u.stats, atk: Math.round(u.stats.atk * r) };
+      }
+    }
+    const t = this.add
+      .text(this.playerBase.x + 60, LANE_Y - 70, '🛠️ 강화!', { fontFamily: 'sans-serif', fontSize: '20px', fontStyle: 'bold', color: '#8affb0' })
+      .setOrigin(0.5)
+      .setDepth(70);
+    this.tweens.add({ targets: t, y: LANE_Y - 110, alpha: 0, duration: 650, onComplete: () => t.destroy() });
+  }
+
+  private upgMap(): Record<string, { lv: number; cost: number; afford: boolean }> {
+    const m: Record<string, { lv: number; cost: number; afford: boolean }> = {};
+    for (const k of Object.keys(UNITS)) {
+      const lv = this.battleUpg[k] ?? 0;
+      const cost = this.upgCost(k);
+      m[k] = { lv: lv + 1, cost, afford: this.runGold >= cost };
+    }
+    return m;
   }
 
   private affordMap(): Record<string, boolean> {
@@ -294,6 +340,7 @@ export class BattleScene extends Phaser.Scene {
       afford: this.affordMap(),
       beat: this.beat,
       perfectWin: BattleScene.PERFECT_WIN,
+      upg: this.upgMap(),
     });
     this.checkEnd();
   }
