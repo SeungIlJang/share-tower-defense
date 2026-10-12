@@ -17,6 +17,7 @@ import { Hud } from '../ui/Hud';
 import { LevelUpOverlay } from '../ui/LevelUp';
 
 const PROD_TYPES = ['goblin', 'wolf', 'slime', 'bat']; // 적 기지가 계속 생산하는 병력
+const BOSS = new Set(['ogre']); // 보스 타입
 
 const UNITS = unitsData as Record<string, UnitStats>;
 const ENEMIES = enemiesData as Record<string, EnemyStats>;
@@ -34,6 +35,9 @@ export class BattleScene extends Phaser.Scene {
   private hud!: Hud;
   private playerBase!: Base;
   private enemyBase!: Base;
+  private bossBarBg!: Phaser.GameObjects.Rectangle;
+  private bossFill!: Phaser.GameObjects.Rectangle;
+  private bossText!: Phaser.GameObjects.Text;
 
   private unitPool!: Pool<Unit>;
   private enemyPool!: Pool<Enemy>;
@@ -116,6 +120,15 @@ export class BattleScene extends Phaser.Scene {
       (type) => this.trySpawnUnit(type),
       (type) => this.doBattleUpgrade(type)
     );
+
+    // 보스 HP 바(상단, 보스 등장 시만)
+    this.bossBarBg = this.add.rectangle(640, 60, 540, 18, 0x000000, 0.6).setDepth(90).setVisible(false);
+    this.bossFill = this.add.rectangle(640 - 260, 60, 520, 12, 0xff3b3b).setOrigin(0, 0.5).setDepth(91).setVisible(false);
+    this.bossText = this.add
+      .text(640, 60, '', { fontFamily: 'sans-serif', fontSize: '13px', fontStyle: 'bold', color: '#fff' })
+      .setOrigin(0.5)
+      .setDepth(92)
+      .setVisible(false);
   }
 
   private usedFood(): number {
@@ -241,6 +254,27 @@ export class BattleScene extends Phaser.Scene {
     e.spawn(this.enemyBase.x - 50, LANE_Y, stats, type, 'enemy');
     e.reward = stats.reward;
     this.enemies.push(e);
+    if (BOSS.has(type)) {
+      this.cameras.main.shake(300, 0.012);
+      const t = this.add
+        .text(640, 210, '👑 보스 등장!', { fontFamily: 'sans-serif', fontSize: '44px', fontStyle: 'bold', color: '#ff5a6e' })
+        .setOrigin(0.5)
+        .setDepth(95);
+      this.tweens.add({ targets: t, y: 170, alpha: 0, duration: 1600, onComplete: () => t.destroy() });
+    }
+  }
+
+  private updateBossBar(): void {
+    const boss = this.enemies.find((e) => e.active && BOSS.has(e.type));
+    if (boss) {
+      this.bossBarBg.setVisible(true);
+      this.bossFill.setVisible(true).setSize(520 * Math.max(0, boss.hp / boss.maxHp), 12);
+      this.bossText.setVisible(true).setText(`👑 ${boss.stats.name}  ${Math.max(0, Math.ceil(boss.hp))}/${boss.maxHp}`);
+    } else {
+      this.bossBarBg.setVisible(false);
+      this.bossFill.setVisible(false);
+      this.bossText.setVisible(false);
+    }
   }
 
   private nearest(x: number, list: { x: number; active: boolean }[]): { x: number } | null {
@@ -329,6 +363,7 @@ export class BattleScene extends Phaser.Scene {
     this.projectiles = this.projectiles.filter((p) => p.active);
 
     this.cleanupDead();
+    this.updateBossBar();
     this.hud.update({
       lv: this.level,
       gold: this.runGold,

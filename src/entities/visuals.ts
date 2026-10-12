@@ -27,6 +27,7 @@ export const VISUALS: Record<string, Visual> = {
   wolf: { bodyW: 36, bodyH: 20, body: 0x9aa0a8, shape: 'ellipse', head: true, headColor: 0x8a9098, weapon: 'none', weaponColor: 0 },
   slime: { bodyW: 30, bodyH: 24, body: 0x6ad06a, shape: 'ellipse', head: false, headColor: 0, weapon: 'none', weaponColor: 0 },
   bat: { bodyW: 20, bodyH: 16, body: 0x9a6bd0, shape: 'ellipse', head: true, headColor: 0x9a6bd0, weapon: 'wing', weaponColor: 0x6a4ba0 },
+  ogre: { bodyW: 52, bodyH: 72, body: 0x7a2d6a, shape: 'rect', head: true, headColor: 0x6a9a4a, weapon: 'club', weaponColor: 0x8a5a2a },
 };
 
 const FALLBACK: Visual = VISUALS.soldier;

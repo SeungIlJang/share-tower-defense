@@ -4,14 +4,15 @@
     "waves": [
       { "at": 1,  "enemies": [ { "type": "goblin", "count": 5, "interval": 1.3 } ] },
       { "at": 14, "enemies": [ { "type": "wolf", "count": 4, "interval": 0.9 }, { "type": "slime", "count": 2, "interval": 2.0 } ] },
-      { "at": 30, "enemies": [ { "type": "orc", "count": 3, "interval": 2.4 }, { "type": "bat", "count": 6, "interval": 0.7 } ] }
+      { "at": 32, "enemies": [ { "type": "orc", "count": 2, "interval": 2.4 }, { "type": "bat", "count": 5, "interval": 0.7 }, { "type": "ogre", "count": 1, "interval": 1 } ] }
     ]
   },
   {
-    "id": 2, "name": "관문 2", "baseHp": 120, "startGold": 140, "goldRate": 14,
+    "id": 2, "name": "관문 2", "baseHp": 130, "startGold": 140, "goldRate": 14,
     "waves": [
       { "at": 1,  "enemies": [ { "type": "wolf", "count": 6, "interval": 0.8 }, { "type": "bat", "count": 5, "interval": 0.8 } ] },
-      { "at": 16, "enemies": [ { "type": "orc", "count": 4, "interval": 2.0 }, { "type": "slime", "count": 3, "interval": 1.8 } ] }
+      { "at": 18, "enemies": [ { "type": "orc", "count": 4, "interval": 2.0 }, { "type": "slime", "count": 3, "interval": 1.8 } ] },
+      { "at": 40, "enemies": [ { "type": "ogre", "count": 2, "interval": 5 }, { "type": "orc", "count": 3, "interval": 2 } ] }
     ]
   }
 ]
