@@ -10,6 +10,8 @@ export interface HudState {
   foodMax: number;
   linePos: number; // 0(우리 기지) ~ 1(적 기지)
   afford: Record<string, boolean>; // 유닛별 지금 소환 가능 여부
+  beat: number; // ⏱️ 리듬 소환 마커 위치 0~1
+  perfectWin: number; // 퍼펙트 허용 폭(중앙 ±)
 }
 
 const UNIT_COLORS: Record<string, number> = {
@@ -47,6 +49,9 @@ export class Hud {
 
   private slots: Slot[] = [];
   private hint: Phaser.GameObjects.Container | null = null;
+  private beatMark: Phaser.GameObjects.Triangle;
+  private readonly beatX = 400;
+  private readonly beatW = 480;
 
   constructor(
     scene: Phaser.Scene,
@@ -73,6 +78,14 @@ export class Hud {
     this.energyFill = scene.add.rectangle(842, by, 396, 18, 0x4ac8e0).setOrigin(0, 0.5).setDepth(d + 1);
     this.energyText = scene.add.text(1040, by, '', { fontFamily: 'sans-serif', fontSize: '14px', fontStyle: 'bold', color: '#fff' }).setOrigin(0.5).setDepth(d + 2);
     scene.add.text(1238, by, '⚡ 소환', { fontFamily: 'sans-serif', fontSize: '12px', color: '#fff' }).setOrigin(1, 0.5).setDepth(d + 2);
+
+    // ⏱️ 리듬 소환 바 (초록 중앙 = PERFECT)
+    const beatY = 540;
+    scene.add.text(this.beatX + this.beatW / 2, 516, '⏱️ 초록에 맞춰 소환 = PERFECT 강화!', { fontFamily: 'sans-serif', fontSize: '15px', fontStyle: 'bold', color: '#ffe14d' }).setOrigin(0.5).setDepth(d + 1);
+    scene.add.rectangle(this.beatX + this.beatW / 2, beatY, this.beatW + 4, 16, 0x000000, 0.5).setDepth(d);
+    scene.add.rectangle(this.beatX + this.beatW / 2, beatY, this.beatW, 12, 0x2a3348).setDepth(d + 1);
+    scene.add.rectangle(this.beatX + this.beatW / 2, beatY, this.beatW * 0.16, 12, 0x3fd06a).setDepth(d + 1); // 퍼펙트 존
+    this.beatMark = scene.add.triangle(this.beatX + this.beatW / 2, beatY, 0, -10, 10, -10, 5, 2, 0xffffff).setDepth(d + 2);
 
     const keys = Object.keys(units);
     const slotW = 128;
@@ -139,6 +152,7 @@ export class Hud {
     this.energyText.setText(`${Math.floor(s.energy)} / ${s.energyMax}`);
     this.foodFill.setSize(396 * Phaser.Math.Clamp(s.food / s.foodMax, 0, 1), 18);
     this.foodText.setText(`${s.food} / ${s.foodMax}`);
+    this.beatMark.setX(this.beatX + this.beatW * Phaser.Math.Clamp(s.beat, 0, 1));
     // 소환 가능/불가 밝기
     for (const slot of this.slots) {
       const ok = s.afford[slot.key] ?? true;

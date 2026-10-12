@@ -51,6 +51,11 @@ export class BattleScene extends Phaser.Scene {
   private prodTimer = 0; // 적 기지 생산 타이머
   private prodInterval = 4; // 생산 간격(초)
   private prodIdx = 0;
+  // ⏱️ 리듬 소환
+  private beat = 0;
+  private beatDir = 1;
+  private static readonly BEAT_SPEED = 0.85;
+  private static readonly PERFECT_WIN = 0.08;
   private static readonly RANGED = 100; // 사거리 이 이상이면 투사체 발사
 
   constructor() {
@@ -87,6 +92,8 @@ export class BattleScene extends Phaser.Scene {
     this.prodInterval = Math.max(2.5, 4.5 - this.stage.id * 0.3);
     this.prodTimer = this.prodInterval;
     this.prodIdx = 0;
+    this.beat = 0;
+    this.beatDir = 1;
 
     this.unitPool = new Pool<Unit>(
       () => new Unit(this),
@@ -123,11 +130,26 @@ export class BattleScene extends Phaser.Scene {
       this.hud.deny(type, 'energy'); // 에너지 부족 안내
       return;
     }
-    const stats = applyUpgrade(base, meta.level(type)); // 영구 강화 적용
+    const m = applyUpgrade(base, meta.level(type)); // 영구 강화 적용
+    const perfect = Math.abs(this.beat - 0.5) <= BattleScene.PERFECT_WIN; // ⏱️ 타이밍 명중
+    const pm = perfect ? 1.3 : 1;
+    const stats = { ...m, hp: Math.round(m.hp * pm), atk: Math.round(m.atk * pm) };
     const u = this.unitPool.acquire();
     u.spawn(this.playerBase.x + 50, LANE_Y, stats, type, 'ally');
     u.pop = base.pop;
     this.units.push(u);
+    if (perfect) {
+      const t = this.add
+        .text(this.playerBase.x + 60, LANE_Y - 70, 'PERFECT! ⚡', {
+          fontFamily: 'sans-serif',
+          fontSize: '22px',
+          fontStyle: 'bold',
+          color: '#ffe14d',
+        })
+        .setOrigin(0.5)
+        .setDepth(70);
+      this.tweens.add({ targets: t, y: LANE_Y - 112, alpha: 0, duration: 700, onComplete: () => t.destroy() });
+    }
     this.hud.hideHint(); // 첫 소환하면 가이드 제거
   }
 
@@ -192,6 +214,16 @@ export class BattleScene extends Phaser.Scene {
   update(_time: number, deltaMs: number): void {
     if (this.over || this.picking) return; // 스킬 선택 중엔 전투 정지
     const dt = Math.min(0.05, deltaMs / 1000);
+
+    // ⏱️ 리듬 바 진행(0↔1 핑퐁)
+    this.beat += this.beatDir * dt * BattleScene.BEAT_SPEED;
+    if (this.beat >= 1) {
+      this.beat = 1;
+      this.beatDir = -1;
+    } else if (this.beat <= 0) {
+      this.beat = 0;
+      this.beatDir = 1;
+    }
 
     this.energy.update(dt);
     for (const ev of this.waves.update(dt)) this.spawnEnemy(ev.type);
@@ -260,6 +292,8 @@ export class BattleScene extends Phaser.Scene {
       foodMax: this.foodMax,
       linePos: this.linePos(),
       afford: this.affordMap(),
+      beat: this.beat,
+      perfectWin: BattleScene.PERFECT_WIN,
     });
     this.checkEnd();
   }

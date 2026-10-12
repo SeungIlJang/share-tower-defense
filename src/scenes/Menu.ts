@@ -9,7 +9,7 @@ export class MenuScene extends Phaser.Scene {
       .text(640, 230, '라인 디펜스', { fontFamily: 'sans-serif', fontSize: '64px', color: '#7cf6ff' })
       .setOrigin(0.5);
     this.add
-      .text(640, 310, 'LINE DEFENSE · 프로토타입 v0.8 · 소환 가이드(초보 친화)', {
+      .text(640, 310, 'LINE DEFENSE · 프로토타입 v0.9 · ⏱️리듬 소환(PERFECT 강화)', {
         fontFamily: 'sans-serif',
         fontSize: '20px',
         color: '#8892b0',
