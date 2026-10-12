@@ -24,7 +24,9 @@ const LANE_Y = 500;
 
 export class BattleScene extends Phaser.Scene {
   private stage!: StageData;
-  private resources!: ResourceSystem;
+  private energy!: ResourceSystem;
+  private runGold = 0;
+  private readonly foodMax = 40;
   private waves!: WaveSystem;
   private hud!: Hud;
   private playerBase!: Base;
@@ -64,7 +66,8 @@ export class BattleScene extends Phaser.Scene {
     this.playerBase = new Base(this, 90, LANE_Y - 10, this.stage.baseHp, 0x2f6fe0);
     this.enemyBase = new Base(this, 1190, LANE_Y - 10, this.stage.baseHp, 0xc0392b);
 
-    this.resources = new ResourceSystem(this.stage.startGold, this.stage.goldRate);
+    this.energy = new ResourceSystem(40, 9, 100); // 소환 에너지(초당 9, 상한 100)
+    this.runGold = 0;
     this.waves = new WaveSystem(this.stage);
     this.prodInterval = Math.max(2.5, 4.5 - this.stage.id * 0.3);
     this.prodTimer = this.prodInterval;
@@ -86,14 +89,30 @@ export class BattleScene extends Phaser.Scene {
     this.hud = new Hud(this, UNITS, (type) => this.trySpawnUnit(type));
   }
 
+  private usedFood(): number {
+    let f = 0;
+    for (const u of this.units) if (u.active) f += u.pop;
+    return f;
+  }
+
   private trySpawnUnit(type: string): void {
     if (this.over) return;
     const base = UNITS[type];
-    if (!base || !this.resources.spend(base.cost)) return;
+    if (!base) return;
+    if (this.usedFood() + base.pop > this.foodMax) return; // 인구(식량) 초과
+    if (!this.energy.spend(base.cost)) return; // 에너지 부족
     const stats = applyUpgrade(base, meta.level(type)); // 영구 강화 적용
     const u = this.unitPool.acquire();
     u.spawn(this.playerBase.x + 50, LANE_Y, stats, type, 'ally');
+    u.pop = base.pop;
     this.units.push(u);
+  }
+
+  private linePos(): number {
+    let front = this.playerBase.x;
+    for (const u of this.units) if (u.active && u.x > front) front = u.x;
+    const span = this.enemyBase.x - this.playerBase.x;
+    return span > 0 ? (front - this.playerBase.x) / span : 0;
   }
 
   private spawnEnemy(type: string): void {
@@ -123,7 +142,7 @@ export class BattleScene extends Phaser.Scene {
     if (this.over) return;
     const dt = Math.min(0.05, deltaMs / 1000);
 
-    this.resources.update(dt);
+    this.energy.update(dt);
     for (const ev of this.waves.update(dt)) this.spawnEnemy(ev.type);
 
     // 적 기지가 병력을 계속 생산(기지 파괴 전까지) → 기지를 부숴야 생산이 멈춤
@@ -181,13 +200,15 @@ export class BattleScene extends Phaser.Scene {
     this.projectiles = this.projectiles.filter((p) => p.active);
 
     this.cleanupDead();
-    this.hud.update(
-      this.resources.amount,
-      this.playerBase.hp,
-      this.playerBase.maxHp,
-      this.enemyBase.hp,
-      this.enemyBase.maxHp
-    );
+    this.hud.update({
+      lv: this.stage.id,
+      gold: this.runGold,
+      energy: this.energy.amount,
+      energyMax: this.energy.max,
+      food: this.usedFood(),
+      foodMax: this.foodMax,
+      linePos: this.linePos(),
+    });
     this.checkEnd();
   }
 
@@ -209,7 +230,7 @@ export class BattleScene extends Phaser.Scene {
   private cleanupDead(): void {
     for (const e of this.enemies) {
       if (e.active && e.hp <= 0) {
-        this.resources.add(e.reward);
+        this.runGold += e.reward;
         this.enemyPool.release(e);
       }
     }
@@ -229,7 +250,7 @@ export class BattleScene extends Phaser.Scene {
   private end(win: boolean): void {
     this.over = true;
     if (win) {
-      meta.addGold(80 + this.stage.id * 40); // 승리 보상(강화용 메타 골드)
+      meta.addGold(this.runGold + 60 + this.stage.id * 30); // 처치 골드 + 승리 보너스(강화용)
       meta.clearStage(this.stage.id); // 다음 스테이지 해금
     }
     this.time.delayedCall(600, () => this.scene.start('Result', { win, stageId: this.stage.id }));

@@ -10,7 +10,8 @@ export interface CombatStats {
 }
 
 export interface UnitStats extends CombatStats {
-  cost: number;
+  cost: number; // 소환 에너지 비용
+  pop: number; // 인구(식량) 점유
 }
 
 export interface EnemyStats extends CombatStats {

@@ -1,22 +1,29 @@
 /** 골드 자원 관리 (시간당 적립 + 소모) */
 export class ResourceSystem {
   private gold: number;
-  private rate: number; // 초당 골드
+  private rate: number; // 초당 적립
   private carry = 0;
+  private cap: number;
 
-  constructor(startGold: number, ratePerSec: number) {
-    this.gold = startGold;
+  constructor(startGold: number, ratePerSec: number, cap = Infinity) {
+    this.gold = Math.min(startGold, cap);
     this.rate = ratePerSec;
+    this.cap = cap;
   }
 
-  /** dt(초) 만큼 시간 경과 → 골드 적립 (정수 단위로 누적) */
+  /** dt(초) 만큼 시간 경과 → 적립 (정수 단위, 상한 clamp) */
   update(dt: number): void {
+    if (this.gold >= this.cap) return;
     this.carry += this.rate * dt;
     const whole = Math.floor(this.carry);
     if (whole > 0) {
-      this.gold += whole;
+      this.gold = Math.min(this.cap, this.gold + whole);
       this.carry -= whole;
     }
+  }
+
+  get max(): number {
+    return this.cap;
   }
 
   get amount(): number {

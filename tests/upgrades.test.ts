@@ -25,6 +25,7 @@ describe('upgrades', () => {
       range: 44,
       speed: 70,
       cost: 50,
+      pop: 8,
     };
     const up = applyUpgrade(base, 2);
     expect(up.hp).toBe(130);
