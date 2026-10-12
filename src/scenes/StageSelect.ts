@@ -27,8 +27,19 @@ export class StageSelectScene extends Phaser.Scene {
         .setOrigin(0.5);
       btn.on('pointerdown', () => this.scene.start('Battle', { stageId: s.id }));
     });
+    const up = this.add
+      .text(500, 660, '🔧 강화', {
+        fontFamily: 'sans-serif',
+        fontSize: '22px',
+        color: '#ffd34d',
+        backgroundColor: '#20304e',
+        padding: { x: 16, y: 8 },
+      })
+      .setOrigin(0.5)
+      .setInteractive({ useHandCursor: true });
+    up.on('pointerdown', () => this.scene.start('Upgrade'));
     const back = this.add
-      .text(640, 660, '← 메뉴', { fontFamily: 'sans-serif', fontSize: '22px', color: '#8892b0' })
+      .text(760, 660, '← 메뉴', { fontFamily: 'sans-serif', fontSize: '22px', color: '#8892b0' })
       .setOrigin(0.5)
       .setInteractive({ useHandCursor: true });
     back.on('pointerdown', () => this.scene.start('Menu'));

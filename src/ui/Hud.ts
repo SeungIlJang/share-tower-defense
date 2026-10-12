@@ -40,8 +40,8 @@ export class Hud {
     });
   }
 
-  update(gold: number, baseHp: number, baseMax: number, enemiesLeft: number): void {
+  update(gold: number, playerHp: number, playerMax: number, enemyHp: number, enemyMax: number): void {
     this.goldText.setText(`🪙 ${gold}`);
-    this.infoText.setText(`🏰 ${baseHp}/${baseMax}    👾 남은 적 ${enemiesLeft}`);
+    this.infoText.setText(`🏰 우리 ${playerHp}/${playerMax}    🎯 적 생산기지 ${enemyHp}/${enemyMax}`);
   }
 }

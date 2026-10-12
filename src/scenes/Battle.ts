@@ -11,7 +11,10 @@ import { Pool } from '../utils/pool';
 import { ResourceSystem } from '../systems/resources';
 import { WaveSystem } from '../systems/waves';
 import { computeDamage, attackCooldown, inRange } from '../systems/combat';
+import { meta, applyUpgrade } from '../systems/upgrades';
 import { Hud } from '../ui/Hud';
+
+const PROD_TYPES = ['goblin', 'wolf']; // 적 기지가 계속 생산하는 병력
 
 const UNITS = unitsData as Record<string, UnitStats>;
 const ENEMIES = enemiesData as Record<string, EnemyStats>;
@@ -34,6 +37,9 @@ export class BattleScene extends Phaser.Scene {
   private enemies: Enemy[] = [];
   private projectiles: Projectile[] = [];
   private over = false;
+  private prodTimer = 0; // 적 기지 생산 타이머
+  private prodInterval = 4; // 생산 간격(초)
+  private prodIdx = 0;
   private static readonly RANGED = 100; // 사거리 이 이상이면 투사체 발사
 
   constructor() {
@@ -60,6 +66,9 @@ export class BattleScene extends Phaser.Scene {
 
     this.resources = new ResourceSystem(this.stage.startGold, this.stage.goldRate);
     this.waves = new WaveSystem(this.stage);
+    this.prodInterval = Math.max(2.5, 4.5 - this.stage.id * 0.3);
+    this.prodTimer = this.prodInterval;
+    this.prodIdx = 0;
 
     this.unitPool = new Pool<Unit>(
       () => new Unit(this),
@@ -79,8 +88,9 @@ export class BattleScene extends Phaser.Scene {
 
   private trySpawnUnit(type: string): void {
     if (this.over) return;
-    const stats = UNITS[type];
-    if (!stats || !this.resources.spend(stats.cost)) return;
+    const base = UNITS[type];
+    if (!base || !this.resources.spend(base.cost)) return;
+    const stats = applyUpgrade(base, meta.level(type)); // 영구 강화 적용
     const u = this.unitPool.acquire();
     u.spawn(this.playerBase.x + 50, LANE_Y, stats, type, 'ally');
     this.units.push(u);
@@ -115,6 +125,16 @@ export class BattleScene extends Phaser.Scene {
 
     this.resources.update(dt);
     for (const ev of this.waves.update(dt)) this.spawnEnemy(ev.type);
+
+    // 적 기지가 병력을 계속 생산(기지 파괴 전까지) → 기지를 부숴야 생산이 멈춤
+    if (!this.enemyBase.destroyed) {
+      this.prodTimer -= dt;
+      if (this.prodTimer <= 0) {
+        this.prodTimer = this.prodInterval;
+        this.spawnEnemy(PROD_TYPES[this.prodIdx % PROD_TYPES.length]);
+        this.prodIdx++;
+      }
+    }
 
     // 아군: 적 추격/공격, 없으면 전진 → 적 기지 공격
     for (const u of this.units) {
@@ -165,7 +185,8 @@ export class BattleScene extends Phaser.Scene {
       this.resources.amount,
       this.playerBase.hp,
       this.playerBase.maxHp,
-      this.enemies.filter((e) => e.active).length + (this.waves.totalCount - this.spawnedCount())
+      this.enemyBase.hp,
+      this.enemyBase.maxHp
     );
     this.checkEnd();
   }
@@ -185,11 +206,6 @@ export class BattleScene extends Phaser.Scene {
     att.cooldown = attackCooldown(att.stats.atkSpeed);
   }
 
-  private spawnedCount(): number {
-    // 이미 소환된 적 수 추정(총 - 남은 큐). WaveSystem이 finished면 전부 소환됨.
-    return this.waves.finished ? this.waves.totalCount : this.enemies.length;
-  }
-
   private cleanupDead(): void {
     for (const e of this.enemies) {
       if (e.active && e.hp <= 0) {
@@ -205,13 +221,14 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private checkEnd(): void {
+    // 승리 = 적 생산기지 파괴 / 패배 = 우리 기지 파괴
     if (this.playerBase.destroyed) return this.end(false);
     if (this.enemyBase.destroyed) return this.end(true);
-    if (this.waves.finished && this.enemies.length === 0) return this.end(true);
   }
 
   private end(win: boolean): void {
     this.over = true;
+    if (win) meta.addGold(80 + this.stage.id * 40); // 승리 보상(강화용 메타 골드)
     this.time.delayedCall(600, () => this.scene.start('Result', { win, stageId: this.stage.id }));
   }
 }

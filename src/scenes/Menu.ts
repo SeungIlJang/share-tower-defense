@@ -9,7 +9,7 @@ export class MenuScene extends Phaser.Scene {
       .text(640, 230, '라인 디펜스', { fontFamily: 'sans-serif', fontSize: '64px', color: '#7cf6ff' })
       .setOrigin(0.5);
     this.add
-      .text(640, 310, 'LINE DEFENSE · 프로토타입 v0.2 · 궁수 화살', {
+      .text(640, 310, 'LINE DEFENSE · 프로토타입 v0.3 · 유닛강화·적기지 생산', {
         fontFamily: 'sans-serif',
         fontSize: '20px',
         color: '#8892b0',
@@ -20,5 +20,16 @@ export class MenuScene extends Phaser.Scene {
       .setOrigin(0.5)
       .setInteractive({ useHandCursor: true });
     btn.on('pointerdown', () => this.scene.start('StageSelect'));
+    const up = this.add
+      .text(640, 540, '🔧 유닛 강화', {
+        fontFamily: 'sans-serif',
+        fontSize: '24px',
+        color: '#ffd34d',
+        backgroundColor: '#20304e',
+        padding: { x: 20, y: 10 },
+      })
+      .setOrigin(0.5)
+      .setInteractive({ useHandCursor: true });
+    up.on('pointerdown', () => this.scene.start('Upgrade'));
   }
 }
