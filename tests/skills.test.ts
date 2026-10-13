@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { xpToNext, hasteMult, mimicMult, magicMult, anyUpgradable, SKILLS } from '../src/systems/skills';
+import { xpToNext, hasteMult, mimicMult, magicMult, supplyBonus, anyUpgradable, SKILLS } from '../src/systems/skills';
 
 describe('skills', () => {
   it('필요 경험치는 레벨마다 증가', () => {
@@ -13,6 +13,8 @@ describe('skills', () => {
     expect(hasteMult(3)).toBeCloseTo(0.76);
     expect(mimicMult(2)).toBeCloseTo(1.3);
     expect(magicMult(5)).toBeCloseTo(0.7);
+    expect(supplyBonus(0)).toBe(0);
+    expect(supplyBonus(4)).toBe(20); // 최대 레벨 → 인구 40 → 60
   });
 
   it('배수는 하한 유지', () => {

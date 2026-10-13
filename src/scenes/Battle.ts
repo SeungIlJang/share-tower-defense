@@ -12,7 +12,7 @@ import { ResourceSystem } from '../systems/resources';
 import { WaveSystem } from '../systems/waves';
 import { computeDamage, attackCooldown, inRange } from '../systems/combat';
 import { meta, applyUpgrade } from '../systems/upgrades';
-import { xpToNext, hasteMult, mimicMult, magicMult, anyUpgradable } from '../systems/skills';
+import { xpToNext, hasteMult, mimicMult, magicMult, supplyBonus, anyUpgradable } from '../systems/skills';
 import { Hud } from '../ui/Hud';
 import { LevelUpOverlay } from '../ui/LevelUp';
 import { showRewarded } from '../systems/ads';
@@ -30,7 +30,7 @@ export class BattleScene extends Phaser.Scene {
   private stage!: StageData;
   private energy!: ResourceSystem;
   private runGold = 0;
-  private readonly foodMax = 40;
+  private static readonly FOOD_BASE = 40;
   private battleUpg: Record<string, number> = {}; // 전장 실시간 강화 레벨
   private waves!: WaveSystem;
   private hud!: Hud;
@@ -185,6 +185,11 @@ export class BattleScene extends Phaser.Scene {
       this.scene.start('StageSelect');
     });
     layer.add([resume, mute, quit]);
+  }
+
+  /** 최대 인구 = 기본 40 + 보급 스킬 */
+  private get foodMax(): number {
+    return BattleScene.FOOD_BASE + supplyBonus(this.skills.supply ?? 0);
   }
 
   private usedFood(): number {

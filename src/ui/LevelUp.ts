@@ -22,7 +22,7 @@ export class LevelUpOverlay {
     SKILLS.forEach((def, i) => {
       const lv = levels[def.key] ?? 0;
       const maxed = lv >= def.max;
-      const cx = 360 + i * 280;
+      const cx = 640 + (i - (SKILLS.length - 1) / 2) * 280; // 카드 수에 맞춰 가운데 정렬
       const cy = 380;
       const card = s.add.rectangle(cx, cy, 240, 360, maxed ? 0x3a2a2a : 0x7a2230).setStrokeStyle(4, maxed ? 0x555 : 0xe0b84e);
       c.add(card);

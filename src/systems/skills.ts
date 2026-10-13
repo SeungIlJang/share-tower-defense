@@ -11,6 +11,7 @@ export const SKILLS: SkillDef[] = [
   { key: 'haste', name: '신속 오라', desc: '아군 공격 간격 단축', max: 3 },
   { key: 'mimic', name: '미믹', desc: '획득 경험치 증가', max: 9 },
   { key: 'magic', name: '마법 숙련', desc: '소환 에너지 소모 감소', max: 5 },
+  { key: 'supply', name: '보급', desc: '최대 인구 +5', max: 4 },
 ];
 
 /** 다음 레벨까지 필요 경험치 */
@@ -31,6 +32,11 @@ export function mimicMult(lv: number): number {
 /** 마법숙련: 소환 에너지 배수(작을수록 저렴) */
 export function magicMult(lv: number): number {
   return Math.max(0.5, 1 - 0.06 * lv);
+}
+
+/** 보급: 최대 인구 추가량 */
+export function supplyBonus(lv: number): number {
+  return 5 * lv;
 }
 
 /** 더 올릴 수 있는 스킬이 하나라도 있나 */
