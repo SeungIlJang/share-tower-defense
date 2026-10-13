@@ -20,6 +20,12 @@ describe('Pool', () => {
 });
 
 describe('ResourceSystem', () => {
+  it('add는 상한을 넘지 않는다', () => {
+    const r = new ResourceSystem(80, 0, 100);
+    r.add(60);
+    expect(r.amount).toBe(100);
+  });
+
   it('시간 경과로 골드 적립, 소수는 누적', () => {
     const r = new ResourceSystem(100, 10);
     r.update(0.5); // +5

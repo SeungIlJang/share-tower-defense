@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { dailyAmount, idleAmount } from '../src/systems/upgrades';
+import { dailyAmount, idleAmount, localDayIndex } from '../src/systems/upgrades';
 
 describe('daily reward', () => {
   it('day 1 (streak 0) = 50', () => {
@@ -31,5 +31,19 @@ describe('idle reward', () => {
   });
   it('caps at cap hours', () => {
     expect(idleAmount(20 * H, 60, 8)).toBe(480);
+  });
+});
+
+describe('localDayIndex', () => {
+  const KST = -540; // UTC+9
+  it('KST 자정에 날짜가 바뀐다', () => {
+    const before = Date.UTC(2026, 9, 13, 14, 59); // KST 10/13 23:59
+    const after = Date.UTC(2026, 9, 13, 15, 0); // KST 10/14 00:00
+    expect(localDayIndex(after, KST)).toBe(localDayIndex(before, KST) + 1);
+  });
+  it('UTC 자정(KST 09:00)에는 날짜가 바뀌지 않는다', () => {
+    const before = Date.UTC(2026, 9, 13, 23, 59); // KST 10/14 08:59
+    const after = Date.UTC(2026, 9, 14, 0, 0); // KST 10/14 09:00
+    expect(localDayIndex(after, KST)).toBe(localDayIndex(before, KST));
   });
 });

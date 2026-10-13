@@ -30,6 +30,11 @@ export function idleAmount(elapsedMs: number, goldPerHour: number, capHours: num
   return Math.floor((ms / 3600_000) * goldPerHour);
 }
 
+/** 현지 자정 기준 날짜 index — tzOffsetMin은 Date#getTimezoneOffset() 값(KST=-540) */
+export function localDayIndex(nowMs: number, tzOffsetMin: number): number {
+  return Math.floor((nowMs - tzOffsetMin * 60_000) / 86_400_000);
+}
+
 const IDLE_PER_HOUR = 60;
 const IDLE_CAP_HOURS = 8;
 
@@ -60,7 +65,8 @@ export class MetaProgress {
   }
 
   private dayIndex(): number {
-    return Math.floor(Date.now() / 86_400_000);
+    const now = new Date();
+    return localDayIndex(now.getTime(), now.getTimezoneOffset());
   }
 
   /** 오늘 일일보상 받을 수 있나 */
@@ -92,12 +98,6 @@ export class MetaProgress {
     this.lastSeen = Date.now();
     this.save();
     return amt;
-  }
-
-  /** 접속/플레이 시각 갱신(방치 타이머 리셋) */
-  touchSeen(): void {
-    this.lastSeen = Date.now();
-    this.save();
   }
 
   /** 스테이지 잠금 해제 여부 — 1관문은 항상 열림, 그 외는 직전 스테이지 클리어 필요 */

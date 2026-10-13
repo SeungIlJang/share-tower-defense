@@ -76,7 +76,6 @@ export class BattleScene extends Phaser.Scene {
   }
 
   create(): void {
-    meta.touchSeen(); // 전투 진입 = 접속, 방치 타이머 리셋
     this.over = false;
     this.paused = false;
     this.reviving = false;

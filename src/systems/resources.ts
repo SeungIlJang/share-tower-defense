@@ -41,7 +41,8 @@ export class ResourceSystem {
     return true;
   }
 
+  /** 즉시 적립 (상한 clamp) */
   add(amount: number): void {
-    this.gold += amount;
+    this.gold = Math.min(this.cap, this.gold + amount);
   }
 }
