@@ -35,7 +35,7 @@ interface Slot {
   lvText: Phaser.GameObjects.Text;
 }
 
-/** 전투 HUD — 상단(LV·VS·골드) + 하단 9슬롯 유닛바 + 에너지/식량 바 + 소환 가이드 */
+/** 전투 HUD — 상단(LV·VS·골드) + 하단 9슬롯 유닛바 + 에너지/식량 바 */
 export class Hud {
   private scene: Phaser.Scene;
   private lvText: Phaser.GameObjects.Text;
@@ -52,10 +52,9 @@ export class Hud {
   private foodText: Phaser.GameObjects.Text;
 
   private slots: Slot[] = [];
-  private hint: Phaser.GameObjects.Container | null = null;
   private beatMark: Phaser.GameObjects.Triangle;
-  private readonly beatX = 400;
-  private readonly beatW = 480;
+  private readonly beatX = 470; // 인구 바(~440)와 에너지 바(840~) 사이
+  private readonly beatW = 340;
 
   constructor(
     scene: Phaser.Scene,
@@ -84,9 +83,9 @@ export class Hud {
     this.energyText = scene.add.text(1040, by, '', { fontFamily: 'sans-serif', fontSize: '14px', fontStyle: 'bold', color: '#fff' }).setOrigin(0.5).setDepth(d + 2);
     scene.add.text(1238, by, '⚡ 소환', { fontFamily: 'sans-serif', fontSize: '12px', color: '#fff' }).setOrigin(1, 0.5).setDepth(d + 2);
 
-    // ⏱️ 리듬 소환 바 (초록 중앙 = PERFECT)
-    const beatY = 540;
-    scene.add.text(this.beatX + this.beatW / 2, 516, '⏱️ 초록에 맞춰 소환 = PERFECT 강화!', { fontFamily: 'sans-serif', fontSize: '15px', fontStyle: 'bold', color: '#ffe14d' }).setOrigin(0.5).setDepth(d + 1);
+    // ⏱️ 리듬 소환 바 (초록 중앙 = PERFECT) — 하단 HUD, 인구/에너지 바 사이
+    const beatY = by + 4;
+    scene.add.text(this.beatX + this.beatW / 2, by - 15, '⏱️ 초록에 맞춰 소환 = PERFECT 강화!', { fontFamily: 'sans-serif', fontSize: '12px', fontStyle: 'bold', color: '#ffe14d' }).setOrigin(0.5).setDepth(d + 1);
     scene.add.rectangle(this.beatX + this.beatW / 2, beatY, this.beatW + 4, 16, 0x000000, 0.5).setDepth(d);
     scene.add.rectangle(this.beatX + this.beatW / 2, beatY, this.beatW, 12, 0x2a3348).setDepth(d + 1);
     scene.add.rectangle(this.beatX + this.beatW / 2, beatY, this.beatW * 0.16, 12, 0x3fd06a).setDepth(d + 1); // 퍼펙트 존
@@ -104,40 +103,22 @@ export class Hud {
         const u = units[key];
         const col = UNIT_COLORS[key] ?? 0x4a9eff;
         const rect = scene.add.rectangle(cx, cy, slotW, 78, 0x2a3348).setStrokeStyle(3, col).setDepth(d);
-        const icon = scene.add.rectangle(cx - 36, cy - 8, 36, 36, col).setDepth(d + 1);
-        const label = scene.add.text(cx + 6, cy - 16, u.name, { fontFamily: 'sans-serif', fontSize: '18px', fontStyle: 'bold', color: '#fff' }).setOrigin(0, 0.5).setDepth(d + 1);
-        const cost = scene.add.text(cx + 6, cy + 14, `⚡${u.cost} 🍖${u.pop}`, { fontFamily: 'sans-serif', fontSize: '13px', color: '#cfe' }).setOrigin(0, 0.5).setDepth(d + 1);
-        scene.add.text(cx - 54, cy + 26, String(i + 1), { fontFamily: 'sans-serif', fontSize: '13px', color: '#8aa' }).setDepth(d + 1);
+        // 윗줄: 레벨(좌) · 전장 강화 버튼(우) / 아랫부분: 아이콘 + 이름 + 비용
+        const lvText = scene.add.text(cx - 58, cy - 26, 'Lv1', { fontFamily: 'sans-serif', fontSize: '12px', fontStyle: 'bold', color: '#ffd34d' }).setOrigin(0, 0.5).setDepth(d + 2);
+        const icon = scene.add.rectangle(cx - 40, cy + 8, 30, 30, col).setDepth(d + 1);
+        const label = scene.add.text(cx - 18, cy - 2, u.name, { fontFamily: 'sans-serif', fontSize: '16px', fontStyle: 'bold', color: '#fff' }).setOrigin(0, 0.5).setDepth(d + 1);
+        const cost = scene.add.text(cx - 18, cy + 20, `⚡${u.cost} 🍖${u.pop}`, { fontFamily: 'sans-serif', fontSize: '13px', color: '#cfe' }).setOrigin(0, 0.5).setDepth(d + 1);
         rect.setInteractive({ useHandCursor: true });
         rect.on('pointerdown', () => onSpawn(key));
         // 🛠️ 전장 실시간 강화 버튼(카드 우상단) — 탭 영역이 카드보다 위라 소환과 분리됨
-        const upBtn = scene.add.rectangle(cx + 44, cy - 24, 40, 24, 0x2f7a4d).setStrokeStyle(1, 0x5cff9e).setDepth(d + 2).setInteractive({ useHandCursor: true });
-        const upText = scene.add.text(cx + 44, cy - 24, '⬆', { fontFamily: 'sans-serif', fontSize: '12px', fontStyle: 'bold', color: '#fff' }).setOrigin(0.5).setDepth(d + 3);
-        const lvText = scene.add.text(cx - 54, cy - 24, 'Lv1', { fontFamily: 'sans-serif', fontSize: '12px', fontStyle: 'bold', color: '#ffd34d' }).setDepth(d + 2);
+        const upBtn = scene.add.rectangle(cx + 38, cy - 26, 48, 20, 0x2f7a4d).setStrokeStyle(1, 0x5cff9e).setDepth(d + 2).setInteractive({ useHandCursor: true });
+        const upText = scene.add.text(cx + 38, cy - 26, '⬆', { fontFamily: 'sans-serif', fontSize: '12px', fontStyle: 'bold', color: '#fff' }).setOrigin(0.5).setDepth(d + 3);
         upBtn.on('pointerdown', () => onUpgrade(key));
         this.slots.push({ key, cx, rect, label, cost, icon, upBtn, upText, lvText });
       } else {
         scene.add.rectangle(cx, cy, slotW, 78, 0x20242e).setStrokeStyle(3, 0x3a3f4a).setDepth(d);
         scene.add.text(cx, cy, '🔒', { fontSize: '28px' }).setOrigin(0.5).setDepth(d + 1);
       }
-    }
-
-    // 소환 가이드 (첫 유닛 칸 위 화살표 + 문구)
-    if (this.slots.length) {
-      const s0 = this.slots[0];
-      const c = scene.add.container(0, 0).setDepth(d + 5);
-      const txt = scene.add.text(s0.cx, 560, '👆 눌러서 소환!', { fontFamily: 'sans-serif', fontSize: '22px', fontStyle: 'bold', color: '#ffe14d', backgroundColor: '#000000aa', padding: { x: 10, y: 4 } }).setOrigin(0.5);
-      const arrow = scene.add.triangle(s0.cx, 600, 0, 0, 20, 0, 10, 16, 0xffe14d);
-      c.add([txt, arrow]);
-      scene.tweens.add({ targets: c, y: 10, duration: 500, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
-      this.hint = c;
-    }
-  }
-
-  hideHint(): void {
-    if (this.hint) {
-      this.hint.destroy(true);
-      this.hint = null;
     }
   }
 

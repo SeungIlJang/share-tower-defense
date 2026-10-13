@@ -15,7 +15,8 @@
     #rotate .t{font-size:24px;font-weight:700;margin-top:18px}
     #rotate .s{font-size:15px;color:#8892b0;margin-top:10px;line-height:1.6}
     @keyframes spin{0%,100%{transform:rotate(0)}50%{transform:rotate(90deg)}}
-    @media (orientation: portrait){#rotate{display:flex}}
+    /* 터치 기기(폰·태블릿)에서만 — PC 브라우저 좁은 창은 게임을 그대로 표시 */
+    @media (orientation: portrait) and (pointer: coarse){#rotate{display:flex}}
   </style>
 </head>
 <body>
