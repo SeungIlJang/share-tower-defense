@@ -1,0 +1,38 @@
+{
+  "_comment": "extract_sprites.py 설정. 경로는 이 파일 기준. rows=[상태, 시트의 몇 번째 행(0부터), 프레임 수], height=게임 속 키(px)",
+  "soldier": {
+    "sheet": "../../idle-hero-app/www/assets/char/_source/sheets/sword.jpg",
+    "x": [470, 1260],
+    "rows": [["idle", 0, 6], ["walk", 1, 6], ["attack", 2, 6], ["death", 4, 5]],
+    "height": 56,
+    "fps": { "idle": 6, "walk": 10, "attack": 14, "death": 9 }
+  },
+  "archer": {
+    "sheet": "../../idle-hero-app/www/assets/char/_source/sheets/archer.jpg",
+    "x": [470, 1260],
+    "rows": [["idle", 0, 6], ["walk", 1, 6], ["attack", 2, 6], ["death", 4, 6]],
+    "height": 52,
+    "fps": { "idle": 6, "walk": 10, "attack": 12, "death": 9 }
+  },
+  "knight": {
+    "sheet": "../../idle-hero-app/www/assets/char/_source/sheets/knight.jpg",
+    "mirror": true,
+    "x": [545, 1240],
+    "rows": [["idle", 0, 5], ["walk", 1, 5], ["attack", 2, 5], ["death", 4, 5]],
+    "height": 64,
+    "fps": { "idle": 6, "walk": 9, "attack": 12, "death": 8 }
+  },
+  "mage": {
+    "sheet": "../../idle-hero-app/www/assets/char/_source/sheets/mage.jpg",
+    "x": [515, 1238],
+    "rows": [["idle", 0, 5], ["walk", 1, 7], ["attack", 2, 6], ["death", 4, 4]],
+    "height": 54,
+    "fps": { "idle": 6, "walk": 11, "attack": 10, "death": 7 }
+  },
+  "goblin": { "image": "../../idle-hero-app/www/assets/mon/goblin.png", "height": 44 },
+  "orc": { "image": "../../idle-hero-app/www/assets/mon/orc.png", "mirror": true, "height": 62 },
+  "wolf": { "image": "../../idle-hero-app/www/assets/mon/wolf.png", "height": 40 },
+  "slime": { "image": "../../idle-hero-app/www/assets/mon/slime.png", "height": 36 },
+  "bat": { "image": "../../idle-hero-app/www/assets/mon/bat.png", "height": 30 },
+  "ogre": { "image": "../../idle-hero-app/www/assets/mon/_source/enemies-gallery.jpg", "crop": [680, 595, 930, 772], "holes": true, "height": 100 }
+}

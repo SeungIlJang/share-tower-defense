@@ -227,7 +227,6 @@ export class BattleScene extends Phaser.Scene {
         .setDepth(70);
       this.tweens.add({ targets: t, y: LANE_Y - 112, alpha: 0, duration: 700, onComplete: () => t.destroy() });
     }
-    this.hud.hideHint(); // 첫 소환하면 가이드 제거
   }
 
   private upgCost(type: string): number {
@@ -387,6 +386,9 @@ export class BattleScene extends Phaser.Scene {
         if (u.cooldown <= 0) {
           this.enemyBase.takeDamage(computeDamage(u.stats.atk, 0));
           u.cooldown = attackCooldown(u.stats.atkSpeed);
+          u.lunge();
+        } else {
+          u.idle();
         }
       } else {
         u.moveBy(u.stats.speed * dt);
@@ -406,6 +408,9 @@ export class BattleScene extends Phaser.Scene {
         if (e.cooldown <= 0) {
           this.playerBase.takeDamage(computeDamage(e.stats.atk, 0));
           e.cooldown = attackCooldown(e.stats.atkSpeed);
+          e.lunge();
+        } else {
+          e.idle();
         }
       } else {
         e.moveBy(-e.stats.speed * dt);
@@ -437,7 +442,10 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private attack(att: Unit | Enemy, def: Unit | Enemy): void {
-    if (att.cooldown > 0) return;
+    if (att.cooldown > 0) {
+      att.idle(); // 사거리 안 쿨다운 대기
+      return;
+    }
     const dmg = computeDamage(att.stats.atk, def.stats.def);
     if (att.stats.range >= BattleScene.RANGED) {
       // 원거리: 궁수=화살(직선·빠름), 마법사=마법 구슬(느림·명중 시 광역)
@@ -489,12 +497,14 @@ export class BattleScene extends Phaser.Scene {
       if (e.active && e.hp <= 0) {
         this.runGold += e.reward;
         this.gainXp(e.reward);
+        e.playDeath();
         this.puff(e.x, 0xff8a6a);
         this.enemyPool.release(e);
       }
     }
     for (const u of this.units) {
       if (u.active && u.hp <= 0) {
+        u.playDeath();
         this.puff(u.x, 0x8ab4ff);
         this.unitPool.release(u);
       }
