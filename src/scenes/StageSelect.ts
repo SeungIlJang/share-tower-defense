@@ -90,6 +90,11 @@ export class StageSelectScene extends Phaser.Scene {
         this.add.text(cx, cy + 24, '⭐', { fontSize: '18px' }).setOrigin(0.5);
       tile.setInteractive({ useHandCursor: true });
       tile.on('pointerdown', () => this.scene.start('Battle', { stageId: id }));
+    } else if (!hasData) {
+      // 아직 만들지 않은 스테이지 — 잠금(클리어 필요)과 구분
+      this.add
+        .text(cx, cy, '준비 중', { fontFamily: 'sans-serif', fontSize: '16px', fontStyle: 'bold', color: '#a89a82' })
+        .setOrigin(0.5);
     } else {
       this.add.text(cx, cy, '🔒', { fontSize: '30px' }).setOrigin(0.5);
       this.add
