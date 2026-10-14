@@ -16,6 +16,33 @@ import { xpToNext, hasteMult, mimicMult, magicMult, supplyBonus, anyUpgradable }
 import { Hud } from '../ui/Hud';
 import { LevelUpOverlay } from '../ui/LevelUp';
 import { showRewarded } from '../systems/ads';
+import {
+  WEAPONS,
+  WeaponCharge,
+  unlockedWeapons,
+  meteorTarget,
+  lightningTargets,
+  snipeTarget,
+  METEOR_DAMAGE,
+  METEOR_RADIUS,
+  ARROWS_DAMAGE,
+  LIGHTNING_DAMAGE,
+  HEAL_UNIT_RATIO,
+  HEAL_BASE_RATIO,
+  SHOCKWAVE_RANGE,
+  SHOCKWAVE_PUSH,
+  SHOCKWAVE_DAMAGE,
+  FREEZE_SEC,
+  GUARD_SEC,
+  BERSERK_SEC,
+  BERSERK_ATK,
+  BERSERK_COOLDOWN,
+  SNIPE_DAMAGE,
+} from '../systems/weapons';
+
+const FROZEN_TINT = 0x7cd8ff;
+const GUARD_TINT = 0xb0c4ff;
+const BERSERK_TINT = 0xff9a9a;
 
 const PROD_TYPES = ['goblin', 'wolf', 'slime', 'bat']; // 적 기지가 계속 생산하는 병력
 const BOSS = new Set(['ogre']); // 보스 타입
@@ -60,6 +87,12 @@ export class BattleScene extends Phaser.Scene {
   private prodTimer = 0; // 적 기지 생산 타이머
   private prodInterval = 4; // 생산 간격(초)
   private prodIdx = 0;
+  // 🔥 특수 무기 — 게이지(해금된 것만) + 효과 지속 시각(전투 시계 기준)
+  private weapons: WeaponCharge[] = [];
+  private clock = 0;
+  private frozenUntil = 0;
+  private guardUntil = 0;
+  private berserkUntil = 0;
   // ⏱️ 리듬 소환
   private beat = 0;
   private beatDir = 1;
@@ -107,6 +140,11 @@ export class BattleScene extends Phaser.Scene {
     this.prodIdx = 0;
     this.beat = 0;
     this.beatDir = 1;
+    this.clock = 0;
+    this.frozenUntil = 0;
+    this.guardUntil = 0;
+    this.berserkUntil = 0;
+    this.weapons = WEAPONS.slice(0, unlockedWeapons(this.stage.id)).map((w) => new WeaponCharge(w.chargeSec));
 
     this.unitPool = new Pool<Unit>(
       () => new Unit(this),
@@ -125,8 +163,15 @@ export class BattleScene extends Phaser.Scene {
       this,
       UNITS,
       (type) => this.trySpawnUnit(type),
-      (type) => this.doBattleUpgrade(type)
+      (type) => this.doBattleUpgrade(type),
+      (i) => this.fireWeapon(i),
+      this.weapons.length
     );
+    // 키보드 1~9 = 특수 무기
+    this.input.keyboard?.on('keydown', (ev: KeyboardEvent) => {
+      const n = Number(ev.key);
+      if (Number.isInteger(n) && n >= 1 && n <= 9) this.fireWeapon(n - 1);
+    });
 
     // 보스 HP 바(상단, 보스 등장 시만)
     this.bossBarBg = this.add.rectangle(640, 60, 540, 18, 0x000000, 0.6).setDepth(90).setVisible(false);
@@ -365,6 +410,12 @@ export class BattleScene extends Phaser.Scene {
       this.beatDir = 1;
     }
 
+    this.clock += dt;
+    for (const w of this.weapons) w.update(dt);
+    const frozen = this.clock < this.frozenUntil;
+    const guard = this.clock < this.guardUntil;
+    const berserk = this.clock < this.berserkUntil;
+
     this.energy.update(dt);
     for (const ev of this.waves.update(dt)) this.spawnEnemy(ev.type);
 
@@ -379,8 +430,10 @@ export class BattleScene extends Phaser.Scene {
     }
 
     // 아군: 적 추격/공격, 없으면 전진 → 적 기지 공격
+    const allyTint = guard ? GUARD_TINT : berserk ? BERSERK_TINT : null;
     for (const u of this.units) {
       if (!u.active) continue;
+      u.setStatus(allyTint);
       const target = this.nearest(u.x, this.enemies) as Enemy | null;
       u.cooldown -= dt;
       if (target && inRange(u.x, target.x, u.stats.range)) {
@@ -389,8 +442,8 @@ export class BattleScene extends Phaser.Scene {
         u.moveBy(u.stats.speed * dt);
       } else if (inRange(u.x, this.enemyBase.x, u.stats.range)) {
         if (u.cooldown <= 0) {
-          this.enemyBase.takeDamage(computeDamage(u.stats.atk, 0));
-          u.cooldown = attackCooldown(u.stats.atkSpeed);
+          this.enemyBase.takeDamage(computeDamage(u.stats.atk * (berserk ? BERSERK_ATK : 1), 0));
+          u.cooldown = attackCooldown(u.stats.atkSpeed) * (berserk ? BERSERK_COOLDOWN : 1);
           u.lunge();
         } else {
           u.idle();
@@ -403,6 +456,8 @@ export class BattleScene extends Phaser.Scene {
     // 적: 아군 추격/공격, 없으면 전진 → 플레이어 기지 공격
     for (const e of this.enemies) {
       if (!e.active) continue;
+      e.setStatus(frozen ? FROZEN_TINT : null, frozen);
+      if (frozen) continue; // ❄️ 빙결: 이동·공격 정지
       const target = this.nearest(e.x, this.units) as Unit | null;
       e.cooldown -= dt;
       if (target && inRange(e.x, target.x, e.stats.range)) {
@@ -442,6 +497,7 @@ export class BattleScene extends Phaser.Scene {
       beat: this.beat,
       perfectWin: BattleScene.PERFECT_WIN,
       upg: this.upgMap(),
+      weapons: this.weapons.map((w) => ({ ratio: w.ratio, ready: w.ready })),
     });
     this.checkEnd();
   }
@@ -451,7 +507,8 @@ export class BattleScene extends Phaser.Scene {
       att.idle(); // 사거리 안 쿨다운 대기
       return;
     }
-    const dmg = computeDamage(att.stats.atk, def.stats.def);
+    const berserk = att.side === 'ally' && this.clock < this.berserkUntil; // ⚔️ 광폭
+    const dmg = computeDamage(att.stats.atk * (berserk ? BERSERK_ATK : 1), def.stats.def);
     if (att.stats.range >= BattleScene.RANGED) {
       // 원거리: 궁수=화살(직선·빠름), 마법사=마법 구슬(느림·명중 시 광역)
       const p = this.projPool.acquire();
@@ -462,12 +519,136 @@ export class BattleScene extends Phaser.Scene {
       p.spawn(att.x + (att.side === 'ally' ? 14 : -14), 486, def, dmg, isMage ? 'orb' : 'arrow', onHit);
       this.projectiles.push(p);
     } else {
-      def.takeDamage(dmg); // 근접: 즉시
+      // 근접: 즉시 — 🛡️ 수호 중인 아군은 피해 없음
+      if (!(def.side === 'ally' && this.clock < this.guardUntil)) def.takeDamage(dmg);
     }
     att.lunge(); // 공격 찌르기 모션
     let cd = attackCooldown(att.stats.atkSpeed);
     if (att.side === 'ally') cd *= hasteMult(this.skills.haste ?? 0); // 신속 오라
+    if (berserk) cd *= BERSERK_COOLDOWN;
     att.cooldown = cd;
+  }
+
+  /** 🔥 특수 무기 발사 — 게이지가 가득 찬 해금 무기만 */
+  private fireWeapon(i: number): void {
+    if (this.over || this.picking || this.paused || this.reviving) return;
+    const charge = this.weapons[i];
+    if (!charge?.ready) return;
+    const def = WEAPONS[i];
+    const live = this.enemies.filter((e) => e.active);
+    // 대상이 필요한 무기는 적이 없으면 게이지를 쓰지 않음
+    const needsEnemy = ['meteor', 'arrows', 'lightning', 'shockwave', 'snipe'].includes(def.key);
+    if (needsEnemy && live.length === 0) return;
+    charge.fire();
+    this.banner(`${def.icon} ${def.name}!`, def.color);
+
+    switch (def.key) {
+      case 'meteor': {
+        const x = meteorTarget(live.map((e) => e.x)) ?? live[0].x;
+        const rock = this.add.circle(x - 120, -40, 22, 0xff7a3c).setStrokeStyle(4, 0xffd34d).setDepth(80);
+        this.tweens.add({
+          targets: rock,
+          x,
+          y: LANE_Y - 10,
+          duration: 380,
+          ease: 'Quad.easeIn',
+          onComplete: () => {
+            rock.destroy();
+            for (const e of this.enemies) if (e.active && Math.abs(e.x - x) <= METEOR_RADIUS) e.takeDamage(METEOR_DAMAGE);
+            this.burst(x, 0xff7a3c, METEOR_RADIUS);
+            this.cameras.main.shake(250, 0.01);
+          },
+        });
+        break;
+      }
+      case 'arrows':
+        for (const e of live) {
+          const a = this.add.rectangle(e.x - 30, LANE_Y - 260, 4, 26, 0xc8e06a).setAngle(-20).setDepth(80);
+          this.tweens.add({ targets: a, x: e.x, y: LANE_Y - 20, duration: 260 + Math.random() * 120, onComplete: () => a.destroy() });
+        }
+        this.time.delayedCall(330, () => {
+          for (const e of live) if (e.active) e.takeDamage(ARROWS_DAMAGE);
+        });
+        break;
+      case 'lightning':
+        for (const idx of lightningTargets(live.map((e) => e.x))) {
+          const e = live[idx];
+          const bolt = this.add.rectangle(e.x, LANE_Y - 200, 6, 400, 0xfff6b0).setDepth(80);
+          this.tweens.add({ targets: bolt, alpha: 0, scaleX: 3, duration: 260, onComplete: () => bolt.destroy() });
+          e.takeDamage(LIGHTNING_DAMAGE);
+        }
+        this.cameras.main.flash(120, 255, 240, 160);
+        break;
+      case 'heal':
+        for (const u of this.units) {
+          if (!u.active) continue;
+          u.heal(Math.round(u.maxHp * HEAL_UNIT_RATIO));
+          this.burst(u.x, 0x5cff9e, 24);
+        }
+        this.playerBase.heal(Math.round(this.playerBase.maxHp * HEAL_BASE_RATIO));
+        this.burst(this.playerBase.x, 0x5cff9e, 50);
+        break;
+      case 'shockwave': {
+        const front = Math.min(...live.map((e) => e.x));
+        for (const e of live) {
+          if (e.x - front > SHOCKWAVE_RANGE) continue;
+          e.moveBy(Math.min(SHOCKWAVE_PUSH, Math.max(0, this.enemyBase.x - 50 - e.x)));
+          e.takeDamage(SHOCKWAVE_DAMAGE);
+        }
+        this.burst(front, 0xffa94d, SHOCKWAVE_RANGE / 2);
+        this.cameras.main.shake(200, 0.008);
+        break;
+      }
+      case 'freeze':
+        this.frozenUntil = this.clock + FREEZE_SEC;
+        this.cameras.main.flash(200, 120, 200, 255);
+        break;
+      case 'guard':
+        this.guardUntil = this.clock + GUARD_SEC;
+        for (const u of this.units) if (u.active) this.burst(u.x, 0x9ab4ff, 26);
+        break;
+      case 'berserk':
+        this.berserkUntil = this.clock + BERSERK_SEC;
+        for (const u of this.units) if (u.active) this.burst(u.x, 0xff5a6e, 26);
+        break;
+      case 'snipe': {
+        const t = live[snipeTarget(live.map((e) => e.hp))];
+        const mark = this.add.circle(t.x, LANE_Y - 20, 40).setStrokeStyle(3, 0xd58cff).setDepth(80);
+        this.tweens.add({
+          targets: mark,
+          scale: 0.3,
+          duration: 300,
+          onComplete: () => {
+            mark.destroy();
+            if (t.active) t.takeDamage(SNIPE_DAMAGE);
+            this.burst(t.x, 0xd58cff, 30);
+          },
+        });
+        break;
+      }
+    }
+  }
+
+  /** 무기 이름 배너 */
+  private banner(text: string, color: number): void {
+    const t = this.add
+      .text(640, 230, text, {
+        fontFamily: 'sans-serif',
+        fontSize: '36px',
+        fontStyle: 'bold',
+        color: `#${color.toString(16).padStart(6, '0')}`,
+        stroke: '#000',
+        strokeThickness: 5,
+      })
+      .setOrigin(0.5)
+      .setDepth(96);
+    this.tweens.add({ targets: t, y: 200, alpha: 0, duration: 900, onComplete: () => t.destroy() });
+  }
+
+  /** 원형 폭발/효과 링 */
+  private burst(x: number, color: number, radius: number): void {
+    const c = this.add.circle(x, LANE_Y - 10, Math.max(8, radius / 3), color, 0.45).setDepth(75);
+    this.tweens.add({ targets: c, scale: 3, alpha: 0, duration: 380, onComplete: () => c.destroy() });
   }
 
   /** 마법 구슬 광역 피해 — 명중 지점 주변 적(또는 아군)에게 추가 피해 + 폭발 이펙트 */

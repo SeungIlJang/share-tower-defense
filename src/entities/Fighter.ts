@@ -19,6 +19,7 @@ export class Fighter {
   private sprite: Phaser.GameObjects.Sprite | null = null;
   private spriteDef: SpriteDef | null = null;
   private anim: AnimState = 'idle';
+  private statusTint: number | null = null; // 빙결·수호·광폭 등 상태 색
 
   stats!: CombatStats;
   type = '';
@@ -45,6 +46,7 @@ export class Fighter {
     this.maxHp = stats.hp;
     this.cooldown = 0;
     this.active = true;
+    this.statusTint = null;
 
     // 외형 재구성
     this.char.removeAll(true);
@@ -87,11 +89,37 @@ export class Fighter {
       // 스프라이트: 흰색으로 잠깐 채움
       const s = this.sprite;
       s.setTint(0xffffff).setTintMode(Phaser.TintModes.FILL);
-      this.scene.time.delayedCall(90, () => s.active && s.clearTint().setTintMode(Phaser.TintModes.MULTIPLY));
+      this.scene.time.delayedCall(90, () => s.active && this.applyTint(s));
       return;
     }
     this.flash.setAlpha(0.65);
     this.scene.tweens.add({ targets: this.flash, alpha: 0, duration: 130 });
+  }
+
+  /**
+   * 상태 표시 — tint 색(없으면 해제), paused면 애니메이션 정지(빙결).
+   * 벡터 캐릭터는 몸 위에 반투명 색을 덮는다.
+   */
+  setStatus(tint: number | null, paused = false): void {
+    this.statusTint = tint;
+    if (this.sprite) {
+      this.applyTint(this.sprite);
+      if (paused) this.sprite.anims.pause();
+      else if (this.sprite.anims.isPaused) this.sprite.anims.resume();
+    } else {
+      this.flash.setFillStyle(tint ?? 0xffffff, 1).setAlpha(tint === null ? 0 : 0.35);
+    }
+  }
+
+  private applyTint(s: Phaser.GameObjects.Sprite): void {
+    s.clearTint().setTintMode(Phaser.TintModes.MULTIPLY);
+    if (this.statusTint !== null) s.setTint(this.statusTint);
+  }
+
+  /** 회복(최대 HP까지) */
+  heal(amount: number): void {
+    this.hp = Math.min(this.maxHp, this.hp + amount);
+    this.updateHp();
   }
 
   /** 공격 모션 — 스프라이트는 attack 애니(없으면 찌르기), 벡터는 앞으로 살짝 찌르기 */
