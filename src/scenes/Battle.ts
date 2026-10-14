@@ -55,7 +55,7 @@ const GUARD_TINT = 0xb0c4ff;
 const BERSERK_TINT = 0xff9a9a;
 
 const PROD_TYPES = ['goblin', 'wolf', 'slime', 'bat']; // 적 기지가 계속 생산하는 병력
-const BOSS = new Set(['ogre']); // 보스 타입
+const BOSS = new Set(['ogre', 'dragon']); // 보스 타입
 
 const UNITS = unitsData as Record<string, UnitStats>;
 const ENEMIES = enemiesData as Record<string, EnemyStats>;

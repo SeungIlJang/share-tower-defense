@@ -4,5 +4,9 @@
   "wolf":   { "name": "늑대",   "hp": 60,  "atk": 10, "def": 1,  "atkSpeed": 1.4, "range": 38, "speed": 95, "reward": 10 },
   "slime":  { "name": "슬라임", "hp": 150, "atk": 10, "def": 4,  "atkSpeed": 0.8, "range": 40, "speed": 30, "reward": 16 },
   "bat":    { "name": "박쥐",   "hp": 42,  "atk": 8,  "def": 0,  "atkSpeed": 1.5, "range": 36, "speed": 112,"reward": 9 },
-  "ogre":   { "name": "골렘 두목", "hp": 1400, "atk": 45, "def": 12, "atkSpeed": 0.6, "range": 54, "speed": 26, "reward": 150 }
+  "ogre":   { "name": "골렘 두목", "hp": 1400, "atk": 45, "def": 12, "atkSpeed": 0.6, "range": 54, "speed": 26, "reward": 150 },
+  "skeleton": { "name": "해골 전사", "hp": 160, "atk": 18, "def": 10, "atkSpeed": 0.9, "range": 44, "speed": 48, "reward": 22 },
+  "mushroom": { "name": "버섯 몬스터", "hp": 110, "atk": 14, "def": 3, "atkSpeed": 1.0, "range": 40, "speed": 42, "reward": 15 },
+  "ghost":    { "name": "유령",     "hp": 80,  "atk": 16, "def": 0,  "atkSpeed": 1.2, "range": 40, "speed": 82, "reward": 18 },
+  "dragon":   { "name": "레드 드래곤", "hp": 3200, "atk": 70, "def": 18, "atkSpeed": 0.5, "range": 90, "speed": 22, "reward": 400 }
 }
