@@ -18,6 +18,19 @@ import { LevelUpOverlay } from '../ui/LevelUp';
 import { showRewarded } from '../systems/ads';
 import { lockedUntil, UNLOCK_ALL } from '../systems/unlocks';
 import {
+  UNIT_SKILLS,
+  isSkillSwing,
+  skillMult,
+  SINGLE_BONUS,
+  GUARD_SEC as SKILL_GUARD_SEC,
+  SLOW_SEC,
+  PULL_PX,
+  PUSH_PX,
+  DASH_PX,
+  PIERCE_MAX,
+} from '../systems/unitSkills';
+import { spriteOf, textureKey } from '../systems/sprites';
+import {
   WEAPONS,
   WeaponCharge,
   unlockedWeapons,
@@ -484,7 +497,7 @@ export class BattleScene extends Phaser.Scene {
       if (target && inRange(e.x, target.x, e.stats.range)) {
         this.attack(e, target);
       } else if (target) {
-        e.moveBy(-e.stats.speed * dt);
+        e.moveBy(-e.stats.speed * e.speedMult * dt);
       } else if (inRange(e.x, this.playerBase.x, e.stats.range)) {
         if (e.cooldown <= 0) {
           this.playerBase.takeDamage(computeDamage(e.stats.atk, 0));
@@ -494,7 +507,7 @@ export class BattleScene extends Phaser.Scene {
           e.idle();
         }
       } else {
-        e.moveBy(-e.stats.speed * dt);
+        e.moveBy(-e.stats.speed * e.speedMult * dt);
       }
     }
 
@@ -545,6 +558,13 @@ export class BattleScene extends Phaser.Scene {
       u.idle();
       return true;
     }
+    const lv = meta.level(u.type);
+    u.swings++;
+    if (lv > 0 && isSkillSwing(u.swings, lv)) {
+      this.castSkill(u, best, lv, 1); // ✨ 치유의 빛: 주변 아군 전체
+      u.cooldown = attackCooldown(u.stats.atkSpeed) * hasteMult(this.skills.haste ?? 0);
+      return true;
+    }
     best.heal(Math.round(u.stats.atk * CLERIC_HEAL_MULT));
     const fx = this.add.circle(best.x, LANE_Y - 30, 10, 0x5cff9e, 0.6).setDepth(55);
     this.tweens.add({ targets: fx, y: LANE_Y - 60, scale: 1.8, alpha: 0, duration: 450, onComplete: () => fx.destroy() });
@@ -559,6 +579,18 @@ export class BattleScene extends Phaser.Scene {
       return;
     }
     const berserk = att.side === 'ally' && this.clock < this.berserkUntil; // ⚔️ 광폭
+    // ✨ 유닛 스킬: 영구 강화 Lv1부터, 일반 공격 N번마다
+    if (att.side === 'ally') {
+      const lv = meta.level(att.type);
+      att.swings++;
+      if (lv > 0 && UNIT_SKILLS[att.type] && isSkillSwing(att.swings, lv)) {
+        this.castSkill(att, def, lv, berserk ? BERSERK_ATK : 1);
+        let scd = attackCooldown(att.stats.atkSpeed) * hasteMult(this.skills.haste ?? 0);
+        if (berserk) scd *= BERSERK_COOLDOWN;
+        att.cooldown = scd;
+        return;
+      }
+    }
     const dmg = computeDamage(att.stats.atk * (berserk ? BERSERK_ATK : 1), def.stats.def);
     if (att.stats.range >= BattleScene.RANGED) {
       // 원거리: 궁수=화살(직선·빠름), 마법사=마법 구슬(느림·명중 시 광역)
@@ -578,6 +610,93 @@ export class BattleScene extends Phaser.Scene {
     if (att.side === 'ally') cd *= hasteMult(this.skills.haste ?? 0); // 신속 오라
     if (berserk) cd *= BERSERK_COOLDOWN;
     att.cooldown = cd;
+  }
+
+  /** ✨ 유닛 스킬 발동 — 효과 적용 + 스킬 동작 + 이펙트 그림 + 이름 표시 */
+  private castSkill(u: Unit | Enemy, target: Unit | Enemy, lv: number, atkMul: number): void {
+    const sk = UNIT_SKILLS[u.type];
+    const power = u.stats.atk * atkMul * skillMult(lv);
+    const hit = (e: Unit | Enemy, mul = 1): void => {
+      if (e.active) e.takeDamage(computeDamage(power * mul, e.stats.def));
+    };
+    const foes = this.enemies.filter((e) => e.active);
+    const near = (x: number, r: number): Enemy[] => foes.filter((e) => Math.abs(e.x - x) <= r);
+    const ahead = (len: number): Enemy[] =>
+      foes
+        .filter((e) => e.x >= u.x - 10 && e.x - u.x <= u.stats.range + len)
+        .sort((a, b) => a.x - b.x)
+        .slice(0, PIERCE_MAX);
+    const now = this.time.now;
+    let fxX = target.x;
+
+    switch (sk.kind) {
+      case 'aoe':
+        for (const e of near(target.x, sk.radius)) hit(e);
+        break;
+      case 'single':
+        hit(target, SINGLE_BONUS);
+        break;
+      case 'pierce':
+        for (const e of ahead(sk.radius)) hit(e);
+        fxX = u.x + Math.min(sk.radius, u.stats.range + 40);
+        break;
+      case 'guard':
+        for (const e of near(target.x, sk.radius)) hit(e);
+        u.guardUntil = now + SKILL_GUARD_SEC * 1000;
+        fxX = u.x;
+        break;
+      case 'slow':
+        for (const e of near(target.x, sk.radius)) {
+          hit(e);
+          e.slowUntil = now + SLOW_SEC * 1000;
+        }
+        break;
+      case 'pull':
+        for (const e of near(target.x, sk.radius)) {
+          hit(e);
+          const d = target.x - e.x;
+          e.moveBy(Math.sign(d) * Math.min(PULL_PX, Math.abs(d)));
+        }
+        break;
+      case 'push':
+        hit(target);
+        target.moveBy(Math.min(PUSH_PX, Math.max(0, this.enemyBase.x - 50 - target.x)));
+        break;
+      case 'dash': {
+        const len = Math.max(0, Math.min(DASH_PX, this.enemyBase.x - 60 - u.x));
+        for (const e of foes) if (e.x >= u.x - 10 && e.x <= u.x + len + u.stats.range) hit(e);
+        u.moveBy(len);
+        fxX = u.x;
+        break;
+      }
+      case 'heal':
+        for (const a of this.units) {
+          if (a.active && Math.abs(a.x - u.x) <= sk.radius) a.heal(Math.round(power * CLERIC_HEAL_MULT));
+        }
+        fxX = u.x;
+        break;
+    }
+
+    u.skillMotion();
+    this.skillFx(u.type, fxX, sk.color, sk.radius);
+    const t = this.add
+      .text(u.x, LANE_Y - 78, `✨${sk.name}`, { fontFamily: 'sans-serif', fontSize: '15px', fontStyle: 'bold', color: '#ffe680', stroke: '#000', strokeThickness: 3 })
+      .setOrigin(0.5)
+      .setDepth(85);
+    this.tweens.add({ targets: t, y: LANE_Y - 104, alpha: 0, duration: 800, onComplete: () => t.destroy() });
+  }
+
+  /** 스킬 이펙트 그림(public/sprites/fx_<유닛>) — 없으면 색 원 폭발 */
+  private skillFx(type: string, x: number, color: number, radius: number): void {
+    const key = textureKey(`fx_${type}`);
+    if (this.textures.exists(key)) {
+      const base = spriteOf(`fx_${type}`)?.scale ?? 1; // 매니페스트 height 기준 배율
+      const img = this.add.image(x, LANE_Y - 18, key, 0).setDepth(78);
+      img.setScale(base * 0.6).setAlpha(1);
+      this.tweens.add({ targets: img, scale: base * 1.15, alpha: 0, duration: 520, ease: 'Quad.easeOut', onComplete: () => img.destroy() });
+      return;
+    }
+    this.burst(x, color, radius);
   }
 
   /** 🔥 특수 무기 발사 — 게이지가 가득 찬 해금 무기만 */

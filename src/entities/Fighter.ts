@@ -28,6 +28,9 @@ export class Fighter {
   maxHp = 0;
   cooldown = 0;
   active = false;
+  swings = 0; // 누적 공격 수(스킬 발동 판정)
+  slowUntil = 0; // 이동 50% 감속 끝나는 시각(ms, scene.time.now)
+  guardUntil = 0; // 받는 피해 50% 감소 끝나는 시각(ms)
 
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
@@ -47,6 +50,9 @@ export class Fighter {
     this.cooldown = 0;
     this.active = true;
     this.statusTint = null;
+    this.swings = 0;
+    this.slowUntil = 0;
+    this.guardUntil = 0;
 
     // 외형 재구성
     this.char.removeAll(true);
@@ -82,7 +88,13 @@ export class Fighter {
     this.updateHp();
   }
 
+  /** 감속 중이면 0.5 */
+  get speedMult(): number {
+    return this.scene.time.now < this.slowUntil ? 0.5 : 1;
+  }
+
   takeDamage(dmg: number): void {
+    if (this.scene.time.now < this.guardUntil) dmg = Math.max(1, Math.round(dmg * 0.5)); // 철벽의 의지
     this.hp = applyDamage(this.hp, dmg);
     this.updateHp();
     if (this.sprite) {
@@ -132,6 +144,15 @@ export class Fighter {
     this.scene.tweens.add({ targets: this.char, x: dir * 7, duration: 70, yoyo: true });
   }
 
+  /** 스킬 동작 — skill 애니(없으면 공격 애니·찌르기) */
+  skillMotion(): void {
+    if (this.sprite && this.spriteDef && (this.spriteDef.anims.skill || this.spriteDef.anims.attack)) {
+      this.play('skill');
+      return;
+    }
+    this.lunge();
+  }
+
   /** 제자리 대기(사거리 안에서 쿨다운 중) */
   idle(): void {
     this.play('idle');
@@ -168,16 +189,17 @@ export class Fighter {
     const s = this.sprite;
     const d = this.spriteDef;
     if (!s || !d) return;
-    // 공격 애니 재생 중엔 끝날 때까지 유지
-    if (this.anim === 'attack' && s.anims.isPlaying && state !== 'attack') return;
+    // 공격·스킬 애니 재생 중엔 끝날 때까지 유지
+    const oneShot = (a: AnimState): boolean => a === 'attack' || a === 'skill';
+    if (oneShot(this.anim) && s.anims.isPlaying && !oneShot(state)) return;
     const next = resolveState(d, state);
     if (!next) return;
-    if (next === this.anim && s.anims.isPlaying && next !== 'attack') return;
+    if (next === this.anim && s.anims.isPlaying && !oneShot(next)) return;
     this.anim = next;
     s.play(animKey(this.type, next));
-    if (next === 'attack') {
+    if (oneShot(next)) {
       s.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => {
-        if (this.sprite === s && this.anim === 'attack') {
+        if (this.sprite === s && oneShot(this.anim)) {
           this.anim = 'idle';
           s.play(animKey(this.type, 'idle'));
         }

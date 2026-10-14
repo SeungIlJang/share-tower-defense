@@ -5,11 +5,11 @@
  * 나머지는 visuals.ts 의 벡터 도형으로 폴백 → 그림을 한 종씩 교체 가능.
  */
 
-export type AnimState = 'idle' | 'walk' | 'attack' | 'death';
-export const ANIM_STATES: AnimState[] = ['idle', 'walk', 'attack', 'death'];
+export type AnimState = 'idle' | 'walk' | 'attack' | 'death' | 'skill';
+export const ANIM_STATES: AnimState[] = ['idle', 'walk', 'attack', 'death', 'skill'];
 
-/** 반복 재생하는 상태(공격·사망은 1회) */
-export const LOOPING: Record<AnimState, boolean> = { idle: true, walk: true, attack: false, death: false };
+/** 반복 재생하는 상태(공격·사망·스킬은 1회) */
+export const LOOPING: Record<AnimState, boolean> = { idle: true, walk: true, attack: false, death: false, skill: false };
 
 export interface AnimDef {
   frames: number[]; // 시트 내 프레임 index(좌→우, 위→아래)
@@ -100,6 +100,7 @@ export function parseManifest(raw: unknown): { manifest: SpriteManifest; warning
 export function resolveState(def: SpriteDef, state: AnimState): AnimState | null {
   if (def.anims[state]) return state;
   if (state === 'death') return null; // 사망 애니 없으면 기존 파티클만
+  if (state === 'skill') return def.anims.attack ? 'attack' : 'idle'; // 스킬 동작 없으면 공격 동작
   return 'idle';
 }
 

@@ -5,6 +5,7 @@ import { lockedUntil } from '../systems/unlocks';
 import { iconKey, textureKey } from '../systems/sprites';
 import { meta, scaleStat } from '../systems/upgrades';
 import { WEAPONS, weaponChargeMult, weaponDurationMult, weaponPowerMult } from '../systems/weapons';
+import { UNIT_SKILLS, skillEvery, skillMult } from '../systems/unitSkills';
 
 const UNITS = unitsData as Record<string, UnitStats>;
 
@@ -96,7 +97,8 @@ export class UpgradeScene extends Phaser.Scene {
     btnLabel: string,
     canUp: boolean,
     dim: boolean,
-    onUp: () => void
+    onUp: () => void,
+    extra = '' // 제목 오른쪽 작은 글씨(유닛 스킬)
   ): void {
     const { x, y, h } = this.cell(i, count);
     const parts: Phaser.GameObjects.GameObject[] = [
@@ -107,6 +109,7 @@ export class UpgradeScene extends Phaser.Scene {
       this.add.text(x - 228, y - 14, title, { fontFamily: 'sans-serif', fontSize: '20px', color: dim ? '#7c8aa0' : '#fff' }).setOrigin(0, 0.5),
       this.add.text(x - 228, y + 14, desc, { fontFamily: 'sans-serif', fontSize: '13px', color: '#9fb3d0' }).setOrigin(0, 0.5)
     );
+    if (extra) parts.push(this.add.text(x - 70, y - 14, extra, { fontFamily: 'sans-serif', fontSize: '13px', color: '#ffe680' }).setOrigin(0, 0.5));
     const btn = this.add
       .rectangle(x + 232, y, 118, h - 20, canUp ? 0x2f7a4d : 0x3a3f55)
       .setStrokeStyle(2, canUp ? 0x5cff9e : 0x555)
@@ -138,9 +141,18 @@ export class UpgradeScene extends Phaser.Scene {
         !!locked,
         () => {
           if (!locked && meta.upgrade(key)) this.render();
-        }
+        },
+        this.skillLabel(key, lv)
       );
     });
+  }
+
+  /** ✨ 유닛 스킬 안내 — Lv0: 'Lv1 해금', Lv1+: '공격 N번마다 · ×배율' */
+  private skillLabel(key: string, lv: number): string {
+    const sk = UNIT_SKILLS[key];
+    if (!sk) return '';
+    if (lv <= 0) return `✨${sk.name} (강화 시 해금)`;
+    return `✨${sk.name} · ${skillEvery(lv)}타마다 ×${skillMult(lv).toFixed(1)}`;
   }
 
   private renderWeapons(): void {
