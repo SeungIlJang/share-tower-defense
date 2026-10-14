@@ -94,7 +94,8 @@ export class Hud {
     onUpgrade: (type: string) => void,
     onWeapon: (index: number) => void,
     weaponOwned: boolean[], // 무기별 보유 여부
-    unitOwned: Record<string, boolean> // 유닛별 보유 여부
+    unitOwned: Record<string, boolean>, // 유닛별 보유 여부
+    looks: Record<string, string> = {} // 👗 스킨 적용 얼굴(유닛@스킨)
   ) {
     this.scene = scene;
     const d = 100;
@@ -154,8 +155,9 @@ export class Hud {
       // 윗줄: 레벨(좌) · 전장 강화 버튼(우) / 아랫부분: 얼굴 + 이름 + 비용
       const lvText = scene.add.text(cx - 45, cy - 25, 'Lv1', { fontFamily: 'sans-serif', fontSize: '11px', fontStyle: 'bold', color: '#ffd34d' }).setOrigin(0, 0.5).setDepth(d + 2);
       const icon = scene.add.rectangle(cx - 28, cy + 9, 32, 32, col).setDepth(d + 1);
-      const face = scene.textures.exists(iconKey(key))
-        ? scene.add.image(cx - 28, cy + 9, iconKey(key)).setDisplaySize(32, 32).setDepth(d + 2)
+      const faceKey = scene.textures.exists(iconKey(looks[key] ?? key)) ? iconKey(looks[key] ?? key) : iconKey(key);
+      const face = scene.textures.exists(faceKey)
+        ? scene.add.image(cx - 28, cy + 9, faceKey).setDisplaySize(32, 32).setDepth(d + 2)
         : null;
       if (face) icon.setFillStyle(0x1a2133).setStrokeStyle(2, col); // 얼굴 뒤는 어두운 바탕 + 유닛 색 테두리
       const label = scene.add.text(cx - 8, cy + 1, u.name, { fontFamily: 'sans-serif', fontSize: u.name.length >= 4 ? '11px' : '14px', fontStyle: 'bold', color: '#fff' }).setOrigin(0, 0.5).setDepth(d + 1);

@@ -7,6 +7,8 @@ import { meta, scaleStat } from '../systems/upgrades';
 import { bgm, sfx } from '../systems/sound';
 import { WEAPONS, weaponChargeMult, weaponDurationMult, weaponPowerMult } from '../systems/weapons';
 import { UNIT_SKILLS, skillEvery, skillMult } from '../systems/unitSkills';
+import { SKINS } from '../systems/skins';
+import { ensureSkin } from '../systems/skinTextures';
 
 const UNITS = unitsData as Record<string, UnitStats>;
 
@@ -100,7 +102,8 @@ export class UpgradeScene extends Phaser.Scene {
     canUp: boolean,
     dim: boolean,
     onUp: () => void,
-    extra = '' // 제목 오른쪽 작은 글씨(유닛 스킬)
+    extra = '', // 제목 오른쪽 작은 글씨(유닛 스킬)
+    skin?: { label: string; color: number; onClick: () => void } // 👗 스킨 버튼
   ): void {
     const { x, y, h } = this.cell(i, count);
     const parts: Phaser.GameObjects.GameObject[] = [
@@ -111,6 +114,14 @@ export class UpgradeScene extends Phaser.Scene {
       this.add.text(x - 228, y - 14, title, { fontFamily: 'sans-serif', fontSize: '20px', color: dim ? '#7c8aa0' : '#fff' }).setOrigin(0, 0.5),
       this.add.text(x - 228, y + 14, desc, { fontFamily: 'sans-serif', fontSize: '13px', color: '#9fb3d0' }).setOrigin(0, 0.5)
     );
+    if (skin) {
+      const sb = this.add
+        .text(x + 120, y + 14, skin.label, { fontFamily: 'sans-serif', fontSize: '12px', fontStyle: 'bold', color: '#ffffff', backgroundColor: `#${skin.color.toString(16).padStart(6, '0')}`, padding: { x: 7, y: 3 } })
+        .setOrigin(0.5)
+        .setInteractive({ useHandCursor: true });
+      sb.on('pointerdown', skin.onClick);
+      parts.push(sb);
+    }
     if (extra) parts.push(this.add.text(x - 70, y - 14, extra, { fontFamily: 'sans-serif', fontSize: '13px', color: '#ffe680' }).setOrigin(0, 0.5));
     const btn = this.add
       .rectangle(x + 232, y, 118, h - 20, canUp ? 0x2f7a4d : 0x3a3f55)
@@ -131,7 +142,8 @@ export class UpgradeScene extends Phaser.Scene {
       const owned = meta.ownsUnit(key);
       const price = unitPrice(i);
       const lv = meta.level(key);
-      const icon = this.textures.exists(iconKey(key)) ? this.add.image(0, 0, iconKey(key)) : null;
+      const look = owned ? ensureSkin(this, key, meta.equippedSkin(key)) : key; // 👗 착용 스킨 얼굴
+      const icon = this.textures.exists(iconKey(look)) ? this.add.image(0, 0, iconKey(look)) : null;
       this.card(
         i,
         keys.length,
@@ -154,9 +166,39 @@ export class UpgradeScene extends Phaser.Scene {
             this.render();
           }
         },
-        this.skillLabel(key, lv)
+        this.skillLabel(key, lv),
+        owned ? this.skinButton(key) : undefined
       );
     });
+  }
+
+  /** 👗 레어 스킨 버튼 — 없으면 구매(바로 착용), 있으면 착용/해제 */
+  private skinButton(key: string): { label: string; color: number; onClick: () => void } | undefined {
+    const sk = SKINS[key];
+    if (!sk) return undefined;
+    if (!meta.ownsSkin(key, sk.id)) {
+      const can = meta.gold >= sk.price;
+      return {
+        label: `👗 스킨 🪙${sk.price}`,
+        color: can ? 0x7a4ad8 : 0x8a8aa0,
+        onClick: () => {
+          if (meta.buySkin(key, sk.id, sk.price)) {
+            sfx(this, 'levelup');
+            this.render();
+          }
+        },
+      };
+    }
+    const on = meta.equippedSkin(key) === sk.id;
+    return {
+      label: on ? `👗 ${sk.name} ✓` : '👗 기본 복장',
+      color: on ? 0x3a8adf : 0x5a6a8a,
+      onClick: () => {
+        meta.toggleSkin(key, sk.id);
+        sfx(this, 'click');
+        this.render();
+      },
+    };
   }
 
   /** ✨ 유닛 스킬 안내 — Lv0: 'Lv1 해금', Lv1+: '공격 N번마다 · ×배율' */

@@ -46,7 +46,11 @@ export class Fighter {
     this.root = scene.add.container(0, 0, [this.char, this.flash, this.hpBg, this.hpBar]).setVisible(false);
   }
 
-  spawn(x: number, y: number, stats: CombatStats, type: string, side: Side): void {
+  /** 텍스처·애니 이름(스킨 적용 시 '유닛@스킨') */
+  private look = '';
+
+  spawn(x: number, y: number, stats: CombatStats, type: string, side: Side, look = type): void {
+    this.look = look;
     this.stats = stats;
     this.type = type;
     this.side = side;
@@ -75,16 +79,16 @@ export class Fighter {
     const footOffset = v.bodyH / 2; // 벡터 캐릭터와 같은 높이에 발을 둠
     let barY = -v.bodyH / 2 - 20;
 
-    if (this.spriteDef && this.scene.textures.exists(textureKey(type))) {
+    if (this.spriteDef && this.scene.textures.exists(textureKey(look))) {
       const d = this.spriteDef;
       const s = this.scene.add
-        .sprite(0, footOffset, textureKey(type), d.anims.idle!.frames[0])
+        .sprite(0, footOffset, textureKey(look), d.anims.idle!.frames[0])
         .setOrigin(0.5, d.footY / d.frameHeight)
         .setScale(d.scale);
       this.char.add([this.scene.add.ellipse(0, footOffset + 2, d.frameWidth * d.scale * 0.6, 8, 0x000000, 0.25), s]);
       this.sprite = s;
       this.anim = 'idle';
-      s.play(animKey(type, 'idle'));
+      s.play(animKey(look, 'idle'));
       barY = footOffset - d.footY * d.scale - 8;
       this.flash.setAlpha(0);
     } else {
@@ -226,7 +230,7 @@ export class Fighter {
     corpse.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => {
       this.scene.tweens.add({ targets: corpse, alpha: 0, duration: 250, onComplete: () => corpse.destroy() });
     });
-    corpse.play(animKey(this.type, 'death'));
+    corpse.play(animKey(this.look, 'death'));
     return true;
   }
 
@@ -241,12 +245,12 @@ export class Fighter {
     if (!next) return;
     if (next === this.anim && s.anims.isPlaying && !oneShot(next)) return;
     this.anim = next;
-    s.play(animKey(this.type, next));
+    s.play(animKey(this.look, next));
     if (oneShot(next)) {
       s.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => {
         if (this.sprite === s && oneShot(this.anim)) {
           this.anim = 'idle';
-          s.play(animKey(this.type, 'idle'));
+          s.play(animKey(this.look, 'idle'));
         }
       });
     }

@@ -60,6 +60,8 @@ export class MetaProgress {
   daily: { day: number; stats: Stats; claimed: string[] } = { day: -1, stats: {}, claimed: [] }; // 오늘 미션 진행
   achClaimed: string[] = []; // 받은 업적
   endlessTop: EndlessRecord[] = []; // ♾️ 무한 모드 명예의 전당(상위 5)
+  skinsOwned: string[] = []; // 👗 보유 스킨 '유닛:스킨'
+  skinEquipped: Record<string, string> = {}; // 유닛별 착용 스킨
   clearedMax = 0; // 클리어한 최고 스테이지 id
   lastDaily = -1; // 마지막 일일보상 수령 day index
   streak = 0; // 연속 출석
@@ -222,6 +224,31 @@ export class MetaProgress {
     );
   }
 
+  ownsSkin(type: string, skin: string): boolean {
+    return this.skinsOwned.includes(`${type}:${skin}`);
+  }
+
+  equippedSkin(type: string): string | null {
+    return this.skinEquipped[type] ?? null;
+  }
+
+  buySkin(type: string, skin: string, price: number): boolean {
+    if (this.ownsSkin(type, skin) || this.gold < price) return false;
+    this.gold -= price;
+    this.skinsOwned.push(`${type}:${skin}`);
+    this.skinEquipped[type] = skin; // 사면 바로 착용
+    this.save();
+    return true;
+  }
+
+  /** 착용/해제 전환 */
+  toggleSkin(type: string, skin: string): void {
+    if (!this.ownsSkin(type, skin)) return;
+    if (this.skinEquipped[type] === skin) delete this.skinEquipped[type];
+    else this.skinEquipped[type] = skin;
+    this.save();
+  }
+
   get endlessBest(): number {
     return this.endlessTop[0]?.wave ?? 0;
   }
@@ -287,6 +314,8 @@ export class MetaProgress {
         daily?: { day: number; stats: Stats; claimed: string[] };
         achClaimed?: string[];
         endlessTop?: EndlessRecord[];
+        skinsOwned?: string[];
+        skinEquipped?: Record<string, string>;
         clearedMax?: number;
         lastDaily?: number;
         streak?: number;
@@ -302,6 +331,8 @@ export class MetaProgress {
       this.daily = obj.daily ?? { day: -1, stats: {}, claimed: [] };
       this.achClaimed = obj.achClaimed ?? [];
       this.endlessTop = obj.endlessTop ?? [];
+      this.skinsOwned = obj.skinsOwned ?? [];
+      this.skinEquipped = obj.skinEquipped ?? {};
       this.clearedMax = obj.clearedMax ?? 0;
       this.lastDaily = obj.lastDaily ?? -1;
       this.streak = obj.streak ?? 0;
@@ -325,6 +356,8 @@ export class MetaProgress {
         daily: this.daily,
         achClaimed: this.achClaimed,
         endlessTop: this.endlessTop,
+        skinsOwned: this.skinsOwned,
+        skinEquipped: this.skinEquipped,
         clearedMax: this.clearedMax,
         lastDaily: this.lastDaily,
         streak: this.streak,

@@ -29,6 +29,7 @@ import {
   PIERCE_MAX,
 } from '../systems/unitSkills';
 import { spriteOf, textureKey } from '../systems/sprites';
+import { ensureSkin } from '../systems/skinTextures';
 import { sfx, bgm, setMute } from '../systems/sound';
 import { starsFor, STAR_GOLD } from '../systems/stars';
 import { activeSynergies, synergyMult, type Synergy } from '../systems/synergy';
@@ -128,6 +129,7 @@ export class BattleScene extends Phaser.Scene {
   private prodTimer = 0; // 적 기지 생산 타이머
   private prodInterval = 4; // 생산 간격(초)
   private prodIdx = 0;
+  private looks: Record<string, string> = {}; // 👗 유닛별 착용 스킨 텍스처 이름
   // ♾️ 무한 모드
   private endless = false;
   private waveNo = 0;
@@ -232,6 +234,8 @@ export class BattleScene extends Phaser.Scene {
       (p) => p.deactivate()
     );
 
+    // 👗 착용 스킨 텍스처 미리 준비(HUD 얼굴에도 적용)
+    this.looks = Object.fromEntries(Object.keys(UNITS).map((k) => [k, ensureSkin(this, k, meta.equippedSkin(k))]));
     this.hud = new Hud(
       this,
       UNITS,
@@ -239,7 +243,8 @@ export class BattleScene extends Phaser.Scene {
       (type) => this.doBattleUpgrade(type),
       (i) => this.fireWeapon(i),
       this.weapons.map((w) => !!w),
-      this.unitOwned
+      this.unitOwned,
+      this.looks
     );
     // 키보드 1~9 = 특수 무기
     this.input.keyboard?.on('keydown', (ev: KeyboardEvent) => {
@@ -367,7 +372,7 @@ export class BattleScene extends Phaser.Scene {
     const bm = 1 + (this.battleUpg[type] ?? 0) * 0.2; // 🛠️ 전장 강화
     const stats = { ...m, hp: Math.round(m.hp * bm * pm), atk: Math.round(m.atk * bm * pm) };
     const u = this.unitPool.acquire();
-    u.spawn(this.playerBase.x + 50, LANE_Y, stats, type, 'ally');
+    u.spawn(this.playerBase.x + 50, LANE_Y, stats, type, 'ally', this.looks[type] ?? type); // 👗 착용 스킨
     u.pop = base.pop;
     sfx(this, 'spawn');
     this.track('spawns');
