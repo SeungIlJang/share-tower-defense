@@ -1,5 +1,5 @@
 {
-  "_comment": "extract_sprites.py 설정. 경로는 이 파일 기준. rows=[상태, 시트의 몇 번째 행(0부터), 프레임 수], height=게임 속 키(px)",
+  "_comment": "extract_sprites.py 설정. 경로는 이 파일 기준. rows=[상태, 시트의 몇 번째 행(0부터), 프레임 수, (선택) 쓸 프레임 번호], height=게임 속 키(px)",
   "soldier": {
     "sheet": "../../idle-hero-app/www/assets/char/_source/sheets/sword.jpg",
     "x": [470, 1260],
@@ -21,6 +21,15 @@
     "rows": [["idle", 0, 5], ["walk", 1, 5], ["attack", 2, 5], ["death", 4, 5]],
     "height": 64,
     "fps": { "idle": 6, "walk": 9, "attack": 12, "death": 8 }
+  },
+  "spear": {
+    "sheet": "../art/spearman_sheet.png",
+    "x": [476, 1445],
+    "rows": [["idle", 0, 6], ["walk", 1, 6], ["attack", 2, 6, [0, 3, 4, 5]], ["death", 4, 6]],
+    "resolution": 2,
+    "palette": true,
+    "height": 64,
+    "fps": { "idle": 6, "walk": 10, "attack": 12, "death": 9 }
   },
   "mage": {
     "sheet": "../../idle-hero-app/www/assets/char/_source/sheets/mage.jpg",

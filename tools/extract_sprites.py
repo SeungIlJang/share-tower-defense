@@ -80,23 +80,39 @@ def split_frames(fg, expected):
     """덩어리 분리: 큰 덩어리 = 캐릭터, 작은 덩어리(이펙트)는 가장 가까운 캐릭터에 귀속."""
     grown = ndimage.binary_dilation(fg, iterations=3)
     lab, n = ndimage.label(grown)
-    # 프레임 수가 모자라면: 이펙트로 이웃과 붙은 덩어리(중앙값 폭 1.6배 초과)를 가운데 가장 빈 열에서 절단
-    widths = [sl[1].stop - sl[1].start for sl in ndimage.find_objects(lab)]
-    pre_areas = [(fg & (lab == i + 1)).sum() for i in range(n)]
-    pre_chars = sum(a >= max(pre_areas) * 0.3 for a in pre_areas) if n else 0
-    if n and len(widths) >= 3 and pre_chars < expected:
-        med = float(np.median(widths))
-        cut = False
-        for sl in ndimage.find_objects(lab):
-            w = sl[1].stop - sl[1].start
-            if w > med * 1.6:
-                cols = fg[sl].sum(0)
-                lo, hi = int(w * 0.3), int(w * 0.7)
-                x = sl[1].start + lo + int(np.argmin(cols[lo:hi]))
-                grown[sl[0], x - 2:x + 3] = False
-                cut = True
-        if cut:
-            lab, n = ndimage.label(grown)
+    # 프레임 수가 모자라면: 이펙트·무기로 이웃과 붙은 가장 넓은 덩어리를 잘라 나눔(예상 수가 될 때까지)
+    for _ in range(expected):
+        if n == 0:
+            break
+        objs = ndimage.find_objects(lab)
+        areas = [(fg & (lab == i + 1)).sum() for i in range(n)]
+        chars = [i for i in range(n) if areas[i] >= max(areas) * 0.3]
+        if len(chars) >= expected or len(chars) < 2:
+            break
+        widths = {i: objs[i][1].stop - objs[i][1].start for i in chars}
+        widest = max(chars, key=lambda i: widths[i])
+        if widths[widest] < np.median(list(widths.values())) * 1.3:
+            break
+        sl = objs[widest]
+        cols = (fg[sl] & (lab[sl] == widest + 1)).sum(0)
+        # 몸통 = 두꺼운 열 구간. 두 번째 몸통 바로 앞에서 자름(가는 창대·이펙트는 몸통으로 안 봄)
+        body = cols > cols.max() * 0.35
+        runs, start = [], None
+        for x, v in enumerate(np.append(body, False)):
+            if v and start is None:
+                start = x
+            elif not v and start is not None:
+                if x - start >= 20:
+                    runs.append((start, x))
+                start = None
+        if len(runs) >= 2:
+            x = sl[1].start + runs[1][0] - 2
+        else:
+            w = widths[widest]
+            lo, hi = int(w * 0.3), int(w * 0.7)
+            x = sl[1].start + lo + int(np.argmin(cols[lo:hi]))
+        grown[sl[0], x - 2:x + 3] = False
+        lab, n = ndimage.label(grown)
     objs = ndimage.find_objects(lab)
     areas = [(fg & (lab == i + 1)).sum() for i in range(n)]
     if n == 0:
@@ -135,12 +151,16 @@ def extract_sheet(cfg):
     x0, x1 = cfg['x']
     bands = detect_bands(rgb, x0, x1)
     rows = {}
-    for state, row_idx, n in cfg['rows']:
+    for row in cfg['rows']:
+        state, row_idx, n = row[:3]
+        keep = row[3] if len(row) > 3 else None  # 쓸 프레임 번호만(0부터) — 깨진 프레임 제외용
         y0, y1 = bands[row_idx]
         pad = 6
         crop = rgb[max(0, y0 - pad):y1 + pad, x0:x1]
         fg = foreground(crop, cfg.get('thresh', 40), strip_lines=True)
         frames = split_frames(fg, n)
+        if keep is not None and len(frames) == n:
+            frames = [frames[k] for k in keep]
         for f in frames:
             f['rgb'] = crop
         rows[state] = frames
@@ -256,6 +276,24 @@ def extract_static(cfg):
     }
 
 
+def rescale_sheet(img, meta, resolution):
+    """애니메이션 시트를 '게임 표시 크기 × resolution'으로 칸 단위 축소(칸 격자 유지)."""
+    f = min(1.0, meta['scale'] * resolution)
+    if f >= 1.0:
+        return img, meta
+    fw, fh = meta['frameWidth'], meta['frameHeight']
+    cols, rows = img.width // fw, img.height // fh
+    cw, ch = max(1, round(fw * f)), max(1, round(fh * f))
+    out = Image.new('RGBA', (cw * cols, ch * rows), (0, 0, 0, 0))
+    for r in range(rows):
+        for c in range(cols):
+            cell = img.crop((c * fw, r * fh, (c + 1) * fw, (r + 1) * fh)).resize((cw, ch), Image.LANCZOS)
+            out.alpha_composite(cell, (c * cw, r * ch))
+    meta = {**meta, 'frameWidth': cw, 'frameHeight': ch, 'footY': round(meta['footY'] * ch / fh),
+            'scale': round(meta['scale'] * fh / ch, 3)}
+    return out, meta
+
+
 def main():
     sys.stdout.reconfigure(encoding="utf-8")
     cfg_path = sys.argv[1]
@@ -281,6 +319,8 @@ def main():
             c['images'] = [os.path.normpath(os.path.join(base, p)) for p in c['images']]
         print(f'{type_}:')
         img, meta = extract_sheet(c) if 'sheet' in c else extract_static(c)
+        if 'sheet' in c and c.get('resolution'):
+            img, meta = rescale_sheet(img, meta, c['resolution'])
         out = img
         if c.get('palette'):  # 256색 팔레트 PNG — 큰 그림 용량 대폭 절감(눈으로 구분 안 됨)
             out = img.quantize(colors=256, method=Image.Quantize.FASTOCTREE, dither=Image.Dither.NONE)
