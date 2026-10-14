@@ -6,7 +6,7 @@ AI 생성 캐릭터 시트(어두운 배경, 행=Idle/Walk/Attack/Hit/Dead) → 
 
 - 시트: 행 단위로 배경 제거(테두리에서 flood fill → 캐릭터 안쪽 어두운 외곽선 보존)
   → 프레임(캐릭터 덩어리 + 붙어 있는 이펙트) 분리 → 머리 중심·발바닥 기준으로 정렬.
-- 정지 이미지(몬스터): 투명 PNG 그대로, 발바닥 높이·배율만 계산.
+- 정지 이미지(몬스터·기지): 배경 제거 후 발바닥 높이·배율 계산. images 여러 장이면 한 시트로(기지 파손 단계).
 - 결과: public/sprites/<type>.png 와 public/sprites/manifest.json(기존 항목은 덮어씀).
 """
 import json
@@ -188,32 +188,41 @@ def extract_sheet(cfg):
     }
 
 
-def extract_static(cfg):
-    img = Image.open(cfg['image']).convert('RGBA')
+def load_static(path, cfg):
+    """정지 이미지 1장 → 배경 제거·잡조각 제거·여백 잘라낸 RGBA."""
+    img = Image.open(path).convert('RGBA')
     if cfg.get('crop'):  # 갤러리 같은 큰 그림에서 영역만 [x0, y0, x1, y1]
         img = img.crop(tuple(cfg['crop']))
     arr = np.asarray(img).copy()
     if (arr[..., 3] == 255).all():  # 투명도 없는 그림(JPG 등) → 테두리 배경색 제거
         arr[..., 3] = foreground(arr[..., :3], cfg.get('thresh', 40), holes=cfg.get('holes', False)) * 255
-        img = Image.fromarray(arr)
     # 원본 자를 때 딸려 온 옆 그림 조각 제거 — 가장 큰 덩어리(+그 영역과 겹치는 조각)만 유지
     lab, n = ndimage.label(ndimage.binary_dilation(arr[..., 3] > 0, iterations=2))
     if n > 1:
         sizes = ndimage.sum(arr[..., 3] > 0, lab, range(1, n + 1))
         arr[..., 3][lab != int(np.argmax(sizes)) + 1] = 0
-        img = Image.fromarray(arr)
-    a = arr[..., 3]
-    ys, xs = np.nonzero(a)
-    img = img.crop((xs.min(), ys.min(), xs.max() + 1, ys.max() + 1))
+    ys, xs = np.nonzero(arr[..., 3])
+    img = Image.fromarray(arr).crop((xs.min(), ys.min(), xs.max() + 1, ys.max() + 1))
     if cfg.get('mirror'):
         img = img.transpose(Image.FLIP_LEFT_RIGHT)  # 왼쪽을 보는 그림 → 오른쪽 보게
-    w, h = img.size
-    return img, {
+    return img
+
+
+def extract_static(cfg):
+    """image 1장, 또는 images 여러 장(기지 파손 단계 등) → 바닥 맞춘 가로 시트."""
+    paths = cfg['images'] if 'images' in cfg else [cfg['image']]
+    imgs = [load_static(p, cfg) for p in paths]
+    w = max(i.width for i in imgs)
+    h = max(i.height for i in imgs)
+    sheet = Image.new('RGBA', (w * len(imgs), h), (0, 0, 0, 0))
+    for k, im in enumerate(imgs):  # 가운데 정렬, 바닥(발)은 칸 아래에 맞춤
+        sheet.alpha_composite(im, (k * w + (w - im.width) // 2, h - im.height))
+    return sheet, {
         'frameWidth': w,
         'frameHeight': h,
-        'scale': round(cfg['height'] / h, 3),
+        'scale': round(cfg['height'] / imgs[0].height, 3),  # 첫 장(멀쩡한 모습) 키 기준
         'footY': h,
-        'anims': {'idle': {'frames': [0], 'fps': 1}},
+        'anims': {'idle': {'frames': list(range(len(imgs))), 'fps': 1}},
         'ax': w // 2,
     }
 
@@ -239,6 +248,8 @@ def main():
         for k in ('sheet', 'image'):
             if k in c:
                 c[k] = os.path.normpath(os.path.join(base, c[k]))
+        if 'images' in c:
+            c['images'] = [os.path.normpath(os.path.join(base, p)) for p in c['images']]
         print(f'{type_}:')
         img, meta = extract_sheet(c) if 'sheet' in c else extract_static(c)
         img.save(os.path.join(OUT_DIR, f'{type_}.png'), optimize=True)

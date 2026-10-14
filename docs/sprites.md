@@ -56,3 +56,18 @@ python tools/extract_sprites.py tools/sprites.config.json --preview preview.png
 - 그림이 왼쪽을 보고 있으면 `"mirror": true` (게임은 오른쪽을 보는 그림 기준).
 - 프레임 수가 예상과 다르면 `!` 경고가 나온다. `--preview` 이미지로 결과를 꼭 눈으로 확인.
 - 필요 패키지: Pillow, numpy, scipy.
+
+## 기지(타워) 이미지
+
+키 이름 `base_ally`(왼쪽 우리 기지), `base_enemy`(오른쪽 적 기지). 없으면 기존 사각형.
+기지는 **좌우 반전하지 않으므로** 적 타워는 왼쪽을 보게 그린다(필요하면 `"mirror": true`).
+
+프레임이 여러 장이면 **파손 단계** — 첫 장=멀쩡, 마지막=거의 무너짐. HP 구간을 균등 분할해 교체
+(3장: 100~67% / 67~33% / 33% 이하). 부활로 HP가 차면 다시 멀쩡한 모습으로.
+
+`tools/sprites.config.json` 예시 (흰 배경 이미지도 자동으로 배경 제거):
+```json
+"base_ally":  { "images": ["tower/ally_0.png", "tower/ally_1.png", "tower/ally_2.png"], "height": 130 },
+"base_enemy": { "image": "tower/enemy.png", "height": 130 }
+```
+`height`는 게임 속 키(px). 기존 사각형 기지는 110px.

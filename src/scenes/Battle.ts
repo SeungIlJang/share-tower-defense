@@ -95,8 +95,8 @@ export class BattleScene extends Phaser.Scene {
     this.add.rectangle(640, LANE_Y + 40, 1280, 90, 0x1d2740).setDepth(-5);
     this.add.rectangle(640, LANE_Y + 2, 1280, 3, 0x33406a).setDepth(-4);
 
-    this.playerBase = new Base(this, 90, LANE_Y - 10, this.stage.baseHp, 0x2f6fe0);
-    this.enemyBase = new Base(this, 1190, LANE_Y - 10, this.stage.baseHp, 0xc0392b);
+    this.playerBase = new Base(this, 90, LANE_Y - 10, this.stage.baseHp, 0x2f6fe0, 'base_ally');
+    this.enemyBase = new Base(this, 1190, LANE_Y - 10, this.stage.baseHp, 0xc0392b, 'base_enemy');
 
     this.energy = new ResourceSystem(40, 9, 100); // 소환 에너지(초당 9, 상한 100)
     this.runGold = 0;

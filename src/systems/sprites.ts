@@ -97,6 +97,16 @@ export function resolveState(def: SpriteDef, state: AnimState): AnimState | null
   return 'idle';
 }
 
+/**
+ * 기지 파손 단계 — stages장 중 몇 번째를 보일지(0=멀쩡).
+ * HP 구간을 균등 분할: 3장이면 100~67% → 0, 67~33% → 1, 33% 이하 → 2.
+ */
+export function damageStage(hp: number, maxHp: number, stages: number): number {
+  if (stages <= 1 || maxHp <= 0) return 0;
+  const lost = 1 - Math.max(0, Math.min(1, hp / maxHp));
+  return Math.min(stages - 1, Math.floor(lost * stages));
+}
+
 /** 로드된 매니페스트(Preload에서 채움) */
 export const sprites: { manifest: SpriteManifest } = { manifest: {} };
 

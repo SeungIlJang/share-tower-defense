@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseManifest, resolveState, type SpriteDef } from '../src/systems/sprites';
+import { damageStage, parseManifest, resolveState, type SpriteDef } from '../src/systems/sprites';
 
 const base = { file: 'a.png', frameWidth: 32, frameHeight: 32, anims: { idle: { frames: [0, 1] } } };
 
@@ -47,5 +47,18 @@ describe('resolveState', () => {
     expect(resolveState(def, 'walk')).toBe('idle');
     expect(resolveState(def, 'attack')).toBe('idle');
     expect(resolveState(def, 'death')).toBeNull();
+  });
+});
+
+describe('damageStage', () => {
+  it('1장이면 항상 0', () => {
+    expect(damageStage(10, 100, 1)).toBe(0);
+  });
+  it('3장: HP 구간 균등 분할', () => {
+    expect(damageStage(100, 100, 3)).toBe(0);
+    expect(damageStage(70, 100, 3)).toBe(0);
+    expect(damageStage(60, 100, 3)).toBe(1);
+    expect(damageStage(30, 100, 3)).toBe(2);
+    expect(damageStage(0, 100, 3)).toBe(2);
   });
 });
