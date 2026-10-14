@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { loadAudio } from '../systems/sound';
 import { ANIM_STATES, LOOPING, MANIFEST_URL, animKey, iconKey, parseManifest, sprites, textureKey } from '../systems/sprites';
 
 /**
@@ -21,6 +22,7 @@ export class PreloadScene extends Phaser.Scene {
       console.warn(`[sprites] 로드 실패: ${file.src}`);
     });
     this.load.json('spriteManifest', MANIFEST_URL);
+    loadAudio(this); // 🔊 효과음·배경음
   }
 
   create(): void {
