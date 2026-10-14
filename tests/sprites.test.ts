@@ -18,6 +18,10 @@ describe('parseManifest', () => {
   it('축소 배율이면 기본 필터 linear', () => {
     expect(parseManifest({ s: { ...base, scale: 0.4 } }).manifest.s.filter).toBe('linear');
   });
+  it('icon 필드 유지(없으면 생략)', () => {
+    expect(parseManifest({ s: { ...base, icon: 'icon_s.png' } }).manifest.s.icon).toBe('icon_s.png');
+    expect(parseManifest({ s: base }).manifest.s.icon).toBeUndefined();
+  });
   it('_ 메모 키 무시', () => {
     const r = parseManifest({ _comment: 'x', soldier: base });
     expect(Object.keys(r.manifest)).toEqual(['soldier']);

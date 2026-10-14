@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import type { UnitStats } from '../types';
+import { iconKey } from '../systems/sprites';
 
 export interface HudState {
   lv: number;
@@ -30,6 +31,7 @@ interface Slot {
   label: Phaser.GameObjects.Text;
   cost: Phaser.GameObjects.Text;
   icon: Phaser.GameObjects.Rectangle;
+  face: Phaser.GameObjects.Image | null; // 얼굴 아이콘(없으면 색 네모만)
   upBtn: Phaser.GameObjects.Rectangle;
   upText: Phaser.GameObjects.Text;
   lvText: Phaser.GameObjects.Text;
@@ -105,7 +107,11 @@ export class Hud {
         const rect = scene.add.rectangle(cx, cy, slotW, 78, 0x2a3348).setStrokeStyle(3, col).setDepth(d);
         // 윗줄: 레벨(좌) · 전장 강화 버튼(우) / 아랫부분: 아이콘 + 이름 + 비용
         const lvText = scene.add.text(cx - 58, cy - 26, 'Lv1', { fontFamily: 'sans-serif', fontSize: '12px', fontStyle: 'bold', color: '#ffd34d' }).setOrigin(0, 0.5).setDepth(d + 2);
-        const icon = scene.add.rectangle(cx - 40, cy + 8, 30, 30, col).setDepth(d + 1);
+        const icon = scene.add.rectangle(cx - 40, cy + 8, 34, 34, col).setDepth(d + 1);
+        const face = scene.textures.exists(iconKey(key))
+          ? scene.add.image(cx - 40, cy + 8, iconKey(key)).setDisplaySize(34, 34).setDepth(d + 2)
+          : null;
+        if (face) icon.setFillStyle(0x1a2133).setStrokeStyle(2, col); // 얼굴 뒤는 어두운 바탕 + 유닛 색 테두리
         const label = scene.add.text(cx - 18, cy - 2, u.name, { fontFamily: 'sans-serif', fontSize: '16px', fontStyle: 'bold', color: '#fff' }).setOrigin(0, 0.5).setDepth(d + 1);
         const cost = scene.add.text(cx - 18, cy + 20, `⚡${u.cost} 🍖${u.pop}`, { fontFamily: 'sans-serif', fontSize: '13px', color: '#cfe' }).setOrigin(0, 0.5).setDepth(d + 1);
         rect.setInteractive({ useHandCursor: true });
@@ -114,7 +120,7 @@ export class Hud {
         const upBtn = scene.add.rectangle(cx + 38, cy - 26, 48, 20, 0x2f7a4d).setStrokeStyle(1, 0x5cff9e).setDepth(d + 2).setInteractive({ useHandCursor: true });
         const upText = scene.add.text(cx + 38, cy - 26, '⬆', { fontFamily: 'sans-serif', fontSize: '12px', fontStyle: 'bold', color: '#fff' }).setOrigin(0.5).setDepth(d + 3);
         upBtn.on('pointerdown', () => onUpgrade(key));
-        this.slots.push({ key, cx, rect, label, cost, icon, upBtn, upText, lvText });
+        this.slots.push({ key, cx, rect, label, cost, icon, face, upBtn, upText, lvText });
       } else {
         scene.add.rectangle(cx, cy, slotW, 78, 0x20242e).setStrokeStyle(3, 0x3a3f4a).setDepth(d);
         scene.add.text(cx, cy, '🔒', { fontSize: '28px' }).setOrigin(0.5).setDepth(d + 1);
@@ -150,6 +156,7 @@ export class Hud {
       const a = ok ? 1 : 0.4;
       slot.rect.setAlpha(a);
       slot.icon.setAlpha(a);
+      slot.face?.setAlpha(a);
       slot.label.setAlpha(a);
       slot.cost.setAlpha(ok ? 1 : 0.6);
       slot.cost.setColor(ok ? '#aef5b0' : '#ff9a9a');

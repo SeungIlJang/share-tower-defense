@@ -88,3 +88,13 @@ python tools/extract_sprites.py tools/sprites.config.json --preview preview.png
 - `keep_all`: 떨어져 있는 조각(연기 등)도 유지. 기본은 가장 큰 덩어리만 남김
 - `resolution`: 게임 표시 크기의 몇 배로 저장할지(예: `2`). 큰 원본을 미리 줄여 용량 절약 — 애니메이션 시트(`sheet`)에도 사용 가능
 - `palette`: `true`면 256색 PNG로 저장 — 눈으로는 같고 용량은 몇 분의 1 (타워 1.2MB → 약 0.1MB)
+
+## HUD 슬롯 얼굴 아이콘
+
+`tools/sprites.config.json`의 유닛 항목에 `icon`을 넣으면 `public/sprites/icon_<타입>.png`(64px)를 만들고
+하단 슬롯의 색 네모 대신 얼굴을 보여 준다. 없으면 기존 색 네모.
+```json
+"icon": { "image": "../art/portrait_knight.png", "box": [340, 190, 900, 750] }
+```
+- `box`: 초상화에서 얼굴 영역 `[x0, y0, x1, y1]`(정사각형 권장). 배경이 불투명하면 자동 제거
+- 초상화 원본: `images/image/All_Pixel_RPG_Assets/01_Character_Singles` → `art/portrait_*.png`(영문 이름), 창병은 시트 왼쪽 큰 그림

@@ -24,6 +24,7 @@ export interface SpriteDef {
   footY: number; // 프레임 상단에서 발바닥까지 px(원본 기준) — 레인에 발을 맞춤
   filter: 'nearest' | 'linear'; // 확대(진짜 도트)=nearest, 축소(고해상도 도트풍)=linear
   anims: Partial<Record<AnimState, AnimDef>>;
+  icon?: string; // HUD 슬롯 얼굴 아이콘(public/sprites/ 기준)
 }
 
 export type SpriteManifest = Record<string, SpriteDef>;
@@ -32,6 +33,10 @@ export const MANIFEST_URL = 'sprites/manifest.json';
 
 export function textureKey(type: string): string {
   return `spr_${type}`;
+}
+
+export function iconKey(type: string): string {
+  return `icon_${type}`;
 }
 
 export function animKey(type: string, state: AnimState): string {
@@ -86,6 +91,7 @@ export function parseManifest(raw: unknown): { manifest: SpriteManifest; warning
     const footY = typeof d.footY === 'number' && d.footY > 0 ? Math.min(d.footY, d.frameHeight) : d.frameHeight;
     const filter = d.filter === 'nearest' || d.filter === 'linear' ? d.filter : scale >= 1 ? 'nearest' : 'linear';
     manifest[type] = { file: d.file, frameWidth: d.frameWidth, frameHeight: d.frameHeight, scale, footY, filter, anims };
+    if (typeof d.icon === 'string' && d.icon) manifest[type].icon = d.icon;
   }
   return { manifest, warnings };
 }

@@ -20,6 +20,7 @@ from scipy import ndimage
 
 STATES = ['idle', 'walk', 'attack', 'death']
 OUT_DIR = 'public/sprites'
+ICON_SIZE = 64
 
 
 def detect_bands(rgb, x0, x1, thresh=60, min_h=30):
@@ -326,6 +327,15 @@ def main():
             out = img.quantize(colors=256, method=Image.Quantize.FASTOCTREE, dither=Image.Dither.NONE)
         out.save(os.path.join(OUT_DIR, f'{type_}.png'), optimize=True)
         meta.pop('ax')
+        if c.get('icon'):  # HUD 슬롯용 얼굴 아이콘(64px) — 큰 초상화에서 얼굴 영역만
+            ic = c['icon']
+            face = Image.open(os.path.normpath(os.path.join(base, ic['image']))).convert('RGBA').crop(tuple(ic['box']))
+            arr = np.asarray(face).copy()
+            if (arr[..., 3] == 255).all():  # 불투명 배경(시트 남색 등) 제거
+                arr[..., 3] = foreground(arr[..., :3], 40) * 255
+            Image.fromarray(arr).resize((ICON_SIZE, ICON_SIZE), Image.LANCZOS).save(
+                os.path.join(OUT_DIR, f'icon_{type_}.png'), optimize=True)
+            meta['icon'] = f'icon_{type_}.png'
         manifest[type_] = {'file': f'{type_}.png', 'filter': 'linear', **meta}
         previews.append((type_, img, meta))
         print(f"  → {meta['frameWidth']}x{meta['frameHeight']} scale {meta['scale']}")

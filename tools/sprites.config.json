@@ -1,6 +1,7 @@
 {
   "_comment": "extract_sprites.py 설정. 경로는 이 파일 기준. rows=[상태, 시트의 몇 번째 행(0부터), 프레임 수, (선택) 쓸 프레임 번호], height=게임 속 키(px)",
   "soldier": {
+    "icon": { "image": "../art/portrait_soldier.png", "box": [370, 140, 930, 700] },
     "sheet": "../../idle-hero-app/www/assets/char/_source/sheets/sword.jpg",
     "x": [470, 1260],
     "rows": [["idle", 0, 6], ["walk", 1, 6], ["attack", 2, 6], ["death", 4, 5]],
@@ -8,6 +9,7 @@
     "fps": { "idle": 6, "walk": 10, "attack": 14, "death": 9 }
   },
   "archer": {
+    "icon": { "image": "../art/portrait_archer.png", "box": [316, 120, 876, 680] },
     "sheet": "../../idle-hero-app/www/assets/char/_source/sheets/archer.jpg",
     "x": [470, 1260],
     "rows": [["idle", 0, 6], ["walk", 1, 6], ["attack", 2, 6], ["death", 4, 6]],
@@ -15,6 +17,7 @@
     "fps": { "idle": 6, "walk": 10, "attack": 12, "death": 9 }
   },
   "knight": {
+    "icon": { "image": "../art/portrait_knight.png", "box": [340, 190, 900, 750] },
     "sheet": "../../idle-hero-app/www/assets/char/_source/sheets/knight.jpg",
     "mirror": true,
     "x": [545, 1240],
@@ -23,6 +26,7 @@
     "fps": { "idle": 6, "walk": 9, "attack": 12, "death": 8 }
   },
   "spear": {
+    "icon": { "image": "../art/spearman_sheet.png", "box": [10, 300, 290, 580] },
     "sheet": "../art/spearman_sheet.png",
     "x": [476, 1445],
     "rows": [["idle", 0, 6], ["walk", 1, 6], ["attack", 2, 6, [0, 3, 4, 5]], ["death", 4, 6]],
@@ -32,6 +36,7 @@
     "fps": { "idle": 6, "walk": 10, "attack": 12, "death": 9 }
   },
   "mage": {
+    "icon": { "image": "../art/portrait_mage.png", "box": [380, 290, 940, 850] },
     "sheet": "../../idle-hero-app/www/assets/char/_source/sheets/mage.jpg",
     "x": [515, 1238],
     "rows": [["idle", 0, 5], ["walk", 1, 7], ["attack", 2, 6], ["death", 4, 4]],

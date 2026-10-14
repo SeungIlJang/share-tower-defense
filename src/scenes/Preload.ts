@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { ANIM_STATES, LOOPING, MANIFEST_URL, animKey, parseManifest, sprites, textureKey } from '../systems/sprites';
+import { ANIM_STATES, LOOPING, MANIFEST_URL, animKey, iconKey, parseManifest, sprites, textureKey } from '../systems/sprites';
 
 /**
  * 프리로드: sprites/manifest.json → 등록된 스프라이트시트 로드 → 애니메이션 생성 → Menu.
@@ -39,6 +39,7 @@ export class PreloadScene extends Phaser.Scene {
         frameWidth: d.frameWidth,
         frameHeight: d.frameHeight,
       });
+      if (d.icon) this.load.image(iconKey(type), `sprites/${d.icon}`);
     }
     this.load.once(Phaser.Loader.Events.COMPLETE, () => {
       for (const type of types) this.registerAnims(type);
