@@ -188,40 +188,69 @@ def extract_sheet(cfg):
     }
 
 
-def load_static(path, cfg):
-    """정지 이미지 1장 → 배경 제거·잡조각 제거·여백 잘라낸 RGBA."""
+def load_static(path, cfg, crop=None):
+    """정지 이미지 1장 → 배경 제거·잡조각 제거·여백 잘라낸 RGBA + 잘라낸 왼쪽 위치(원본 좌표)."""
     img = Image.open(path).convert('RGBA')
-    if cfg.get('crop'):  # 갤러리 같은 큰 그림에서 영역만 [x0, y0, x1, y1]
-        img = img.crop(tuple(cfg['crop']))
+    x0 = 0
+    crop = crop or cfg.get('crop')
+    if crop:  # 갤러리 같은 큰 그림에서 영역만 [x0, y0, x1, y1]
+        img = img.crop(tuple(crop))
+        x0 = crop[0]
     arr = np.asarray(img).copy()
     if (arr[..., 3] == 255).all():  # 투명도 없는 그림(JPG 등) → 테두리 배경색 제거
         arr[..., 3] = foreground(arr[..., :3], cfg.get('thresh', 40), holes=cfg.get('holes', False)) * 255
-    # 원본 자를 때 딸려 온 옆 그림 조각 제거 — 가장 큰 덩어리(+그 영역과 겹치는 조각)만 유지
-    lab, n = ndimage.label(ndimage.binary_dilation(arr[..., 3] > 0, iterations=2))
-    if n > 1:
-        sizes = ndimage.sum(arr[..., 3] > 0, lab, range(1, n + 1))
-        arr[..., 3][lab != int(np.argmax(sizes)) + 1] = 0
+    if not cfg.get('keep_all'):
+        # 원본 자를 때 딸려 온 옆 그림 조각 제거 — 가장 큰 덩어리(+그 영역과 겹치는 조각)만 유지
+        lab, n = ndimage.label(ndimage.binary_dilation(arr[..., 3] > 0, iterations=2))
+        if n > 1:
+            sizes = ndimage.sum(arr[..., 3] > 0, lab, range(1, n + 1))
+            arr[..., 3][lab != int(np.argmax(sizes)) + 1] = 0
     ys, xs = np.nonzero(arr[..., 3])
     img = Image.fromarray(arr).crop((xs.min(), ys.min(), xs.max() + 1, ys.max() + 1))
+    left = x0 + int(xs.min())
     if cfg.get('mirror'):
         img = img.transpose(Image.FLIP_LEFT_RIGHT)  # 왼쪽을 보는 그림 → 오른쪽 보게
-    return img
+    return img, left
 
 
 def extract_static(cfg):
-    """image 1장, 또는 images 여러 장(기지 파손 단계 등) → 바닥 맞춘 가로 시트."""
-    paths = cfg['images'] if 'images' in cfg else [cfg['image']]
-    imgs = [load_static(p, cfg) for p in paths]
-    w = max(i.width for i in imgs)
+    """
+    image 1장 / images 여러 장 / image + crops 여러 영역(한 시트에 그린 파손 단계 등) → 바닥 맞춘 가로 시트.
+    anchors(원본 x좌표, 프레임별)를 주면 그 점끼리 세로로 맞춤(문·횃불처럼 단계마다 같은 자리) — 없으면 가운데 정렬.
+    """
+    if 'crops' in cfg:
+        loaded = [load_static(cfg['image'], cfg, c) for c in cfg['crops']]
+    else:
+        paths = cfg['images'] if 'images' in cfg else [cfg['image']]
+        loaded = [load_static(p, cfg) for p in paths]
+    imgs = [im for im, _ in loaded]
     h = max(i.height for i in imgs)
-    sheet = Image.new('RGBA', (w * len(imgs), h), (0, 0, 0, 0))
-    for k, im in enumerate(imgs):  # 가운데 정렬, 바닥(발)은 칸 아래에 맞춤
-        sheet.alpha_composite(im, (k * w + (w - im.width) // 2, h - im.height))
+    if cfg.get('anchors'):
+        rel = [a - left for a, (_, left) in zip(cfg['anchors'], loaded)]
+        if cfg.get('mirror'):
+            rel = [im.width - 1 - r for im, r in zip(imgs, rel)]
+        lpad = max(rel)
+        w = lpad + max(im.width - r for im, r in zip(imgs, rel))
+        xs = [lpad - r for r in rel]
+    else:
+        w = max(i.width for i in imgs)
+        xs = [(w - im.width) // 2 for im in imgs]
+    scale = cfg['height'] / imgs[0].height  # 첫 장(멀쩡한 모습) 키 기준
+    # resolution: 게임 표시 크기의 몇 배로 저장할지(예: 2) — 큰 원본을 미리 줄여 용량 절약
+    f = min(1.0, scale * cfg['resolution']) if cfg.get('resolution') else 1.0
+    cw, ch = max(1, round(w * f)), max(1, round(h * f))
+    sheet = Image.new('RGBA', (cw * len(imgs), ch), (0, 0, 0, 0))
+    for k, (im, x) in enumerate(zip(imgs, xs)):  # 바닥(발)은 칸 아래에 맞춤
+        cell = Image.new('RGBA', (w, h), (0, 0, 0, 0))
+        cell.alpha_composite(im, (x, h - im.height))
+        if f < 1.0:
+            cell = cell.resize((cw, ch), Image.LANCZOS)
+        sheet.alpha_composite(cell, (k * cw, 0))
     return sheet, {
-        'frameWidth': w,
-        'frameHeight': h,
-        'scale': round(cfg['height'] / imgs[0].height, 3),  # 첫 장(멀쩡한 모습) 키 기준
-        'footY': h,
+        'frameWidth': cw,
+        'frameHeight': ch,
+        'scale': round(scale / f, 3),
+        'footY': ch,
         'anims': {'idle': {'frames': list(range(len(imgs))), 'fps': 1}},
         'ax': w // 2,
     }
@@ -252,7 +281,10 @@ def main():
             c['images'] = [os.path.normpath(os.path.join(base, p)) for p in c['images']]
         print(f'{type_}:')
         img, meta = extract_sheet(c) if 'sheet' in c else extract_static(c)
-        img.save(os.path.join(OUT_DIR, f'{type_}.png'), optimize=True)
+        out = img
+        if c.get('palette'):  # 256색 팔레트 PNG — 큰 그림 용량 대폭 절감(눈으로 구분 안 됨)
+            out = img.quantize(colors=256, method=Image.Quantize.FASTOCTREE, dither=Image.Dither.NONE)
+        out.save(os.path.join(OUT_DIR, f'{type_}.png'), optimize=True)
         meta.pop('ax')
         manifest[type_] = {'file': f'{type_}.png', 'filter': 'linear', **meta}
         previews.append((type_, img, meta))

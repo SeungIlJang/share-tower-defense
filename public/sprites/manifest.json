@@ -304,5 +304,41 @@
         "fps": 1
       }
     }
+  },
+  "base_ally": {
+    "file": "base_ally.png",
+    "filter": "linear",
+    "frameWidth": 227,
+    "frameHeight": 260,
+    "scale": 0.5,
+    "footY": 260,
+    "anims": {
+      "idle": {
+        "frames": [
+          0,
+          1,
+          2
+        ],
+        "fps": 1
+      }
+    }
+  },
+  "base_enemy": {
+    "file": "base_enemy.png",
+    "filter": "linear",
+    "frameWidth": 198,
+    "frameHeight": 260,
+    "scale": 0.5,
+    "footY": 260,
+    "anims": {
+      "idle": {
+        "frames": [
+          0,
+          1,
+          2
+        ],
+        "fps": 1
+      }
+    }
   }
 }

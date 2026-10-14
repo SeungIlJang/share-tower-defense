@@ -34,5 +34,23 @@
   "wolf": { "image": "../../idle-hero-app/www/assets/mon/wolf.png", "height": 40 },
   "slime": { "image": "../../idle-hero-app/www/assets/mon/slime.png", "height": 36 },
   "bat": { "image": "../../idle-hero-app/www/assets/mon/bat.png", "height": 30 },
-  "ogre": { "image": "../../idle-hero-app/www/assets/mon/_source/enemies-gallery.jpg", "crop": [680, 595, 930, 772], "holes": true, "height": 100 }
+  "ogre": { "image": "../../idle-hero-app/www/assets/mon/_source/enemies-gallery.jpg", "crop": [680, 595, 930, 772], "holes": true, "height": 100 },
+  "base_ally": {
+    "image": "../art/tower_damage_stages_sheet.png",
+    "crops": [[116, 0, 428, 527], [559, 0, 890, 527], [984, 0, 1404, 527]],
+    "anchors": [315, 762, 1121],
+    "keep_all": true,
+    "resolution": 2,
+    "palette": true,
+    "height": 130
+  },
+  "base_enemy": {
+    "image": "../art/tower_damage_stages_sheet.png",
+    "crops": [[85, 540, 414, 1070], [539, 540, 897, 1070], [976, 540, 1405, 1070]],
+    "anchors": [130, 584, 1055],
+    "keep_all": true,
+    "resolution": 2,
+    "palette": true,
+    "height": 130
+  }
 }

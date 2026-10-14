@@ -71,3 +71,19 @@ python tools/extract_sprites.py tools/sprites.config.json --preview preview.png
 "base_enemy": { "image": "tower/enemy.png", "height": 130 }
 ```
 `height`는 게임 속 키(px). 기존 사각형 기지는 110px.
+
+한 장에 여러 단계를 그린 시트라면 `crops`로 영역을 나눠 자른다(현재 설정이 이 방식 — 원본 `art/tower_damage_stages_sheet.png`):
+```json
+"base_ally": {
+  "image": "../art/tower_damage_stages_sheet.png",
+  "crops": [[116, 0, 428, 527], [559, 0, 890, 527], [984, 0, 1404, 527]],
+  "anchors": [315, 762, 1121],
+  "keep_all": true,
+  "height": 130
+}
+```
+- `crops`: 원본에서 자를 영역 `[x0, y0, x1, y1]` 목록 — 한 영역 = 한 프레임
+- `anchors`: 프레임마다 "같은 자리"인 원본 x좌표(아군=문 중앙, 적=횃불). 연기·잔해로 폭이 달라져도 탑이 단계마다 튀지 않게 맞춤. 없으면 가운데 정렬
+- `keep_all`: 떨어져 있는 조각(연기 등)도 유지. 기본은 가장 큰 덩어리만 남김
+- `resolution`: 게임 표시 크기의 몇 배로 저장할지(예: `2`). 큰 원본을 미리 줄여 용량 절약
+- `palette`: `true`면 256색 PNG로 저장 — 눈으로는 같고 용량은 몇 분의 1 (타워 1.2MB → 약 0.1MB)
