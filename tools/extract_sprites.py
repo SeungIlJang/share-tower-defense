@@ -42,7 +42,7 @@ def detect_bands(rgb, x0, x1, thresh=60, min_h=30):
     return bands
 
 
-def foreground(crop, thresh, strip_lines=False, holes=False):
+def foreground(crop, thresh, strip_lines=False, holes=False, drop_thin=False):
     """테두리와 이어진 배경색 영역만 제거 → 캐릭터 내부 어두운 픽셀은 유지."""
     c = crop.astype(int)
     h, w, _ = c.shape
@@ -72,7 +72,7 @@ def foreground(crop, thresh, strip_lines=False, holes=False):
     for i, sl in enumerate(ndimage.find_objects(lab2), start=1):
         hh, ww = sl[0].stop - sl[0].start, sl[1].stop - sl[1].start
         area = (lab2[sl] == i).sum()
-        if area < 12 or (ww > 120 and hh < 8) or (hh > 50 and ww < 6):
+        if area < 12 or (ww > 120 and hh < 8) or (hh > 50 and ww < 6) or (drop_thin and hh <= 3 and ww >= 8):
             fg[lab2 == i] = False
     return fg
 
@@ -164,7 +164,7 @@ def extract_sheet(cfg):
         y0, y1 = bands[row_idx]
         pad = 6
         crop = rgb[max(0, y0 - pad):y1 + pad, x0:x1]
-        fg = foreground(crop, cfg.get('thresh', 40), strip_lines=cfg.get('strip_lines', True))
+        fg = foreground(crop, cfg.get('thresh', 40), strip_lines=cfg.get('strip_lines', True), drop_thin=cfg.get('drop_thin', False))
         frames = split_frames(fg, n)
         if keep is not None and len(frames) == n:
             frames = [frames[k] for k in keep]
@@ -253,6 +253,8 @@ def extract_static(cfg):
         paths = cfg['images'] if 'images' in cfg else [cfg['image']]
         loaded = [load_static(p, cfg) for p in paths]
     imgs = [im for im, _ in loaded]
+    for k in cfg.get('flip', []):  # 방향이 섞인 포즈 → 해당 프레임만 좌우 반전
+        imgs[k] = imgs[k].transpose(Image.FLIP_LEFT_RIGHT)
     h = max(i.height for i in imgs)
     if cfg.get('anchors'):
         rel = [a - left for a, (_, left) in zip(cfg['anchors'], loaded)]
@@ -280,7 +282,10 @@ def extract_static(cfg):
         'frameHeight': ch,
         'scale': round(scale / f, 3),
         'footY': ch,
-        'anims': {'idle': {'frames': list(range(len(imgs))), 'fps': 1}},
+        # anims: {"idle": [0, 1], "walk": [...]} — 프레임 번호를 동작에 배정(없으면 전부 idle 1fps)
+        'anims': {k: {'frames': v, 'fps': cfg.get('fps', {}).get(k, 6)} for k, v in cfg['anims'].items()}
+        if cfg.get('anims')
+        else {'idle': {'frames': list(range(len(imgs))), 'fps': 1}},
         'ax': w // 2,
     }
 

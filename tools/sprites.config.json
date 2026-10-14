@@ -65,12 +65,17 @@
     "fps": { "idle": 6, "walk": 10, "attack": 10, "death": 8 }
   },
   "earthmage": {
-    "icon": { "image": "../art/portrait_earthmage.png", "box": [358, 230, 958, 830] },
-    "image": "../art/portrait_earthmage.png",
-    "alpha_min": 40,
-    "resolution": 2,
-    "palette": true,
-    "height": 58
+    "_comment": "V1 시트의 흙마법사 Terra(투명 배경). x 끝은 날아가는 불구슬 제외",
+    "icon": { "image": "../art/characters_enemies_v1_sheet.png", "box": [48, 62, 143, 157], "alpha_min": 40 },
+    "sheet": "../art/characters_enemies_v1_sheet.png",
+    "mask": [[0, 0, 245, 400]],
+    "x": [245, 470],
+    "bands": [[40, 98], [100, 156], [158, 214], [220, 276], [282, 316]],
+    "alpha_min": 140,
+    "drop_thin": true,
+    "rows": [["idle", 0, 4], ["walk", 1, 4], ["attack", 2, 4], ["death", 4, 3]],
+    "height": 56,
+    "fps": { "idle": 6, "walk": 8, "attack": 9, "death": 6 }
   },
   "darkmage": {
     "_comment": "V1 시트의 후드 쓴 암흑마법사(투명 배경). x 끝은 날아가는 구슬 제외",
@@ -80,6 +85,7 @@
     "x": [770, 1072],
     "bands": [[40, 98], [100, 156], [158, 214], [223, 275], [282, 316]],
     "alpha_min": 140,
+    "drop_thin": true,
     "rows": [["idle", 0, 5], ["walk", 1, 5], ["attack", 2, 5, [0, 1, 2, 3]], ["death", 4, 3, [0, 1, 2]]],
     "height": 56,
     "fps": { "idle": 6, "walk": 9, "attack": 10, "death": 6 }
@@ -118,12 +124,16 @@
     "height": 60,
     "fps": { "idle": 5, "walk": 9, "attack": 9, "death": 8 }
   },
-  "goblin": { "image": "../../idle-hero-app/www/assets/mon/goblin.png", "height": 44 },
-  "orc": { "image": "../../idle-hero-app/www/assets/mon/orc.png", "mirror": true, "height": 62 },
-  "wolf": { "image": "../../idle-hero-app/www/assets/mon/wolf.png", "height": 40 },
-  "slime": { "image": "../../idle-hero-app/www/assets/mon/slime.png", "height": 36 },
-  "bat": { "image": "../../idle-hero-app/www/assets/mon/bat.png", "height": 30 },
-  "ogre": { "image": "../../idle-hero-app/www/assets/mon/_source/enemies-gallery.jpg", "crop": [680, 595, 930, 772], "holes": true, "height": 100 },
+  "goblin": {"_comment": "V1 시트 적 포즈(투명 배경) — 프레임 번호를 동작에 배정", "image": "../art/characters_enemies_v1_sheet.png", "alpha_min": 140, "crops": [[291, 578, 348, 640], [354, 584, 426, 640], [427, 578, 503, 640], [294, 640, 352, 696], [358, 638, 424, 696], [434, 645, 507, 695]], "anims": {"idle": [0, 3], "walk": [0, 1, 3, 1], "attack": [2, 4], "death": [5]}, "fps": {"idle": 3, "walk": 7, "attack": 6, "death": 4}, "height": 44},
+  "orc": {"_comment": "V1 시트 적 포즈(투명 배경) — 프레임 번호를 동작에 배정", "image": "../art/characters_enemies_v1_sheet.png", "alpha_min": 140, "crops": [[1145, 555, 1238, 640], [1255, 572, 1325, 640], [1340, 550, 1410, 640], [1405, 545, 1492, 640], [1165, 636, 1250, 696], [1265, 636, 1345, 696], [1365, 636, 1492, 696]], "anims": {"idle": [1, 2], "walk": [1, 2, 1, 0], "attack": [0, 3], "death": [4, 6]}, "fps": {"idle": 3, "walk": 6, "attack": 5, "death": 4}, "height": 62},
+  "wolf": {"_comment": "V1 시트 적 포즈(투명 배경) — 프레임 번호를 동작에 배정", "image": "../art/characters_enemies_v1_sheet.png", "alpha_min": 140, "crops": [[833, 560, 932, 635], [937, 580, 1017, 638], [1018, 572, 1108, 637], [845, 634, 943, 694], [944, 636, 1014, 694], [1020, 632, 1114, 692]], "flip": [0, 2, 3, 5], "anims": {"idle": [1, 4], "walk": [0, 3, 5, 3], "attack": [2, 3]}, "fps": {"idle": 3, "walk": 9, "attack": 7}, "height": 40},
+  "slime": {"_comment": "V1 시트 적 포즈(투명 배경) — 프레임 번호를 동작에 배정", "image": "../art/characters_enemies_v1_sheet.png", "alpha_min": 140, "crops": [[34, 580, 102, 632], [106, 585, 172, 632], [180, 583, 256, 632], [30, 640, 95, 690], [103, 638, 172, 690], [180, 640, 257, 690]], "anims": {"idle": [0, 1, 3, 1], "walk": [0, 2, 4, 2], "attack": [2, 5]}, "fps": {"idle": 4, "walk": 6, "attack": 6}, "height": 36},
+  "bat": {"_comment": "V1 시트 적 포즈(투명 배경) — 프레임 번호를 동작에 배정", "image": "../art/characters_enemies_v1_sheet.png", "alpha_min": 140, "crops": [[16, 837, 98, 892], [92, 840, 169, 895], [163, 841, 246, 895], [16, 894, 99, 950], [97, 890, 167, 951], [161, 907, 248, 953]], "anims": {"idle": [0, 1, 2, 3], "walk": [0, 1, 2, 3], "attack": [4, 2], "death": [5]}, "fps": {"idle": 8, "walk": 10, "attack": 6, "death": 4}, "height": 30},
+  "ogre": {"_comment": "V1 시트 적 포즈(투명 배경) — 프레임 번호를 동작에 배정", "image": "../art/characters_enemies_v1_sheet.png", "alpha_min": 140, "crops": [[756, 822, 869, 904], [865, 839, 959, 910], [954, 839, 1070, 911], [777, 897, 857, 982], [868, 907, 959, 981], [969, 928, 1094, 982]], "anims": {"idle": [0, 1], "walk": [0, 2, 4, 2], "attack": [3, 1], "death": [5]}, "fps": {"idle": 3, "walk": 5, "attack": 4, "death": 3}, "height": 100},
+  "skeleton": {"_comment": "V1 시트 적 포즈(투명 배경)", "image": "../art/characters_enemies_v1_sheet.png", "alpha_min": 140, "crops": [[535, 568, 606, 637], [612, 575, 676, 637], [677, 575, 744, 637], [743, 562, 806, 634], [535, 637, 606, 697], [612, 637, 676, 697], [677, 637, 744, 697], [740, 645, 820, 695]], "anims": {"idle": [1, 2], "walk": [0, 1, 2, 1], "attack": [3, 4, 6], "death": [7]}, "fps": {"idle": 3, "walk": 6, "attack": 6, "death": 4}, "height": 50},
+  "mushroom": {"_comment": "V1 시트 적 포즈(투명 배경)", "image": "../art/characters_enemies_v1_sheet.png", "alpha_min": 140, "crops": [[275, 840, 328, 899], [351, 840, 405, 899], [423, 846, 477, 900], [273, 900, 327, 960], [344, 909, 396, 960], [414, 911, 485, 960]], "anims": {"idle": [0, 1], "walk": [0, 1, 2, 1], "attack": [3, 2], "death": [4, 5]}, "fps": {"idle": 3, "walk": 6, "attack": 5, "death": 4}, "height": 40},
+  "ghost": {"_comment": "V1 시트 적 포즈(투명 배경)", "image": "../art/characters_enemies_v1_sheet.png", "alpha_min": 140, "crops": [[522, 838, 577, 899], [588, 838, 639, 909], [642, 838, 690, 908], [696, 838, 742, 903], [526, 900, 581, 969], [595, 909, 647, 971], [670, 935, 741, 971]], "anims": {"idle": [1, 2], "walk": [1, 2, 4, 5], "attack": [0, 4], "death": [3, 6]}, "fps": {"idle": 3, "walk": 6, "attack": 5, "death": 4}, "height": 46},
+  "dragon": {"_comment": "V1 시트 적 포즈(투명 배경)", "image": "../art/characters_enemies_v1_sheet.png", "alpha_min": 140, "crops": [[1075, 700, 1292, 828], [1295, 700, 1490, 828], [1085, 856, 1250, 970], [1245, 932, 1462, 998]], "flip": [0, 1, 2, 3], "anims": {"idle": [1, 2], "walk": [1, 2], "attack": [0], "death": [3]}, "fps": {"idle": 2, "walk": 3, "attack": 2, "death": 2}, "height": 130},
   "base_ally": {
     "image": "../art/tower_damage_stages_sheet.png",
     "crops": [[116, 0, 428, 527], [559, 0, 890, 527], [984, 0, 1404, 527]],
