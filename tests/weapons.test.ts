@@ -5,6 +5,10 @@ import {
   lightningTargets,
   snipeTarget,
   unlockedWeapons,
+  weaponPowerMult,
+  weaponChargeMult,
+  weaponDurationMult,
+  weaponUpgradeCost,
   WEAPONS,
 } from '../src/systems/weapons';
 
@@ -51,5 +55,25 @@ describe('무기 대상', () => {
   it('저격: HP 최대인 적, 없으면 -1', () => {
     expect(snipeTarget([90, 1400, 220])).toBe(1);
     expect(snipeTarget([])).toBe(-1);
+  });
+});
+
+describe('특수 무기 영구 강화', () => {
+  it('레벨 0은 기본값', () => {
+    expect(weaponPowerMult(0)).toBe(1);
+    expect(weaponChargeMult(0)).toBe(1);
+    expect(weaponDurationMult(0)).toBe(1);
+  });
+  it('레벨당 위력 +15%, 충전 -6%, 지속 +8%', () => {
+    expect(weaponPowerMult(2)).toBeCloseTo(1.3);
+    expect(weaponChargeMult(2)).toBeCloseTo(0.88);
+    expect(weaponDurationMult(5)).toBeCloseTo(1.4);
+  });
+  it('충전 단축은 최대 50%', () => {
+    expect(weaponChargeMult(100)).toBe(0.5);
+  });
+  it('비용 150 + 100×레벨', () => {
+    expect(weaponUpgradeCost(0)).toBe(150);
+    expect(weaponUpgradeCost(3)).toBe(450);
   });
 });

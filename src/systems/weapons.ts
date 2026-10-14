@@ -51,6 +51,24 @@ export const BERSERK_ATK = 1.5;
 export const BERSERK_COOLDOWN = 0.5; // 공격 간격 배수(작을수록 빠름)
 export const SNIPE_DAMAGE = 600;
 
+/** 🔧 특수 무기 영구 강화(메타 골드) — 레벨당 위력 +15%, 충전 시간 -6%(최대 50% 단축), 지속시간 +8% */
+export function weaponPowerMult(lv: number): number {
+  return 1 + 0.15 * lv;
+}
+
+export function weaponChargeMult(lv: number): number {
+  return Math.max(0.5, 1 - 0.06 * lv);
+}
+
+export function weaponDurationMult(lv: number): number {
+  return 1 + 0.08 * lv;
+}
+
+/** 레벨 N → 다음 레벨 강화 비용 */
+export function weaponUpgradeCost(lv: number): number {
+  return 150 + 100 * lv;
+}
+
 /** 스테이지 id에서 쓸 수 있는 무기 수 — 스테이지 N이면 N개(최대 9) */
 export function unlockedWeapons(stageId: number): number {
   return Math.max(1, Math.min(WEAPONS.length, stageId));

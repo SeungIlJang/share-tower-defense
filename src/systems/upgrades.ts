@@ -1,5 +1,6 @@
 import type { UnitStats } from '../types';
 import { storageGet, storageSet } from './storage';
+import { weaponUpgradeCost } from './weapons';
 
 /** 강화 순수 계산 (Vitest 검증) */
 
@@ -48,6 +49,7 @@ const KEY = 'ld_meta_v1';
 export class MetaProgress {
   gold = 0;
   levels: Record<string, number> = {};
+  weaponLevels: Record<string, number> = {}; // 특수 무기 영구 강화 레벨
   clearedMax = 0; // 클리어한 최고 스테이지 id
   lastDaily = -1; // 마지막 일일보상 수령 day index
   streak = 0; // 연속 출석
@@ -133,6 +135,23 @@ export class MetaProgress {
     return true;
   }
 
+  weaponLevel(key: string): number {
+    return this.weaponLevels[key] ?? 0;
+  }
+
+  weaponNextCost(key: string): number {
+    return weaponUpgradeCost(this.weaponLevel(key));
+  }
+
+  upgradeWeapon(key: string): boolean {
+    const cost = this.weaponNextCost(key);
+    if (this.gold < cost) return false;
+    this.gold -= cost;
+    this.weaponLevels[key] = this.weaponLevel(key) + 1;
+    this.save();
+    return true;
+  }
+
   addGold(amount: number): void {
     this.gold += amount;
     this.save();
@@ -144,6 +163,7 @@ export class MetaProgress {
       const obj = JSON.parse(raw) as {
         gold?: number;
         levels?: Record<string, number>;
+        weaponLevels?: Record<string, number>;
         clearedMax?: number;
         lastDaily?: number;
         streak?: number;
@@ -151,6 +171,7 @@ export class MetaProgress {
       };
       this.gold = obj.gold ?? 0;
       this.levels = obj.levels ?? {};
+      this.weaponLevels = obj.weaponLevels ?? {};
       this.clearedMax = obj.clearedMax ?? 0;
       this.lastDaily = obj.lastDaily ?? -1;
       this.streak = obj.streak ?? 0;
@@ -166,6 +187,7 @@ export class MetaProgress {
       JSON.stringify({
         gold: this.gold,
         levels: this.levels,
+        weaponLevels: this.weaponLevels,
         clearedMax: this.clearedMax,
         lastDaily: this.lastDaily,
         streak: this.streak,
