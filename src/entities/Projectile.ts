@@ -34,7 +34,8 @@ export class Projectile {
     target: ProjectileTarget,
     dmg: number,
     kind: ProjectileKind,
-    onHit?: (x: number, dmg: number) => void
+    onHit?: (x: number, dmg: number) => void,
+    color = 0xb98cff // 구슬 색(유닛별)
   ): void {
     this.target = target;
     this.dmg = dmg;
@@ -44,7 +45,7 @@ export class Projectile {
     this.onHit = onHit ?? null;
     this.speed = kind === 'orb' ? 360 : 560;
     if (kind === 'orb') {
-      this.orb.setPosition(x, y).setVisible(true);
+      this.orb.setPosition(x, y).setFillStyle(color).setVisible(true);
       this.arrow.setVisible(false);
     } else {
       this.arrow.setPosition(x, y).setVisible(true);

@@ -5,6 +5,9 @@
  */
 export const STARTER_UNITS = 5;
 
+/** true면 유닛 12종·특수 무기 9종 전부 처음부터 사용(스테이지 해금 규칙은 유지, false로 되돌리면 다시 적용) */
+export const UNLOCK_ALL = true;
+
 /** index번째 유닛(0부터)을 쓰려면 클리어해야 하는 스테이지(0 = 처음부터) */
 export function unitUnlockStage(index: number): number {
   return index < STARTER_UNITS ? 0 : index - STARTER_UNITS + 2;
@@ -15,10 +18,10 @@ export function isUnitUnlocked(index: number, clearedMax: number): boolean {
 }
 
 /** 유닛 키별 해금 스테이지(0 = 해금됨) — HUD·강화 화면 표시용 */
-export function lockedUntil(keys: string[], clearedMax: number): Record<string, number> {
+export function lockedUntil(keys: string[], clearedMax: number, unlockAll = UNLOCK_ALL): Record<string, number> {
   const out: Record<string, number> = {};
   keys.forEach((k, i) => {
-    out[k] = isUnitUnlocked(i, clearedMax) ? 0 : unitUnlockStage(i);
+    out[k] = unlockAll || isUnitUnlocked(i, clearedMax) ? 0 : unitUnlockStage(i);
   });
   return out;
 }

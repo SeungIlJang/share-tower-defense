@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import type { UnitStats } from '../types';
-import { iconKey } from '../systems/sprites';
+import { iconKey, textureKey } from '../systems/sprites';
 import { WEAPONS } from '../systems/weapons';
 
 export interface HudState {
@@ -24,6 +24,13 @@ const UNIT_COLORS: Record<string, number> = {
   knight: 0xb98cff,
   spear: 0x4ad0e0,
   mage: 0xd58cff,
+  rogue: 0x6abf5a,
+  cleric: 0xffe08a,
+  earthmage: 0xd8a04a,
+  darkmage: 0x9a5aff,
+  shield: 0x9aa8c0,
+  cavalry: 0xc8864a,
+  cannon: 0xa0a8b8,
 };
 
 interface Slot {
@@ -46,7 +53,7 @@ interface WeaponButton {
   bg: Phaser.GameObjects.Arc;
   gauge: Phaser.GameObjects.Graphics;
   ring: Phaser.GameObjects.Arc; // 발사 가능 표시(깜빡임)
-  icon: Phaser.GameObjects.Text;
+  icon: Phaser.GameObjects.Text | Phaser.GameObjects.Image; // 그림 아이콘(없으면 이모지)
   wasReady: boolean;
 }
 
@@ -144,7 +151,7 @@ export class Hud {
         ? scene.add.image(cx - 28, cy + 9, iconKey(key)).setDisplaySize(32, 32).setDepth(d + 2)
         : null;
       if (face) icon.setFillStyle(0x1a2133).setStrokeStyle(2, col); // 얼굴 뒤는 어두운 바탕 + 유닛 색 테두리
-      const label = scene.add.text(cx - 8, cy + 1, u.name, { fontFamily: 'sans-serif', fontSize: '14px', fontStyle: 'bold', color: '#fff' }).setOrigin(0, 0.5).setDepth(d + 1);
+      const label = scene.add.text(cx - 8, cy + 1, u.name, { fontFamily: 'sans-serif', fontSize: u.name.length >= 4 ? '11px' : '14px', fontStyle: 'bold', color: '#fff' }).setOrigin(0, 0.5).setDepth(d + 1);
       const cost = scene.add.text(cx - 9, cy + 21, `⚡${u.cost} 🍖${u.pop}`, { fontFamily: 'sans-serif', fontSize: '10px', color: '#cfe' }).setOrigin(0, 0.5).setDepth(d + 1);
       rect.setInteractive({ useHandCursor: true });
       rect.on('pointerdown', () => onSpawn(key));
@@ -172,7 +179,10 @@ export class Hud {
       }
       const gauge = scene.add.graphics().setDepth(d + 1);
       const ring = scene.add.circle(cx, wy, WEAPON_R + 3).setStrokeStyle(3, w.color).setDepth(d + 3).setVisible(false);
-      const icon = scene.add.text(cx, wy, w.icon, { fontSize: '23px' }).setOrigin(0.5).setDepth(d + 2);
+      const iconTex = textureKey('weapon_icons'); // public/sprites 무기 아이콘 시트(프레임 i = i번째 무기)
+      const icon = scene.textures.exists(iconTex)
+        ? scene.add.image(cx, wy, iconTex, i).setDisplaySize(WEAPON_R * 1.45, WEAPON_R * 1.45).setDepth(d + 2)
+        : scene.add.text(cx, wy, w.icon, { fontSize: '23px' }).setOrigin(0.5).setDepth(d + 2);
       scene.add.text(cx, wy + WEAPON_R + 8, w.name, { fontFamily: 'sans-serif', fontSize: '11px', fontStyle: 'bold', color: '#cfe0ff' }).setOrigin(0.5).setDepth(d + 2);
       bg.setInteractive({ useHandCursor: true });
       bg.on('pointerdown', () => onWeapon(i));

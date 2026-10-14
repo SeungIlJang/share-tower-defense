@@ -21,6 +21,13 @@ export const VISUALS: Record<string, Visual> = {
   knight: { bodyW: 30, bodyH: 42, body: 0xb98cff, shape: 'rect', head: true, headColor: 0xcfd3da, weapon: 'shield', weaponColor: 0x9aa3b0 },
   spear: { bodyW: 20, bodyH: 34, body: 0x4ad0e0, shape: 'rect', head: true, headColor: SKIN, weapon: 'spear', weaponColor: 0xd8d2b0 },
   mage: { bodyW: 20, bodyH: 32, body: 0xd58cff, shape: 'rect', head: true, headColor: SKIN, weapon: 'staff', weaponColor: 0x7cf6ff },
+  rogue: { bodyW: 20, bodyH: 30, body: 0x3f6a3a, shape: 'rect', head: true, headColor: SKIN, weapon: 'dagger', weaponColor: 0xe8edf4 },
+  cleric: { bodyW: 20, bodyH: 32, body: 0xf0f0ff, shape: 'rect', head: true, headColor: SKIN, weapon: 'staff', weaponColor: 0xffd34d },
+  earthmage: { bodyW: 20, bodyH: 32, body: 0x4a7a3a, shape: 'rect', head: true, headColor: SKIN, weapon: 'staff', weaponColor: 0xff9a3c },
+  darkmage: { bodyW: 20, bodyH: 32, body: 0x4a2a6a, shape: 'rect', head: true, headColor: SKIN, weapon: 'staff', weaponColor: 0xb98cff },
+  shield: { bodyW: 32, bodyH: 40, body: 0x6a7a96, shape: 'rect', head: true, headColor: 0xb8c0cc, weapon: 'shield', weaponColor: 0xd8b04a },
+  cavalry: { bodyW: 42, bodyH: 34, body: 0x8a5a2a, shape: 'rect', head: true, headColor: SKIN, weapon: 'spear', weaponColor: 0xd8d2b0 },
+  cannon: { bodyW: 30, bodyH: 26, body: 0x3a3f4a, shape: 'rect', head: true, headColor: SKIN, weapon: 'club', weaponColor: 0x202430 },
   // 적
   goblin: { bodyW: 18, bodyH: 26, body: 0xff5a6e, shape: 'rect', head: true, headColor: 0xe88a6a, weapon: 'dagger', weaponColor: 0xcccccc },
   orc: { bodyW: 32, bodyH: 44, body: 0xb0392b, shape: 'rect', head: true, headColor: 0x7aa05a, weapon: 'club', weaponColor: 0x8a5a2a },

@@ -3,5 +3,12 @@
   "archer":  { "name": "궁수", "hp": 70,  "atk": 24, "def": 2,  "atkSpeed": 1.3, "range": 180, "speed": 62, "cost": 30, "pop": 6 },
   "knight":  { "name": "기사", "hp": 240, "atk": 22, "def": 12, "atkSpeed": 0.8, "range": 46,  "speed": 56, "cost": 45, "pop": 14 },
   "spear":   { "name": "창병", "hp": 150, "atk": 20, "def": 8,  "atkSpeed": 1.0, "range": 72,  "speed": 60, "cost": 35, "pop": 10 },
-  "mage":    { "name": "마법사", "hp": 64, "atk": 36, "def": 2,  "atkSpeed": 0.75,"range": 210, "speed": 52, "cost": 55, "pop": 12 }
+  "mage":    { "name": "마법사", "hp": 64, "atk": 36, "def": 2,  "atkSpeed": 0.75,"range": 210, "speed": 52, "cost": 55, "pop": 12 },
+  "rogue":     { "name": "로그",       "hp": 90,  "atk": 18, "def": 3,  "atkSpeed": 1.8, "range": 40,  "speed": 95,  "cost": 30, "pop": 7 },
+  "cleric":    { "name": "성직자",     "hp": 95,  "atk": 10, "def": 4,  "atkSpeed": 0.8, "range": 160, "speed": 55,  "cost": 45, "pop": 10 },
+  "earthmage": { "name": "흙마법사",   "hp": 85,  "atk": 30, "def": 3,  "atkSpeed": 0.6, "range": 190, "speed": 46,  "cost": 60, "pop": 12 },
+  "darkmage":  { "name": "암흑마법사", "hp": 70,  "atk": 58, "def": 2,  "atkSpeed": 0.55,"range": 220, "speed": 50,  "cost": 65, "pop": 12 },
+  "shield":    { "name": "방패병",     "hp": 380, "atk": 12, "def": 18, "atkSpeed": 0.7, "range": 42,  "speed": 44,  "cost": 50, "pop": 14 },
+  "cavalry":   { "name": "기병",       "hp": 260, "atk": 30, "def": 9,  "atkSpeed": 0.9, "range": 50,  "speed": 110, "cost": 70, "pop": 16 },
+  "cannon":    { "name": "대포병",     "hp": 120, "atk": 70, "def": 4,  "atkSpeed": 0.35,"range": 260, "speed": 40,  "cost": 90, "pop": 18 }
 }

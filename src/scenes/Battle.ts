@@ -16,7 +16,7 @@ import { xpToNext, hasteMult, mimicMult, magicMult, supplyBonus, anyUpgradable }
 import { Hud } from '../ui/Hud';
 import { LevelUpOverlay } from '../ui/LevelUp';
 import { showRewarded } from '../systems/ads';
-import { lockedUntil } from '../systems/unlocks';
+import { lockedUntil, UNLOCK_ALL } from '../systems/unlocks';
 import {
   WEAPONS,
   WeaponCharge,
@@ -39,7 +39,16 @@ import {
   BERSERK_ATK,
   BERSERK_COOLDOWN,
   SNIPE_DAMAGE,
+  weaponPowerMult,
+  weaponChargeMult,
+  weaponDurationMult,
 } from '../systems/weapons';
+
+// 원거리 유닛: 투사체 모양 · 명중 시 범위 피해 배율(없으면 단일)
+const ORB_UNITS = new Set(['mage', 'earthmage', 'darkmage', 'cannon']);
+const SPLASH: Record<string, number> = { mage: 0.6, earthmage: 0.8, cannon: 0.9 };
+const ORB_COLOR: Record<string, number> = { earthmage: 0xd8903a, darkmage: 0x6a2aff, cannon: 0x2a2e36 };
+const CLERIC_HEAL_MULT = 2.5; // 성직자 1회 치유량 = 공격력 × 2.5
 
 const FROZEN_TINT = 0x7cd8ff;
 const GUARD_TINT = 0xb0c4ff;
@@ -145,7 +154,7 @@ export class BattleScene extends Phaser.Scene {
     this.frozenUntil = 0;
     this.guardUntil = 0;
     this.berserkUntil = 0;
-    this.weapons = WEAPONS.slice(0, unlockedWeapons(this.stage.id)).map((w) => new WeaponCharge(w.chargeSec));
+    this.weapons = WEAPONS.slice(0, UNLOCK_ALL ? WEAPONS.length : unlockedWeapons(this.stage.id)).map((w) => new WeaponCharge(w.chargeSec * weaponChargeMult(meta.weaponLevel(w.key)))); // 🔧 영구 강화: 충전 단축
 
     this.unitPool = new Pool<Unit>(
       () => new Unit(this),
@@ -441,6 +450,11 @@ export class BattleScene extends Phaser.Scene {
     for (const u of this.units) {
       if (!u.active) continue;
       u.setStatus(allyTint);
+      if (u.type === 'cleric') {
+        // ✚ 성직자: 공격하지 않음 — 다친 아군 치유, 없으면 맨 앞 아군 뒤를 따라감
+        if (!this.clericHeal(u, dt)) this.clericFollow(u, dt);
+        continue;
+      }
       const target = this.nearest(u.x, this.enemies) as Enemy | null;
       u.cooldown -= dt;
       if (target && inRange(u.x, target.x, u.stats.range)) {
@@ -509,6 +523,36 @@ export class BattleScene extends Phaser.Scene {
     this.checkEnd();
   }
 
+  /** 성직자 이동: 맨 앞 아군보다 50px 뒤까지만 전진(아군이 없으면 제자리) */
+  private clericFollow(u: Unit, dt: number): void {
+    let front = -Infinity;
+    for (const o of this.units) if (o.active && o !== u && o.type !== 'cleric' && o.x > front) front = o.x;
+    if (front > -Infinity && u.x < front - 50) u.moveBy(u.stats.speed * dt);
+    else u.idle();
+  }
+
+  /** 성직자: 사거리 안에서 가장 많이 다친 아군을 치유. 치유 대상이 있으면 true(그 프레임은 이동·공격 안 함) */
+  private clericHeal(u: Unit, dt: number): boolean {
+    let best: Unit | null = null;
+    for (const o of this.units) {
+      if (!o.active || o === u || o.hp >= o.maxHp) continue;
+      if (!inRange(u.x, o.x, u.stats.range)) continue;
+      if (!best || o.hp / o.maxHp < best.hp / best.maxHp) best = o;
+    }
+    if (!best) return false;
+    u.cooldown -= dt;
+    if (u.cooldown > 0) {
+      u.idle();
+      return true;
+    }
+    best.heal(Math.round(u.stats.atk * CLERIC_HEAL_MULT));
+    const fx = this.add.circle(best.x, LANE_Y - 30, 10, 0x5cff9e, 0.6).setDepth(55);
+    this.tweens.add({ targets: fx, y: LANE_Y - 60, scale: 1.8, alpha: 0, duration: 450, onComplete: () => fx.destroy() });
+    u.lunge();
+    u.cooldown = attackCooldown(u.stats.atkSpeed) * hasteMult(this.skills.haste ?? 0);
+    return true;
+  }
+
   private attack(att: Unit | Enemy, def: Unit | Enemy): void {
     if (att.cooldown > 0) {
       att.idle(); // 사거리 안 쿨다운 대기
@@ -519,11 +563,11 @@ export class BattleScene extends Phaser.Scene {
     if (att.stats.range >= BattleScene.RANGED) {
       // 원거리: 궁수=화살(직선·빠름), 마법사=마법 구슬(느림·명중 시 광역)
       const p = this.projPool.acquire();
-      const isMage = att.type === 'mage';
-      const onHit = isMage
-        ? (x: number, d: number) => this.splash(x, Math.round(d * 0.6), att.side)
+      const splashMul = SPLASH[att.type];
+      const onHit = splashMul
+        ? (x: number, d: number) => this.splash(x, Math.round(d * splashMul), att.side)
         : undefined;
-      p.spawn(att.x + (att.side === 'ally' ? 14 : -14), LANE_Y - 14, def, dmg, isMage ? 'orb' : 'arrow', onHit);
+      p.spawn(att.x + (att.side === 'ally' ? 14 : -14), LANE_Y - 14, def, dmg, ORB_UNITS.has(att.type) ? 'orb' : 'arrow', onHit, ORB_COLOR[att.type]);
       this.projectiles.push(p);
     } else {
       // 근접: 즉시 — 🛡️ 수호 중인 아군은 피해 없음
@@ -548,6 +592,11 @@ export class BattleScene extends Phaser.Scene {
     if (needsEnemy && live.length === 0) return;
     charge.fire();
     this.banner(`${def.icon} ${def.name}!`, def.color);
+    // 🔧 영구 강화: 위력(피해·회복·밀어내기) / 지속시간
+    const lv = meta.weaponLevel(def.key);
+    const P = weaponPowerMult(lv);
+    const D = weaponDurationMult(lv);
+    const pw = (v: number): number => Math.round(v * P);
 
     switch (def.key) {
       case 'meteor': {
@@ -561,7 +610,7 @@ export class BattleScene extends Phaser.Scene {
           ease: 'Quad.easeIn',
           onComplete: () => {
             rock.destroy();
-            for (const e of this.enemies) if (e.active && Math.abs(e.x - x) <= METEOR_RADIUS) e.takeDamage(METEOR_DAMAGE);
+            for (const e of this.enemies) if (e.active && Math.abs(e.x - x) <= METEOR_RADIUS) e.takeDamage(pw(METEOR_DAMAGE));
             this.burst(x, 0xff7a3c, METEOR_RADIUS);
             this.cameras.main.shake(250, 0.01);
           },
@@ -574,7 +623,7 @@ export class BattleScene extends Phaser.Scene {
           this.tweens.add({ targets: a, x: e.x, y: LANE_Y - 20, duration: 260 + Math.random() * 120, onComplete: () => a.destroy() });
         }
         this.time.delayedCall(330, () => {
-          for (const e of live) if (e.active) e.takeDamage(ARROWS_DAMAGE);
+          for (const e of live) if (e.active) e.takeDamage(pw(ARROWS_DAMAGE));
         });
         break;
       case 'lightning':
@@ -582,40 +631,40 @@ export class BattleScene extends Phaser.Scene {
           const e = live[idx];
           const bolt = this.add.rectangle(e.x, LANE_Y - 200, 6, 400, 0xfff6b0).setDepth(80);
           this.tweens.add({ targets: bolt, alpha: 0, scaleX: 3, duration: 260, onComplete: () => bolt.destroy() });
-          e.takeDamage(LIGHTNING_DAMAGE);
+          e.takeDamage(pw(LIGHTNING_DAMAGE));
         }
         this.cameras.main.flash(120, 255, 240, 160);
         break;
       case 'heal':
         for (const u of this.units) {
           if (!u.active) continue;
-          u.heal(Math.round(u.maxHp * HEAL_UNIT_RATIO));
+          u.heal(Math.round(u.maxHp * Math.min(1, HEAL_UNIT_RATIO * P)));
           this.burst(u.x, 0x5cff9e, 24);
         }
-        this.playerBase.heal(Math.round(this.playerBase.maxHp * HEAL_BASE_RATIO));
+        this.playerBase.heal(Math.round(this.playerBase.maxHp * HEAL_BASE_RATIO * P));
         this.burst(this.playerBase.x, 0x5cff9e, 50);
         break;
       case 'shockwave': {
         const front = Math.min(...live.map((e) => e.x));
         for (const e of live) {
           if (e.x - front > SHOCKWAVE_RANGE) continue;
-          e.moveBy(Math.min(SHOCKWAVE_PUSH, Math.max(0, this.enemyBase.x - 50 - e.x)));
-          e.takeDamage(SHOCKWAVE_DAMAGE);
+          e.moveBy(Math.min(pw(SHOCKWAVE_PUSH), Math.max(0, this.enemyBase.x - 50 - e.x)));
+          e.takeDamage(pw(SHOCKWAVE_DAMAGE));
         }
         this.burst(front, 0xffa94d, SHOCKWAVE_RANGE / 2);
         this.cameras.main.shake(200, 0.008);
         break;
       }
       case 'freeze':
-        this.frozenUntil = this.clock + FREEZE_SEC;
+        this.frozenUntil = this.clock + FREEZE_SEC * D;
         this.cameras.main.flash(200, 120, 200, 255);
         break;
       case 'guard':
-        this.guardUntil = this.clock + GUARD_SEC;
+        this.guardUntil = this.clock + GUARD_SEC * D;
         for (const u of this.units) if (u.active) this.burst(u.x, 0x9ab4ff, 26);
         break;
       case 'berserk':
-        this.berserkUntil = this.clock + BERSERK_SEC;
+        this.berserkUntil = this.clock + BERSERK_SEC * D;
         for (const u of this.units) if (u.active) this.burst(u.x, 0xff5a6e, 26);
         break;
       case 'snipe': {
@@ -627,7 +676,7 @@ export class BattleScene extends Phaser.Scene {
           duration: 300,
           onComplete: () => {
             mark.destroy();
-            if (t.active) t.takeDamage(SNIPE_DAMAGE);
+            if (t.active) t.takeDamage(pw(SNIPE_DAMAGE));
             this.burst(t.x, 0xd58cff, 30);
           },
         });
