@@ -3,7 +3,7 @@ import Phaser from 'phaser';
 export interface ProjectileTarget {
   x: number;
   active: boolean;
-  takeDamage(dmg: number): void;
+  takeDamage(dmg: number, crit?: boolean): void;
 }
 
 export type ProjectileKind = 'arrow' | 'orb';
@@ -19,6 +19,7 @@ export class Projectile {
   kind: ProjectileKind = 'arrow';
   private target: ProjectileTarget | null = null;
   private dmg = 0;
+  private crit = false;
   private speed = 520;
   private life = 0;
   private onHit: ((x: number, dmg: number) => void) | null = null;
@@ -35,8 +36,10 @@ export class Projectile {
     dmg: number,
     kind: ProjectileKind,
     onHit?: (x: number, dmg: number) => void,
-    color = 0xb98cff // 구슬 색(유닛별)
+    color = 0xb98cff, // 구슬 색(유닛별)
+    crit = false
   ): void {
+    this.crit = crit;
     this.target = target;
     this.dmg = dmg;
     this.kind = kind;
@@ -66,7 +69,7 @@ export class Projectile {
     const dir = Math.sign(t.x - o.x) || 1;
     o.x += dir * this.speed * dt;
     if (Math.abs(t.x - o.x) <= 16) {
-      if (t.active) t.takeDamage(this.dmg);
+      if (t.active) t.takeDamage(this.dmg, this.crit);
       if (this.onHit) this.onHit(o.x, this.dmg); // 마법 구슬 광역
       return true;
     }

@@ -35,6 +35,8 @@ export interface StageData {
   baseHp: number;
   startGold: number;
   goldRate: number; // 초당 골드
+  world?: number; // 월드(1 관문의 숲, 2 모래 사막)
+  enemyMult?: number; // 적 체력·공격 배율(월드 2부터)
   waves: Wave[];
 }
 

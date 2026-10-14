@@ -31,6 +31,11 @@ export class Fighter {
   swings = 0; // 누적 공격 수(스킬 발동 판정)
   slowUntil = 0; // 이동 50% 감속 끝나는 시각(ms, scene.time.now)
   guardUntil = 0; // 받는 피해 50% 감소 끝나는 시각(ms)
+  stunUntil = 0; // 기절 끝나는 시각(ms) — 보스 땅 내려치기
+  patternT = 0; // 보스 패턴 타이머(초)
+  summonT = 0; // 보스 부하 소환 타이머(초)
+  elite = false; // ⭐ 엘리트 적
+  private baseTint: number | null = null; // 엘리트 금빛 등 기본 색
 
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
@@ -53,6 +58,12 @@ export class Fighter {
     this.swings = 0;
     this.slowUntil = 0;
     this.guardUntil = 0;
+    this.stunUntil = 0;
+    this.patternT = 0;
+    this.summonT = 0;
+    this.elite = false;
+    this.baseTint = null;
+    this.root.setScale(1);
 
     // 외형 재구성
     this.char.removeAll(true);
@@ -88,14 +99,28 @@ export class Fighter {
     this.updateHp();
   }
 
+  /** ⭐ 엘리트로 만들기 — 크기 1.3배 + 금빛(능력치는 Battle에서) */
+  makeElite(): void {
+    this.elite = true;
+    this.baseTint = 0xffe08a;
+    this.root.setScale(1.3);
+    if (this.sprite) this.applyTint(this.sprite);
+    this.updateHp();
+  }
+
+  get stunned(): boolean {
+    return this.scene.time.now < this.stunUntil;
+  }
+
   /** 감속 중이면 0.5 */
   get speedMult(): number {
     return this.scene.time.now < this.slowUntil ? 0.5 : 1;
   }
 
-  takeDamage(dmg: number): void {
+  takeDamage(dmg: number, crit = false): void {
     if (this.scene.time.now < this.guardUntil) dmg = Math.max(1, Math.round(dmg * 0.5)); // 철벽의 의지
     this.hp = applyDamage(this.hp, dmg);
+    if (this.side === 'enemy') this.damageNumber(dmg, crit);
     this.updateHp();
     if (this.sprite) {
       // 스프라이트: 흰색으로 잠깐 채움
@@ -125,7 +150,27 @@ export class Fighter {
 
   private applyTint(s: Phaser.GameObjects.Sprite): void {
     s.clearTint().setTintMode(Phaser.TintModes.MULTIPLY);
-    if (this.statusTint !== null) s.setTint(this.statusTint);
+    const tint = this.statusTint ?? this.baseTint;
+    if (tint !== null) s.setTint(tint);
+  }
+
+  /** 💥 피해 숫자(적이 맞을 때) — 치명타는 크고 주황색 */
+  private damageNumber(dmg: number, crit: boolean): void {
+    const y = this.root.y - 40 - Math.random() * 12;
+    const t = this.scene.add
+      .text(this.root.x + (Math.random() * 16 - 8), y, crit ? `${dmg}!` : String(dmg), {
+        fontFamily: 'sans-serif',
+        fontSize: crit ? '24px' : '15px',
+        fontStyle: 'bold',
+        color: crit ? '#ffb02e' : '#ffffff',
+        stroke: '#000000',
+        strokeThickness: crit ? 5 : 3,
+      })
+      .setOrigin(0.5)
+      .setDepth(88);
+    if (crit) t.setScale(0.5);
+    this.scene.tweens.add({ targets: t, scale: 1, duration: 120, ease: 'Back.easeOut' });
+    this.scene.tweens.add({ targets: t, y: y - 32, alpha: 0, delay: crit ? 380 : 220, duration: 420, onComplete: () => t.destroy() });
   }
 
   /** 회복(최대 HP까지) */

@@ -16,7 +16,6 @@ import { xpToNext, hasteMult, mimicMult, magicMult, supplyBonus, anyUpgradable }
 import { Hud } from '../ui/Hud';
 import { LevelUpOverlay } from '../ui/LevelUp';
 import { showRewarded } from '../systems/ads';
-import { lockedUntil, UNLOCK_ALL } from '../systems/unlocks';
 import {
   UNIT_SKILLS,
   isSkillSwing,
@@ -30,10 +29,29 @@ import {
   PIERCE_MAX,
 } from '../systems/unitSkills';
 import { spriteOf, textureKey } from '../systems/sprites';
+import { sfx, bgm, setMute } from '../systems/sound';
+import { starsFor, STAR_GOLD } from '../systems/stars';
+import { activeSynergies, synergyMult, type Synergy } from '../systems/synergy';
+import type { Stats } from '../systems/missions';
+import { endlessStage, endlessWaveAt, endlessMult, endlessReward } from '../systems/endless';
+
+/** 배경 색(하늘 · 레인 · 레인 선) — 월드·모드별 */
+const THEMES = {
+  forest: [0x121826, 0x1d2740, 0x33406a],
+  desert: [0x2a1f18, 0x4a3826, 0x7a5a36],
+  endless: [0x1a1428, 0x2e2448, 0x5a4a8a],
+} as const;
+
+const ELITE_CHANCE = 0.08; // 일반 적이 엘리트로 나올 확률(2스테이지부터)
+const EVENT_FIRST = 35; // 특수 웨이브 첫 발생(초)
+const EVENT_EVERY = 40; // 이후 간격(초)
+const STUN_TINT = 0x9a9a9a;
+
+const CRIT_CHANCE = 0.1; // 아군 일반 공격 치명타 확률
+const CRIT_MULT = 1.5;
 import {
   WEAPONS,
   WeaponCharge,
-  unlockedWeapons,
   meteorTarget,
   lightningTargets,
   snipeTarget,
@@ -110,8 +128,22 @@ export class BattleScene extends Phaser.Scene {
   private prodTimer = 0; // 적 기지 생산 타이머
   private prodInterval = 4; // 생산 간격(초)
   private prodIdx = 0;
+  // ♾️ 무한 모드
+  private endless = false;
+  private waveNo = 0;
+  private waveText: Phaser.GameObjects.Text | null = null;
+  // 🤝 조합 · 📋 이번 판 기록 · 🌊 특수 웨이브
+  private synergies: Synergy[] = [];
+  private synergyKeys = '';
+  private run: Stats = {};
+  private eventT = EVENT_FIRST;
+  private committed = false;
+  // ⏩ 배속(×1/×2, 판이 바뀌어도 유지) · 보스 처치 슬로모션
+  private static speed = 1;
+  private slowmo = 1;
+  private speedBtn!: Phaser.GameObjects.Text;
   // 🔥 특수 무기 — 게이지(해금된 것만) + 효과 지속 시각(전투 시계 기준)
-  private weapons: WeaponCharge[] = [];
+  private weapons: (WeaponCharge | null)[] = []; // 구매 안 한 무기 = null
   private clock = 0;
   private frozenUntil = 0;
   private guardUntil = 0;
@@ -127,8 +159,9 @@ export class BattleScene extends Phaser.Scene {
     super('Battle');
   }
 
-  init(data: { stageId: number }): void {
-    this.stage = STAGES.find((s) => s.id === data.stageId) ?? STAGES[0];
+  init(data: { stageId: number; mode?: 'endless' }): void {
+    this.endless = data.mode === 'endless';
+    this.stage = this.endless ? endlessStage() : STAGES.find((s) => s.id === data.stageId) ?? STAGES[0];
   }
 
   create(): void {
@@ -145,14 +178,30 @@ export class BattleScene extends Phaser.Scene {
     this.skills = {};
     this.picking = false;
     this.levelUp = new LevelUpOverlay(this);
+    this.synergies = [];
+    this.synergyKeys = '';
+    this.run = {};
+    this.eventT = EVENT_FIRST;
+    this.committed = false;
 
     // 배경 + 레인
-    this.add.rectangle(640, 360, 1280, 720, 0x121826).setDepth(-10);
-    this.add.rectangle(640, LANE_Y + 40, 1280, 90, 0x1d2740).setDepth(-5);
-    this.add.rectangle(640, LANE_Y + 2, 1280, 3, 0x33406a).setDepth(-4);
+    const [sky, lane, line] = THEMES[this.endless ? 'endless' : this.stage.world === 2 ? 'desert' : 'forest'];
+    this.add.rectangle(640, 360, 1280, 720, sky).setDepth(-10);
+    this.add.rectangle(640, LANE_Y + 40, 1280, 90, lane).setDepth(-5);
+    this.add.rectangle(640, LANE_Y + 2, 1280, 3, line).setDepth(-4);
 
     this.playerBase = new Base(this, 90, LANE_Y - 10, this.stage.baseHp, 0x2f6fe0, 'base_ally');
-    this.enemyBase = new Base(this, 1190, LANE_Y - 10, this.stage.baseHp, 0xc0392b, 'base_enemy');
+    // 무한 모드: 적 기지는 부서지지 않는 생산 기지(버틴 웨이브가 기록)
+    this.enemyBase = new Base(this, 1190, LANE_Y - 10, this.endless ? 1e9 : this.stage.baseHp, 0xc0392b, 'base_enemy');
+    this.waveNo = 0;
+    this.waveText = null;
+    if (this.endless) {
+      this.add.text(1190, LANE_Y - 128, '∞', { fontFamily: 'sans-serif', fontSize: '30px', fontStyle: 'bold', color: '#d8b0ff', stroke: '#2a1a4a', strokeThickness: 5 }).setOrigin(0.5).setDepth(60);
+      this.waveText = this.add
+        .text(900, 22, '', { fontFamily: 'sans-serif', fontSize: '20px', fontStyle: 'bold', color: '#d8b0ff' })
+        .setOrigin(0.5)
+        .setDepth(101);
+    }
 
     this.energy = new ResourceSystem(40, 9, 100); // 소환 에너지(초당 9, 상한 100)
     this.runGold = 0;
@@ -167,7 +216,8 @@ export class BattleScene extends Phaser.Scene {
     this.frozenUntil = 0;
     this.guardUntil = 0;
     this.berserkUntil = 0;
-    this.weapons = WEAPONS.slice(0, UNLOCK_ALL ? WEAPONS.length : unlockedWeapons(this.stage.id)).map((w) => new WeaponCharge(w.chargeSec * weaponChargeMult(meta.weaponLevel(w.key)))); // 🔧 영구 강화: 충전 단축
+    // 🛒 구매한 무기만 게이지(영구 강화: 충전 단축)
+    this.weapons = WEAPONS.map((w) => (meta.ownsWeapon(w.key) ? new WeaponCharge(w.chargeSec * weaponChargeMult(meta.weaponLevel(w.key))) : null));
 
     this.unitPool = new Pool<Unit>(
       () => new Unit(this),
@@ -188,8 +238,8 @@ export class BattleScene extends Phaser.Scene {
       (type) => this.trySpawnUnit(type),
       (type) => this.doBattleUpgrade(type),
       (i) => this.fireWeapon(i),
-      this.weapons.length,
-      this.unitLocks
+      this.weapons.map((w) => !!w),
+      this.unitOwned
     );
     // 키보드 1~9 = 특수 무기
     this.input.keyboard?.on('keydown', (ev: KeyboardEvent) => {
@@ -213,6 +263,31 @@ export class BattleScene extends Phaser.Scene {
       .setDepth(95)
       .setInteractive({ useHandCursor: true });
     pauseBtn.on('pointerdown', () => this.openPause());
+
+    // ⏩ 배속 버튼(일시정지 왼쪽)
+    this.speedBtn = this.add
+      .text(1186, 16, '', { fontFamily: 'sans-serif', fontSize: '22px', fontStyle: 'bold', color: '#ffe680', backgroundColor: '#1d2740', padding: { x: 10, y: 7 } })
+      .setOrigin(1, 0)
+      .setDepth(95)
+      .setInteractive({ useHandCursor: true });
+    this.speedBtn.on('pointerdown', () => {
+      BattleScene.speed = BattleScene.speed === 1 ? 2 : 1;
+      sfx(this, 'click');
+      this.applySpeed();
+    });
+    this.slowmo = 1;
+    this.applySpeed();
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => (this.anims.globalTimeScale = 1));
+    bgm(this, 'bgm_battle');
+  }
+
+  /** 배속 × 슬로모션 → 이동·타이머·트윈·애니메이션 모두 */
+  private applySpeed(): void {
+    const k = BattleScene.speed * this.slowmo;
+    this.time.timeScale = k;
+    this.tweens.timeScale = k;
+    this.anims.globalTimeScale = k;
+    this.speedBtn.setText(BattleScene.speed === 2 ? '⏩ ×2' : '▶ ×1');
   }
 
   /** ⏸️ 일시정지 오버레이 — 계속 / 음소거 / 나가기 */
@@ -240,7 +315,7 @@ export class BattleScene extends Phaser.Scene {
       .setOrigin(0.5)
       .setInteractive({ useHandCursor: true });
     mute.on('pointerdown', () => {
-      this.sound.mute = !this.sound.mute;
+      setMute(this, !this.sound.mute);
       mute.setText(this.sound.mute ? '🔇 소리 꺼짐' : '🔊 소리 켜짐');
     });
 
@@ -251,6 +326,7 @@ export class BattleScene extends Phaser.Scene {
     quit.on('pointerdown', () => {
       this.paused = false;
       layer.destroy();
+      this.commitRun();
       this.scene.start('StageSelect');
     });
     layer.add([resume, mute, quit]);
@@ -267,15 +343,15 @@ export class BattleScene extends Phaser.Scene {
     return f;
   }
 
-  /** 유닛별 해금 스테이지(0 = 사용 가능) — 스테이지 클리어로 6번째부터 하나씩 해금 */
-  private get unitLocks(): Record<string, number> {
-    return lockedUntil(Object.keys(UNITS), meta.clearedMax);
+  /** 🛒 유닛 보유 여부(강화 화면에서 구매) */
+  private get unitOwned(): Record<string, boolean> {
+    return Object.fromEntries(Object.keys(UNITS).map((k) => [k, meta.ownsUnit(k)]));
   }
 
   private trySpawnUnit(type: string): void {
     if (this.over || this.picking) return;
     const base = UNITS[type];
-    if (!base || this.unitLocks[type]) return; // 🔒 아직 해금 안 된 유닛
+    if (!base || !meta.ownsUnit(type)) return; // 🔒 구매 안 한 유닛
     if (this.usedFood() + base.pop > this.foodMax) {
       this.hud.deny(type, 'food'); // 인구 초과 안내
       return;
@@ -293,6 +369,9 @@ export class BattleScene extends Phaser.Scene {
     const u = this.unitPool.acquire();
     u.spawn(this.playerBase.x + 50, LANE_Y, stats, type, 'ally');
     u.pop = base.pop;
+    sfx(this, 'spawn');
+    this.track('spawns');
+    if (perfect) this.track('perfects');
     this.units.push(u);
     if (perfect) {
       const t = this.add
@@ -365,6 +444,7 @@ export class BattleScene extends Phaser.Scene {
       this.xpNext = xpToNext(this.level);
       if (anyUpgradable(this.skills)) {
         this.picking = true;
+        sfx(this, 'levelup');
         this.levelUp.show(this.skills, (key) => {
           this.skills[key] = (this.skills[key] ?? 0) + 1;
           this.picking = false;
@@ -381,15 +461,24 @@ export class BattleScene extends Phaser.Scene {
     return span > 0 ? (front - this.playerBase.x) / span : 0;
   }
 
-  private spawnEnemy(type: string): void {
+  private spawnEnemy(type: string, elite = false): void {
     const stats = ENEMIES[type];
     if (!stats) return;
     const e = this.enemyPool.acquire();
     e.spawn(this.enemyBase.x - 50, LANE_Y, stats, type, 'enemy');
     e.reward = stats.reward;
+    const mult = this.endless ? endlessMult(endlessWaveAt(this.clock)) : this.stage.enemyMult ?? 1;
+    if (mult !== 1) {
+      e.stats = { ...e.stats, atk: Math.round(e.stats.atk * (1 + (mult - 1) * 0.6)) };
+      e.maxHp = Math.round(e.maxHp * mult);
+      e.hp = e.maxHp;
+      e.reward = Math.round(e.reward * (1 + (mult - 1) * 0.3));
+    }
     this.enemies.push(e);
+    if (elite || (!BOSS.has(type) && (this.endless || this.stage.id >= 2) && Math.random() < ELITE_CHANCE)) this.makeElite(e);
     if (BOSS.has(type)) {
       this.cameras.main.shake(300, 0.012);
+      sfx(this, 'alert');
       const t = this.add
         .text(640, 210, '👑 보스 등장!', { fontFamily: 'sans-serif', fontSize: '44px', fontStyle: 'bold', color: '#ff5a6e' })
         .setOrigin(0.5)
@@ -427,7 +516,7 @@ export class BattleScene extends Phaser.Scene {
 
   update(_time: number, deltaMs: number): void {
     if (this.over || this.picking || this.paused || this.reviving) return; // 정지 상태
-    const dt = Math.min(0.05, deltaMs / 1000);
+    const dt = Math.min(0.05, deltaMs / 1000) * BattleScene.speed * this.slowmo; // ⏩ 배속
 
     // ⏱️ 리듬 바 진행(0↔1 핑퐁)
     this.beat += this.beatDir * dt * BattleScene.BEAT_SPEED;
@@ -440,7 +529,7 @@ export class BattleScene extends Phaser.Scene {
     }
 
     this.clock += dt;
-    for (const w of this.weapons) w.update(dt);
+    for (const w of this.weapons) w?.update(dt);
     const frozen = this.clock < this.frozenUntil;
     const guard = this.clock < this.guardUntil;
     const berserk = this.clock < this.berserkUntil;
@@ -459,10 +548,25 @@ export class BattleScene extends Phaser.Scene {
     }
 
     // 아군: 적 추격/공격, 없으면 전진 → 적 기지 공격
+    this.updateSynergies();
+    if (this.endless) {
+      const w = endlessWaveAt(this.clock);
+      if (w !== this.waveNo) {
+        this.waveNo = w;
+        this.waveText?.setText(`🌊 웨이브 ${w}   (최고 ${meta.endlessBest})`);
+        this.banner(w % 5 === 0 ? `🌊 웨이브 ${w} — 👑 보스!` : `🌊 웨이브 ${w}`, 0xd8b0ff);
+      }
+    }
+    this.updateEvents(dt);
     const allyTint = guard ? GUARD_TINT : berserk ? BERSERK_TINT : null;
     for (const u of this.units) {
       if (!u.active) continue;
-      u.setStatus(allyTint);
+      const stunned = u.stunned;
+      u.setStatus(stunned ? STUN_TINT : allyTint);
+      if (stunned) {
+        u.idle(); // 💫 보스 땅 내려치기로 기절
+        continue;
+      }
       if (u.type === 'cleric') {
         // ✚ 성직자: 공격하지 않음 — 다친 아군 치유, 없으면 맨 앞 아군 뒤를 따라감
         if (!this.clericHeal(u, dt)) this.clericFollow(u, dt);
@@ -492,6 +596,7 @@ export class BattleScene extends Phaser.Scene {
       if (!e.active) continue;
       e.setStatus(frozen ? FROZEN_TINT : null, frozen);
       if (frozen) continue; // ❄️ 빙결: 이동·공격 정지
+      if (BOSS.has(e.type)) this.bossPattern(e, dt);
       const target = this.nearest(e.x, this.units) as Unit | null;
       e.cooldown -= dt;
       if (target && inRange(e.x, target.x, e.stats.range)) {
@@ -531,7 +636,7 @@ export class BattleScene extends Phaser.Scene {
       beat: this.beat,
       perfectWin: BattleScene.PERFECT_WIN,
       upg: this.upgMap(),
-      weapons: this.weapons.map((w) => ({ ratio: w.ratio, ready: w.ready })),
+      weapons: this.weapons.map((w) => (w ? { ratio: w.ratio, ready: w.ready } : null)),
     });
     this.checkEnd();
   }
@@ -565,7 +670,7 @@ export class BattleScene extends Phaser.Scene {
       u.cooldown = attackCooldown(u.stats.atkSpeed) * hasteMult(this.skills.haste ?? 0);
       return true;
     }
-    best.heal(Math.round(u.stats.atk * CLERIC_HEAL_MULT));
+    best.heal(Math.round(u.stats.atk * CLERIC_HEAL_MULT * synergyMult(this.synergies, u.type, 'heal')));
     const fx = this.add.circle(best.x, LANE_Y - 30, 10, 0x5cff9e, 0.6).setDepth(55);
     this.tweens.add({ targets: fx, y: LANE_Y - 60, scale: 1.8, alpha: 0, duration: 450, onComplete: () => fx.destroy() });
     u.lunge();
@@ -591,7 +696,10 @@ export class BattleScene extends Phaser.Scene {
         return;
       }
     }
-    const dmg = computeDamage(att.stats.atk * (berserk ? BERSERK_ATK : 1), def.stats.def);
+    const crit = att.side === 'ally' && Math.random() < CRIT_CHANCE; // 💥 치명타
+    const synAtk = att.side === 'ally' ? synergyMult(this.synergies, att.type, 'atk') : 1; // 🤝 조합
+    let dmg = computeDamage(att.stats.atk * (berserk ? BERSERK_ATK : 1) * (crit ? CRIT_MULT : 1) * synAtk, def.stats.def);
+    if (def.side === 'ally') dmg = Math.max(1, Math.round(dmg * synergyMult(this.synergies, def.type, 'guard')));
     if (att.stats.range >= BattleScene.RANGED) {
       // 원거리: 궁수=화살(직선·빠름), 마법사=마법 구슬(느림·명중 시 광역)
       const p = this.projPool.acquire();
@@ -599,23 +707,27 @@ export class BattleScene extends Phaser.Scene {
       const onHit = splashMul
         ? (x: number, d: number) => this.splash(x, Math.round(d * splashMul), att.side)
         : undefined;
-      p.spawn(att.x + (att.side === 'ally' ? 14 : -14), LANE_Y - 14, def, dmg, ORB_UNITS.has(att.type) ? 'orb' : 'arrow', onHit, ORB_COLOR[att.type]);
+      p.spawn(att.x + (att.side === 'ally' ? 14 : -14), LANE_Y - 14, def, dmg, ORB_UNITS.has(att.type) ? 'orb' : 'arrow', onHit, ORB_COLOR[att.type], crit);
+      if (att.side === 'ally') sfx(this, ORB_UNITS.has(att.type) ? 'magic' : 'arrow');
       this.projectiles.push(p);
     } else {
       // 근접: 즉시 — 🛡️ 수호 중인 아군은 피해 없음
-      if (!(def.side === 'ally' && this.clock < this.guardUntil)) def.takeDamage(dmg);
+      if (!(def.side === 'ally' && this.clock < this.guardUntil)) def.takeDamage(dmg, crit);
+      sfx(this, att.side === 'ally' ? 'slash' : 'hit');
     }
     att.lunge(); // 공격 찌르기 모션
     let cd = attackCooldown(att.stats.atkSpeed);
     if (att.side === 'ally') cd *= hasteMult(this.skills.haste ?? 0); // 신속 오라
     if (berserk) cd *= BERSERK_COOLDOWN;
+    if (att.side === 'ally') cd *= synergyMult(this.synergies, att.type, 'speed');
     att.cooldown = cd;
   }
 
   /** ✨ 유닛 스킬 발동 — 효과 적용 + 스킬 동작 + 이펙트 그림 + 이름 표시 */
   private castSkill(u: Unit | Enemy, target: Unit | Enemy, lv: number, atkMul: number): void {
     const sk = UNIT_SKILLS[u.type];
-    const power = u.stats.atk * atkMul * skillMult(lv);
+    const power = u.stats.atk * atkMul * skillMult(lv) * synergyMult(this.synergies, u.type, 'atk');
+    this.track('skills');
     const hit = (e: Unit | Enemy, mul = 1): void => {
       if (e.active) e.takeDamage(computeDamage(power * mul, e.stats.def));
     };
@@ -671,13 +783,14 @@ export class BattleScene extends Phaser.Scene {
       }
       case 'heal':
         for (const a of this.units) {
-          if (a.active && Math.abs(a.x - u.x) <= sk.radius) a.heal(Math.round(power * CLERIC_HEAL_MULT));
+          if (a.active && Math.abs(a.x - u.x) <= sk.radius) a.heal(Math.round(power * CLERIC_HEAL_MULT * synergyMult(this.synergies, u.type, 'heal')));
         }
         fxX = u.x;
         break;
     }
 
     u.skillMotion();
+    sfx(this, sk.kind === 'heal' ? 'heal' : u.type === 'cannon' ? 'boom_big' : 'skill');
     this.skillFx(u.type, fxX, sk.color, sk.radius);
     const t = this.add
       .text(u.x, LANE_Y - 78, `✨${sk.name}`, { fontFamily: 'sans-serif', fontSize: '15px', fontStyle: 'bold', color: '#ffe680', stroke: '#000', strokeThickness: 3 })
@@ -710,7 +823,9 @@ export class BattleScene extends Phaser.Scene {
     const needsEnemy = ['meteor', 'arrows', 'lightning', 'shockwave', 'snipe'].includes(def.key);
     if (needsEnemy && live.length === 0) return;
     charge.fire();
+    this.track('weapons');
     this.banner(`${def.icon} ${def.name}!`, def.color);
+    sfx(this, def.key === 'heal' ? 'heal' : def.key === 'meteor' || def.key === 'shockwave' ? 'boom_big' : 'weapon');
     // 🔧 영구 강화: 위력(피해·회복·밀어내기) / 지속시간
     const lv = meta.weaponLevel(def.key);
     const P = weaponPowerMult(lv);
@@ -826,6 +941,130 @@ export class BattleScene extends Phaser.Scene {
     this.tweens.add({ targets: c, scale: 3, alpha: 0, duration: 380, onComplete: () => c.destroy() });
   }
 
+  /** 📋 이번 판 기록(판 끝날 때 meta에 한 번에 반영) */
+  private track(k: keyof Stats, n = 1): void {
+    this.run[k] = (this.run[k] ?? 0) + n;
+  }
+
+  private commitRun(): void {
+    if (this.committed) return;
+    this.committed = true;
+    meta.addRunStats(this.run);
+  }
+
+  /** 🤝 전장 유닛 조합 갱신 — 새로 켜지면 배너 */
+  private updateSynergies(): void {
+    const types = this.units.filter((u) => u.active).map((u) => u.type);
+    const now = activeSynergies(types);
+    const keys = now.map((s) => s.key).join(',');
+    if (keys === this.synergyKeys) return;
+    const prev = new Set(this.synergyKeys.split(','));
+    this.synergyKeys = keys;
+    this.synergies = now;
+    this.hud.setSynergies(now);
+    let row = 0;
+    for (const s of now) {
+      if (prev.has(s.key)) continue;
+      const t = this.add
+        .text(640, 150 + 32 * row++, `🤝 ${s.icon} ${s.name}!  ${s.desc}`, { fontFamily: 'sans-serif', fontSize: '22px', fontStyle: 'bold', color: '#aef5ff', stroke: '#0a2a4a', strokeThickness: 5 })
+        .setOrigin(0.5)
+        .setDepth(96);
+      this.tweens.add({ targets: t, y: t.y - 25, alpha: 0, delay: 1100, duration: 500, onComplete: () => t.destroy() });
+    }
+  }
+
+  /** ⭐ 엘리트: 체력 3배·공격 1.5배·보상 3배, 크고 금빛 */
+  private makeElite(e: Enemy): void {
+    e.stats = { ...e.stats, atk: Math.round(e.stats.atk * 1.5) };
+    e.maxHp = Math.round(e.maxHp * 3);
+    e.hp = e.maxHp;
+    e.reward *= 3;
+    e.makeElite();
+  }
+
+  /** 🌊 특수 웨이브 — 2스테이지부터 주기적으로 */
+  private updateEvents(dt: number): void {
+    if ((!this.endless && this.stage.id < 2) || this.enemyBase.destroyed) return;
+    this.eventT -= dt;
+    if (this.eventT > 0) return;
+    this.eventT = EVENT_EVERY;
+    const events = [
+      { text: '🦇 박쥐 떼 습격!', go: () => this.burstSpawn('bat', 8, 260) },
+      { text: '🐺 늑대 무리 돌진!', go: () => this.burstSpawn('wolf', 6, 320) },
+      { text: '⭐ 엘리트 부대 출현!', go: () => ['goblin', 'orc', 'skeleton'].forEach((t, i) => this.time.delayedCall(i * 700, () => this.spawnEnemy(t, true))) },
+      { text: '👻 유령 행렬!', go: () => this.burstSpawn('ghost', 6, 360) },
+    ];
+    const ev = events[Math.floor(Math.random() * events.length)];
+    sfx(this, 'alert');
+    this.banner(ev.text, 0xff9a3c);
+    ev.go();
+  }
+
+  private burstSpawn(type: string, n: number, gapMs: number): void {
+    for (let i = 0; i < n; i++) this.time.delayedCall(i * gapMs, () => !this.over && this.spawnEnemy(type));
+  }
+
+  /** 👑 보스 패턴 — 골렘: 땅 내려치기(주변 기절) / 드래곤: 화염 숨결 + 박쥐 소환. 0.8초 전 경고 */
+  private bossPattern(e: Enemy, dt: number): void {
+    e.patternT += dt;
+    e.summonT += dt;
+    if (e.type === 'dragon' && e.summonT >= 14) {
+      e.summonT = 0;
+      for (let i = 0; i < 2; i++) this.time.delayedCall(i * 300, () => !this.over && this.spawnEnemy('bat'));
+    }
+    const every = e.type === 'dragon' ? 7 : 6;
+    if (e.patternT < every) return;
+    e.patternT = 0;
+    const slam = e.type !== 'dragon';
+    const x0 = slam ? e.x - 120 : e.x - 260; // 영향 범위(왼쪽 = 우리 쪽)
+    const x1 = slam ? e.x + 120 : e.x;
+    const warn = this.add.rectangle((x0 + x1) / 2, LANE_Y - 10, x1 - x0, 70, 0xff3030, 0.25).setStrokeStyle(3, 0xff5050).setDepth(54);
+    this.tweens.add({ targets: warn, alpha: 0.6, duration: 200, yoyo: true, repeat: 1 });
+    this.time.delayedCall(800, () => {
+      warn.destroy();
+      if (!e.active || this.over) return;
+      const now = this.time.now;
+      for (const u of this.units) {
+        if (!u.active || u.x < x0 || u.x > x1) continue;
+        const dmg = computeDamage(e.stats.atk * (slam ? 1.2 : 1.4), u.stats.def) * synergyMult(this.synergies, u.type, 'guard');
+        if (this.clock >= this.guardUntil) u.takeDamage(Math.max(1, Math.round(dmg)));
+        if (slam) u.stunUntil = now + 1500;
+      }
+      if (slam) {
+        this.cameras.main.shake(300, 0.012);
+        this.burst(e.x, 0xb08a5a, 120);
+        sfx(this, 'boom');
+      } else {
+        const fire = this.add.rectangle((x0 + x1) / 2, LANE_Y - 14, x1 - x0, 46, 0xff7a2a, 0.75).setDepth(55);
+        this.tweens.add({ targets: fire, alpha: 0, scaleY: 1.6, duration: 450, onComplete: () => fire.destroy() });
+        sfx(this, 'boom_big');
+      }
+    });
+  }
+
+  /** 👑 보스 처치 — 잠깐 슬로모션 + 화면 번쩍 + 문구 */
+  private bossDown(x: number): void {
+    this.slowmo = 0.3;
+    this.applySpeed();
+    this.cameras.main.flash(250, 255, 240, 200);
+    this.cameras.main.shake(400, 0.015);
+    sfx(this, 'boom_big');
+    this.burst(x, 0xffd34d, 140);
+    const t = this.add
+      .text(640, 220, '👑 BOSS DOWN!', { fontFamily: 'sans-serif', fontSize: '56px', fontStyle: 'bold', color: '#ffe14d', stroke: '#7a3a00', strokeThickness: 8 })
+      .setOrigin(0.5)
+      .setDepth(97)
+      .setScale(0.4);
+    this.tweens.add({ targets: t, scale: 1, duration: 260, ease: 'Back.easeOut' });
+    this.tweens.add({ targets: t, alpha: 0, delay: 700, duration: 300, onComplete: () => t.destroy() });
+    // 실제 시간 0.9초 뒤 원래 속도(슬로모션 영향 안 받게 브라우저 타이머)
+    window.setTimeout(() => {
+      if (!this.scene.isActive()) return;
+      this.slowmo = 1;
+      this.applySpeed();
+    }, 900);
+  }
+
   /** 마법 구슬 광역 피해 — 명중 지점 주변 적(또는 아군)에게 추가 피해 + 폭발 이펙트 */
   private splash(x: number, dmg: number, side: 'ally' | 'enemy'): void {
     const list = side === 'ally' ? this.enemies : this.units;
@@ -858,6 +1097,13 @@ export class BattleScene extends Phaser.Scene {
       if (e.active && e.hp <= 0) {
         this.runGold += e.reward;
         this.gainXp(e.reward);
+        sfx(this, 'coin');
+        this.track('kills');
+        if (e.elite) this.track('elites');
+        if (BOSS.has(e.type)) {
+          this.track('bosses');
+          this.bossDown(e.x);
+        }
         e.playDeath();
         this.puff(e.x, 0xff8a6a);
         this.enemyPool.release(e);
@@ -876,7 +1122,7 @@ export class BattleScene extends Phaser.Scene {
 
   private checkEnd(): void {
     // 승리 = 적 생산기지 파괴 / 패배 = 우리 기지 파괴
-    if (this.enemyBase.destroyed) return this.end(true);
+    if (!this.endless && this.enemyBase.destroyed) return this.end(true);
     if (this.playerBase.destroyed) {
       if (!this.revivedOnce) {
         this.offerRevive(); // 광고 보고 부활 1회 제안
@@ -946,11 +1192,38 @@ export class BattleScene extends Phaser.Scene {
     this.over = true;
     this.picking = false;
     this.levelUp.hide();
-    const earned = win ? this.runGold + 60 + this.stage.id * 30 : 0;
+    if (this.endless) {
+      // ♾️ 버틴 웨이브 기록 + 보상(웨이브×20 + 처치 골드 20%)
+      const wave = Math.max(1, this.waveNo);
+      const earned = endlessReward(wave) + Math.floor(this.runGold * 0.2);
+      meta.addGold(earned);
+      const newBest = meta.recordEndless(wave);
+      this.commitRun();
+      bgm(this, null);
+      sfx(this, newBest ? 'win' : 'lose');
+      this.slowmo = 1;
+      this.time.delayedCall(600, () => this.scene.start('Result', { win: false, stageId: 0, earned, mode: 'endless', wave, newBest }));
+      return;
+    }
+    // ⭐ 별 평가: 우리 기지 남은 체력(부활했으면 1개), 처음 얻는 별마다 보너스 골드
+    const stars = win ? starsFor(this.playerBase.hp / this.playerBase.maxHp, this.revivedOnce) : 0;
+    const prevStars = meta.starsOf(this.stage.id);
+    const gained = win ? meta.recordStars(this.stage.id, stars) : 0;
+    const starGold = gained * STAR_GOLD;
+    const earned = win ? this.runGold + 60 + this.stage.id * 30 + starGold : 0;
     if (win) {
-      meta.addGold(earned); // 처치 골드 + 승리 보너스(강화용)
+      meta.addGold(earned); // 처치 골드 + 승리 보너스 + 새 별 보너스(강화용)
       meta.clearStage(this.stage.id); // 다음 스테이지 해금
     }
-    this.time.delayedCall(600, () => this.scene.start('Result', { win, stageId: this.stage.id, earned }));
+    if (win) {
+      this.track('clears');
+    }
+    this.commitRun();
+    bgm(this, null);
+    sfx(this, win ? 'win' : 'lose');
+    this.slowmo = 1;
+    this.time.delayedCall(600, () =>
+      this.scene.start('Result', { win, stageId: this.stage.id, earned, stars, prevStars, starGold })
+    );
   }
 }

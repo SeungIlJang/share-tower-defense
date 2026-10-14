@@ -1,6 +1,6 @@
 [
   {
-    "id": 1, "name": "관문 1", "baseHp": 100, "startGold": 120, "goldRate": 12,
+    "id": 1, "name": "관문 1", "world": 1, "baseHp": 100, "startGold": 120, "goldRate": 12,
     "waves": [
       { "at": 1, "enemies": [ {"type": "goblin", "count": 5, "interval": 1.3} ] },
       { "at": 14, "enemies": [ {"type": "wolf", "count": 4, "interval": 0.9}, {"type": "slime", "count": 2, "interval": 2.0} ] },
@@ -8,7 +8,7 @@
     ]
   },
   {
-    "id": 2, "name": "관문 2", "baseHp": 130, "startGold": 140, "goldRate": 14,
+    "id": 2, "name": "관문 2", "world": 1, "baseHp": 130, "startGold": 140, "goldRate": 14,
     "waves": [
       { "at": 1, "enemies": [ {"type": "wolf", "count": 6, "interval": 0.8}, {"type": "bat", "count": 5, "interval": 0.8} ] },
       { "at": 18, "enemies": [ {"type": "orc", "count": 4, "interval": 2.0}, {"type": "slime", "count": 3, "interval": 1.8} ] },
@@ -16,7 +16,7 @@
     ]
   },
   {
-    "id": 3, "name": "관문 3", "baseHp": 150, "startGold": 150, "goldRate": 14,
+    "id": 3, "name": "관문 3", "world": 1, "baseHp": 150, "startGold": 150, "goldRate": 14,
     "waves": [
       { "at": 1, "enemies": [ {"type": "goblin", "count": 6, "interval": 1.0}, {"type": "slime", "count": 2, "interval": 2.2} ] },
       { "at": 18, "enemies": [ {"type": "wolf", "count": 6, "interval": 0.7}, {"type": "bat", "count": 4, "interval": 0.9}, {"type": "mushroom", "count": 3, "interval": 1.5} ] },
@@ -25,7 +25,7 @@
     ]
   },
   {
-    "id": 4, "name": "관문 4", "baseHp": 170, "startGold": 160, "goldRate": 15,
+    "id": 4, "name": "관문 4", "world": 1, "baseHp": 170, "startGold": 160, "goldRate": 15,
     "waves": [
       { "at": 1, "enemies": [ {"type": "bat", "count": 8, "interval": 0.6}, {"type": "wolf", "count": 4, "interval": 0.9} ] },
       { "at": 18, "enemies": [ {"type": "orc", "count": 5, "interval": 1.6}, {"type": "ghost", "count": 4, "interval": 1.0} ] },
@@ -34,7 +34,7 @@
     ]
   },
   {
-    "id": 5, "name": "관문 5 · 보스", "baseHp": 200, "startGold": 170, "goldRate": 15,
+    "id": 5, "name": "관문 5 · 보스", "world": 1, "baseHp": 200, "startGold": 170, "goldRate": 15,
     "waves": [
       { "at": 1, "enemies": [ {"type": "goblin", "count": 8, "interval": 0.8}, {"type": "wolf", "count": 5, "interval": 0.9} ] },
       { "at": 20, "enemies": [ {"type": "orc", "count": 6, "interval": 1.5}, {"type": "bat", "count": 6, "interval": 0.7}, {"type": "skeleton", "count": 3, "interval": 1.8} ] },
@@ -43,7 +43,7 @@
     ]
   },
   {
-    "id": 6, "name": "관문 6", "baseHp": 220, "startGold": 180, "goldRate": 16,
+    "id": 6, "name": "관문 6", "world": 1, "baseHp": 220, "startGold": 180, "goldRate": 16,
     "waves": [
       { "at": 1, "enemies": [ {"type": "orc", "count": 4, "interval": 1.6}, {"type": "bat", "count": 8, "interval": 0.6} ] },
       { "at": 20, "enemies": [ {"type": "wolf", "count": 10, "interval": 0.6}, {"type": "slime", "count": 4, "interval": 1.5}, {"type": "ghost", "count": 6, "interval": 0.8} ] },
@@ -52,7 +52,7 @@
     ]
   },
   {
-    "id": 7, "name": "관문 7", "baseHp": 240, "startGold": 190, "goldRate": 16,
+    "id": 7, "name": "관문 7", "world": 1, "baseHp": 240, "startGold": 190, "goldRate": 16,
     "waves": [
       { "at": 1, "enemies": [ {"type": "slime", "count": 6, "interval": 1.2}, {"type": "wolf", "count": 8, "interval": 0.6} ] },
       { "at": 20, "enemies": [ {"type": "orc", "count": 7, "interval": 1.3}, {"type": "bat", "count": 8, "interval": 0.5}, {"type": "skeleton", "count": 5, "interval": 1.4} ] },
@@ -61,7 +61,7 @@
     ]
   },
   {
-    "id": 8, "name": "관문 8", "baseHp": 260, "startGold": 200, "goldRate": 17,
+    "id": 8, "name": "관문 8", "world": 1, "baseHp": 260, "startGold": 200, "goldRate": 17,
     "waves": [
       { "at": 1, "enemies": [ {"type": "orc", "count": 6, "interval": 1.3}, {"type": "wolf", "count": 8, "interval": 0.6} ] },
       { "at": 22, "enemies": [ {"type": "bat", "count": 12, "interval": 0.45}, {"type": "slime", "count": 6, "interval": 1.2}, {"type": "mushroom", "count": 6, "interval": 1.0} ] },
@@ -70,7 +70,7 @@
     ]
   },
   {
-    "id": 9, "name": "관문 9", "baseHp": 280, "startGold": 210, "goldRate": 17,
+    "id": 9, "name": "관문 9", "world": 1, "baseHp": 280, "startGold": 210, "goldRate": 17,
     "waves": [
       { "at": 1, "enemies": [ {"type": "orc", "count": 8, "interval": 1.2}, {"type": "bat", "count": 10, "interval": 0.5} ] },
       { "at": 22, "enemies": [ {"type": "ogre", "count": 1, "interval": 1}, {"type": "wolf", "count": 12, "interval": 0.5}, {"type": "slime", "count": 6, "interval": 1.2}, {"type": "skeleton", "count": 6, "interval": 1.2} ] },
@@ -79,12 +79,100 @@
     ]
   },
   {
-    "id": 10, "name": "관문 10 · 보스", "baseHp": 320, "startGold": 220, "goldRate": 18,
+    "id": 10, "name": "관문 10 · 보스", "world": 1, "baseHp": 320, "startGold": 220, "goldRate": 18,
     "waves": [
       { "at": 1, "enemies": [ {"type": "orc", "count": 8, "interval": 1.1}, {"type": "wolf", "count": 12, "interval": 0.5} ] },
       { "at": 24, "enemies": [ {"type": "ogre", "count": 1, "interval": 1}, {"type": "bat", "count": 14, "interval": 0.4}, {"type": "slime", "count": 8, "interval": 1.0}, {"type": "ghost", "count": 8, "interval": 0.7} ] },
       { "at": 50, "enemies": [ {"type": "orc", "count": 12, "interval": 0.9}, {"type": "goblin", "count": 14, "interval": 0.5} ] },
       { "at": 78, "enemies": [ {"type": "dragon", "count": 1, "interval": 1}, {"type": "orc", "count": 8, "interval": 1.2}, {"type": "wolf", "count": 10, "interval": 0.5}, {"type": "skeleton", "count": 6, "interval": 1.2} ] }
+    ]
+  },
+  {
+    "id": 11, "name": "사막 1", "world": 2, "baseHp": 140, "startGold": 160, "goldRate": 15, "enemyMult": 1.5,
+    "waves": [
+      { "at": 1, "enemies": [ {"type": "goblin", "count": 7, "interval": 1.3} ] },
+      { "at": 14, "enemies": [ {"type": "wolf", "count": 6, "interval": 0.9}, {"type": "slime", "count": 3, "interval": 2.0} ] },
+      { "at": 32, "enemies": [ {"type": "orc", "count": 3, "interval": 2.4}, {"type": "bat", "count": 7, "interval": 0.7}, {"type": "ogre", "count": 1, "interval": 1} ] }
+    ]
+  },
+  {
+    "id": 12, "name": "사막 2", "world": 2, "baseHp": 182, "startGold": 180, "goldRate": 17, "enemyMult": 1.6,
+    "waves": [
+      { "at": 1, "enemies": [ {"type": "wolf", "count": 8, "interval": 0.8}, {"type": "bat", "count": 7, "interval": 0.8} ] },
+      { "at": 18, "enemies": [ {"type": "orc", "count": 6, "interval": 2.0}, {"type": "slime", "count": 4, "interval": 1.8} ] },
+      { "at": 40, "enemies": [ {"type": "ogre", "count": 2, "interval": 5}, {"type": "orc", "count": 4, "interval": 2} ] }
+    ]
+  },
+  {
+    "id": 13, "name": "사막 3", "world": 2, "baseHp": 210, "startGold": 190, "goldRate": 17, "enemyMult": 1.7,
+    "waves": [
+      { "at": 1, "enemies": [ {"type": "goblin", "count": 8, "interval": 1.0}, {"type": "slime", "count": 3, "interval": 2.2} ] },
+      { "at": 18, "enemies": [ {"type": "wolf", "count": 8, "interval": 0.7}, {"type": "bat", "count": 6, "interval": 0.9}, {"type": "mushroom", "count": 4, "interval": 1.5} ] },
+      { "at": 36, "enemies": [ {"type": "orc", "count": 6, "interval": 1.8}, {"type": "slime", "count": 4, "interval": 1.6} ] },
+      { "at": 56, "enemies": [ {"type": "ogre", "count": 1, "interval": 1}, {"type": "orc", "count": 3, "interval": 2.5} ] }
+    ]
+  },
+  {
+    "id": 14, "name": "사막 4", "world": 2, "baseHp": 237, "startGold": 200, "goldRate": 18, "enemyMult": 1.8,
+    "waves": [
+      { "at": 1, "enemies": [ {"type": "bat", "count": 11, "interval": 0.6}, {"type": "wolf", "count": 6, "interval": 0.9} ] },
+      { "at": 18, "enemies": [ {"type": "orc", "count": 7, "interval": 1.6}, {"type": "ghost", "count": 6, "interval": 1.0} ] },
+      { "at": 38, "enemies": [ {"type": "slime", "count": 7, "interval": 1.4}, {"type": "goblin", "count": 8, "interval": 0.8} ] },
+      { "at": 60, "enemies": [ {"type": "ogre", "count": 1, "interval": 1}, {"type": "orc", "count": 4, "interval": 2}, {"type": "wolf", "count": 8, "interval": 0.7} ] }
+    ]
+  },
+  {
+    "id": 15, "name": "사막 5 · 보스", "world": 2, "baseHp": 280, "startGold": 210, "goldRate": 18, "enemyMult": 1.9,
+    "waves": [
+      { "at": 1, "enemies": [ {"type": "goblin", "count": 11, "interval": 0.8}, {"type": "wolf", "count": 7, "interval": 0.9} ] },
+      { "at": 20, "enemies": [ {"type": "orc", "count": 8, "interval": 1.5}, {"type": "bat", "count": 8, "interval": 0.7}, {"type": "skeleton", "count": 4, "interval": 1.8} ] },
+      { "at": 42, "enemies": [ {"type": "slime", "count": 8, "interval": 1.2}, {"type": "orc", "count": 6, "interval": 1.8} ] },
+      { "at": 65, "enemies": [ {"type": "ogre", "count": 2, "interval": 6}, {"type": "goblin", "count": 13, "interval": 0.7} ] }
+    ]
+  },
+  {
+    "id": 16, "name": "사막 6", "world": 2, "baseHp": 308, "startGold": 220, "goldRate": 19, "enemyMult": 2.0,
+    "waves": [
+      { "at": 1, "enemies": [ {"type": "orc", "count": 6, "interval": 1.6}, {"type": "bat", "count": 11, "interval": 0.6} ] },
+      { "at": 20, "enemies": [ {"type": "wolf", "count": 13, "interval": 0.6}, {"type": "slime", "count": 6, "interval": 1.5}, {"type": "ghost", "count": 8, "interval": 0.8} ] },
+      { "at": 42, "enemies": [ {"type": "orc", "count": 8, "interval": 1.4}, {"type": "goblin", "count": 11, "interval": 0.7} ] },
+      { "at": 66, "enemies": [ {"type": "ogre", "count": 2, "interval": 5}, {"type": "orc", "count": 6, "interval": 1.8} ] }
+    ]
+  },
+  {
+    "id": 17, "name": "사막 7", "world": 2, "baseHp": 336, "startGold": 230, "goldRate": 19, "enemyMult": 2.1,
+    "waves": [
+      { "at": 1, "enemies": [ {"type": "slime", "count": 8, "interval": 1.2}, {"type": "wolf", "count": 11, "interval": 0.6} ] },
+      { "at": 20, "enemies": [ {"type": "orc", "count": 10, "interval": 1.3}, {"type": "bat", "count": 11, "interval": 0.5}, {"type": "skeleton", "count": 7, "interval": 1.4} ] },
+      { "at": 44, "enemies": [ {"type": "ogre", "count": 1, "interval": 1}, {"type": "goblin", "count": 16, "interval": 0.6} ] },
+      { "at": 68, "enemies": [ {"type": "ogre", "count": 2, "interval": 5}, {"type": "orc", "count": 8, "interval": 1.5}, {"type": "slime", "count": 6, "interval": 1.6} ] }
+    ]
+  },
+  {
+    "id": 18, "name": "사막 8", "world": 2, "baseHp": 364, "startGold": 240, "goldRate": 20, "enemyMult": 2.2,
+    "waves": [
+      { "at": 1, "enemies": [ {"type": "orc", "count": 8, "interval": 1.3}, {"type": "wolf", "count": 11, "interval": 0.6} ] },
+      { "at": 22, "enemies": [ {"type": "bat", "count": 16, "interval": 0.45}, {"type": "slime", "count": 8, "interval": 1.2}, {"type": "mushroom", "count": 8, "interval": 1.0} ] },
+      { "at": 46, "enemies": [ {"type": "ogre", "count": 2, "interval": 5}, {"type": "goblin", "count": 16, "interval": 0.6} ] },
+      { "at": 72, "enemies": [ {"type": "ogre", "count": 2, "interval": 4}, {"type": "orc", "count": 11, "interval": 1.2} ] }
+    ]
+  },
+  {
+    "id": 19, "name": "사막 9", "world": 2, "baseHp": 392, "startGold": 250, "goldRate": 20, "enemyMult": 2.3,
+    "waves": [
+      { "at": 1, "enemies": [ {"type": "orc", "count": 11, "interval": 1.2}, {"type": "bat", "count": 13, "interval": 0.5} ] },
+      { "at": 22, "enemies": [ {"type": "ogre", "count": 1, "interval": 1}, {"type": "wolf", "count": 16, "interval": 0.5}, {"type": "slime", "count": 8, "interval": 1.2}, {"type": "skeleton", "count": 8, "interval": 1.2} ] },
+      { "at": 48, "enemies": [ {"type": "orc", "count": 13, "interval": 1.0}, {"type": "goblin", "count": 16, "interval": 0.6} ] },
+      { "at": 74, "enemies": [ {"type": "ogre", "count": 3, "interval": 4}, {"type": "orc", "count": 8, "interval": 1.4} ] }
+    ]
+  },
+  {
+    "id": 20, "name": "사막 10 · 보스", "world": 2, "baseHp": 448, "startGold": 260, "goldRate": 21, "enemyMult": 2.4,
+    "waves": [
+      { "at": 1, "enemies": [ {"type": "orc", "count": 11, "interval": 1.1}, {"type": "wolf", "count": 16, "interval": 0.5} ] },
+      { "at": 24, "enemies": [ {"type": "ogre", "count": 1, "interval": 1}, {"type": "bat", "count": 19, "interval": 0.4}, {"type": "slime", "count": 11, "interval": 1.0}, {"type": "ghost", "count": 11, "interval": 0.7} ] },
+      { "at": 50, "enemies": [ {"type": "orc", "count": 16, "interval": 0.9}, {"type": "goblin", "count": 19, "interval": 0.5} ] },
+      { "at": 78, "enemies": [ {"type": "dragon", "count": 1, "interval": 1}, {"type": "orc", "count": 11, "interval": 1.2}, {"type": "wolf", "count": 13, "interval": 0.5}, {"type": "skeleton", "count": 8, "interval": 1.2} ] }
     ]
   }
 ]

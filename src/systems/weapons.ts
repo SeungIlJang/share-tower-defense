@@ -20,7 +20,7 @@ export interface WeaponDef {
   color: number; // 게이지 색
 }
 
-/** 순서 = 해금 순서(스테이지 N에서 N번째 무기까지) = 단축키 1~9 */
+/** 순서 = 구매 가격 순서(첫 번째는 기본 지급) = 단축키 1~9 */
 export const WEAPONS: WeaponDef[] = [
   { key: 'meteor', name: '메테오', icon: '🔥', desc: '앞쪽 적 무리 범위 피해', chargeSec: 20, color: 0xff7a3c },
   { key: 'arrows', name: '화살비', icon: '🏹', desc: '모든 적에게 피해', chargeSec: 22, color: 0xc8e06a },
@@ -67,11 +67,6 @@ export function weaponDurationMult(lv: number): number {
 /** 레벨 N → 다음 레벨 강화 비용 */
 export function weaponUpgradeCost(lv: number): number {
   return 150 + 100 * lv;
-}
-
-/** 스테이지 id에서 쓸 수 있는 무기 수 — 스테이지 N이면 N개(최대 9) */
-export function unlockedWeapons(stageId: number): number {
-  return Math.max(1, Math.min(WEAPONS.length, stageId));
 }
 
 /** 게이지 — 시간 경과로 0→1, 가득 차면 발사 가능, 발사하면 0부터 다시 */

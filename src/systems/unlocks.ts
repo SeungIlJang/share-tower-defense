@@ -1,27 +1,24 @@
 /**
- * 유닛 해금(A안: 스테이지 클리어) — 순수 로직, Vitest 검증.
- * units.json 순서 = 슬롯 순서. 앞의 5종은 처음부터, 6번째부터는 스테이지를 깰 때마다 하나씩.
- * 6번째 = 2스테이지 클리어, 7번째 = 3스테이지 … 12번째 = 8스테이지 클리어.
+ * 유닛·특수 무기 구매(상점) — 순수 로직, Vitest 검증.
+ * 처음엔 첫 번째 유닛·무기만 보유, 나머지는 강화 화면에서 메타 골드로 구매.
+ * 목록 순서(units.json / WEAPONS) 뒤로 갈수록 비쌈.
  */
-export const STARTER_UNITS = 5;
+export const STARTER_UNIT = 'soldier';
+export const STARTER_WEAPON = 'meteor';
 
-/** true면 유닛 12종·특수 무기 9종 전부 처음부터 사용(스테이지 해금 규칙은 유지, false로 되돌리면 다시 적용) */
-export const UNLOCK_ALL = true;
-
-/** index번째 유닛(0부터)을 쓰려면 클리어해야 하는 스테이지(0 = 처음부터) */
-export function unitUnlockStage(index: number): number {
-  return index < STARTER_UNITS ? 0 : index - STARTER_UNITS + 2;
+/** index번째 유닛(0부터) 가격 — 0번은 기본 지급 */
+export function unitPrice(index: number): number {
+  return index <= 0 ? 0 : 150 + 120 * (index - 1);
 }
 
-export function isUnitUnlocked(index: number, clearedMax: number): boolean {
-  return clearedMax >= unitUnlockStage(index);
+/** index번째 특수 무기 가격 — 0번은 기본 지급 */
+export function weaponPrice(index: number): number {
+  return index <= 0 ? 0 : 250 + 150 * (index - 1);
 }
 
-/** 유닛 키별 해금 스테이지(0 = 해금됨) — HUD·강화 화면 표시용 */
-export function lockedUntil(keys: string[], clearedMax: number, unlockAll = UNLOCK_ALL): Record<string, number> {
-  const out: Record<string, number> = {};
-  keys.forEach((k, i) => {
-    out[k] = unlockAll || isUnitUnlocked(i, clearedMax) ? 0 : unitUnlockStage(i);
-  });
-  return out;
+/** 예전 저장 데이터 이전: 기본 1개 + 이미 강화한 것은 보유로 인정 */
+export function migrateOwned(starter: string, levels: Record<string, number>): string[] {
+  const owned = new Set([starter]);
+  for (const [k, lv] of Object.entries(levels)) if (lv > 0) owned.add(k);
+  return [...owned];
 }

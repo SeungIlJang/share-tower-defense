@@ -4,7 +4,6 @@ import {
   meteorTarget,
   lightningTargets,
   snipeTarget,
-  unlockedWeapons,
   weaponPowerMult,
   weaponChargeMult,
   weaponDurationMult,
@@ -30,16 +29,10 @@ describe('WeaponCharge', () => {
   });
 });
 
-describe('무기 목록·해금', () => {
+describe('무기 목록', () => {
   it('9종, 키 중복 없음', () => {
     expect(WEAPONS).toHaveLength(9);
     expect(new Set(WEAPONS.map((w) => w.key)).size).toBe(9);
-  });
-  it('스테이지 N → N개(1~9로 제한)', () => {
-    expect(unlockedWeapons(1)).toBe(1);
-    expect(unlockedWeapons(5)).toBe(5);
-    expect(unlockedWeapons(10)).toBe(9);
-    expect(unlockedWeapons(0)).toBe(1);
   });
 });
 

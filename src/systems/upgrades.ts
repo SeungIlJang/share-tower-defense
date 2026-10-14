@@ -1,6 +1,9 @@
 import type { UnitStats } from '../types';
 import { storageGet, storageSet } from './storage';
 import { weaponUpgradeCost } from './weapons';
+import { STARTER_UNIT, STARTER_WEAPON, migrateOwned } from './unlocks';
+import { addStats, dailyMissions, type Mission, type Stats } from './missions';
+import { pushRecord, type EndlessRecord } from './endless';
 
 /** 강화 순수 계산 (Vitest 검증) */
 
@@ -50,6 +53,13 @@ export class MetaProgress {
   gold = 0;
   levels: Record<string, number> = {};
   weaponLevels: Record<string, number> = {}; // 특수 무기 영구 강화 레벨
+  stars: Record<string, number> = {}; // 스테이지별 최고 별(1~3)
+  ownedUnits: string[] = [STARTER_UNIT]; // 구매한 유닛
+  ownedWeapons: string[] = [STARTER_WEAPON]; // 구매한 특수 무기
+  totals: Stats = {}; // 업적용 누적 기록
+  daily: { day: number; stats: Stats; claimed: string[] } = { day: -1, stats: {}, claimed: [] }; // 오늘 미션 진행
+  achClaimed: string[] = []; // 받은 업적
+  endlessTop: EndlessRecord[] = []; // ♾️ 무한 모드 명예의 전당(상위 5)
   clearedMax = 0; // 클리어한 최고 스테이지 id
   lastDaily = -1; // 마지막 일일보상 수령 day index
   streak = 0; // 연속 출석
@@ -74,6 +84,13 @@ export class MetaProgress {
   /** 오늘 일일보상 받을 수 있나 */
   canClaimDaily(): boolean {
     return this.dayIndex() > this.lastDaily;
+  }
+
+  /** 출석 며칠째인지(1부터) — 받을 차례면 오늘 받을 날, 받았으면 오늘 받은 날 */
+  dailyDayNumber(): number {
+    if (!this.canClaimDaily()) return this.streak + 1;
+    const consecutive = this.lastDaily >= 0 && this.dayIndex() === this.lastDaily + 1;
+    return consecutive ? this.streak + 2 : 1;
   }
 
   /** 일일보상 수령 → 금액 반환(0=이미 받음) */
@@ -135,6 +152,105 @@ export class MetaProgress {
     return true;
   }
 
+  ownsUnit(key: string): boolean {
+    return this.ownedUnits.includes(key);
+  }
+
+  ownsWeapon(key: string): boolean {
+    return this.ownedWeapons.includes(key);
+  }
+
+  /** 🛒 구매 — 골드 차감 후 보유 목록에 추가 */
+  buyUnit(key: string, price: number): boolean {
+    if (this.ownsUnit(key) || this.gold < price) return false;
+    this.gold -= price;
+    this.ownedUnits.push(key);
+    this.save();
+    return true;
+  }
+
+  buyWeapon(key: string, price: number): boolean {
+    if (this.ownsWeapon(key) || this.gold < price) return false;
+    this.gold -= price;
+    this.ownedWeapons.push(key);
+    this.save();
+    return true;
+  }
+
+  /** 📋 전투 기록 반영(판 끝날 때 한 번) — 날짜가 바뀌었으면 오늘 기록 초기화 */
+  addRunStats(run: Stats): void {
+    this.rollDaily();
+    this.totals = addStats(this.totals, run);
+    this.daily.stats = addStats(this.daily.stats, run);
+    this.save();
+  }
+
+  private rollDaily(): void {
+    const d = this.dayIndex();
+    if (this.daily.day !== d) this.daily = { day: d, stats: {}, claimed: [] };
+  }
+
+  todayMissions(): Mission[] {
+    return dailyMissions(this.dayIndex());
+  }
+
+  /** 미션/업적 진행도 */
+  progress(m: Mission, kind: 'daily' | 'ach'): number {
+    this.rollDaily();
+    const src = kind === 'daily' ? this.daily.stats : m.stat === 'stars' ? { stars: this.totalStars } : this.totals;
+    return Math.min(m.goal, src[m.stat] ?? 0);
+  }
+
+  isClaimed(m: Mission, kind: 'daily' | 'ach'): boolean {
+    return (kind === 'daily' ? this.daily.claimed : this.achClaimed).includes(m.key);
+  }
+
+  /** 보상 받기 — 받은 골드(0 = 불가) */
+  claimMission(m: Mission, kind: 'daily' | 'ach'): number {
+    if (this.isClaimed(m, kind) || this.progress(m, kind) < m.goal) return 0;
+    (kind === 'daily' ? this.daily.claimed : this.achClaimed).push(m.key);
+    this.gold += m.reward;
+    this.save();
+    return m.reward;
+  }
+
+  /** 받을 수 있는 미션/업적이 있나(메뉴 뱃지) */
+  hasClaimable(achievements: Mission[]): boolean {
+    return (
+      this.todayMissions().some((m) => !this.isClaimed(m, 'daily') && this.progress(m, 'daily') >= m.goal) ||
+      achievements.some((m) => !this.isClaimed(m, 'ach') && this.progress(m, 'ach') >= m.goal)
+    );
+  }
+
+  get endlessBest(): number {
+    return this.endlessTop[0]?.wave ?? 0;
+  }
+
+  /** 무한 모드 기록 → 신기록이면 true */
+  recordEndless(wave: number): boolean {
+    const [list, isBest] = pushRecord(this.endlessTop, wave, Date.now());
+    this.endlessTop = list;
+    this.save();
+    return isBest;
+  }
+
+  starsOf(stageId: number): number {
+    return this.stars[String(stageId)] ?? 0;
+  }
+
+  get totalStars(): number {
+    return Object.values(this.stars).reduce((a, b) => a + b, 0);
+  }
+
+  /** 별 기록 갱신 → 새로 얻은 별 수 */
+  recordStars(stageId: number, got: number): number {
+    const prev = this.starsOf(stageId);
+    if (got <= prev) return 0;
+    this.stars[String(stageId)] = got;
+    this.save();
+    return got - prev;
+  }
+
   weaponLevel(key: string): number {
     return this.weaponLevels[key] ?? 0;
   }
@@ -164,6 +280,13 @@ export class MetaProgress {
         gold?: number;
         levels?: Record<string, number>;
         weaponLevels?: Record<string, number>;
+        stars?: Record<string, number>;
+        ownedUnits?: string[];
+        ownedWeapons?: string[];
+        totals?: Stats;
+        daily?: { day: number; stats: Stats; claimed: string[] };
+        achClaimed?: string[];
+        endlessTop?: EndlessRecord[];
         clearedMax?: number;
         lastDaily?: number;
         streak?: number;
@@ -172,6 +295,13 @@ export class MetaProgress {
       this.gold = obj.gold ?? 0;
       this.levels = obj.levels ?? {};
       this.weaponLevels = obj.weaponLevels ?? {};
+      this.stars = obj.stars ?? {};
+      this.ownedUnits = obj.ownedUnits ?? migrateOwned(STARTER_UNIT, this.levels);
+      this.ownedWeapons = obj.ownedWeapons ?? migrateOwned(STARTER_WEAPON, this.weaponLevels);
+      this.totals = obj.totals ?? {};
+      this.daily = obj.daily ?? { day: -1, stats: {}, claimed: [] };
+      this.achClaimed = obj.achClaimed ?? [];
+      this.endlessTop = obj.endlessTop ?? [];
       this.clearedMax = obj.clearedMax ?? 0;
       this.lastDaily = obj.lastDaily ?? -1;
       this.streak = obj.streak ?? 0;
@@ -188,6 +318,13 @@ export class MetaProgress {
         gold: this.gold,
         levels: this.levels,
         weaponLevels: this.weaponLevels,
+        stars: this.stars,
+        ownedUnits: this.ownedUnits,
+        ownedWeapons: this.ownedWeapons,
+        totals: this.totals,
+        daily: this.daily,
+        achClaimed: this.achClaimed,
+        endlessTop: this.endlessTop,
         clearedMax: this.clearedMax,
         lastDaily: this.lastDaily,
         streak: this.streak,

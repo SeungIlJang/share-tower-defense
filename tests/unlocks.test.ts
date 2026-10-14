@@ -1,24 +1,23 @@
 import { describe, it, expect } from 'vitest';
-import { unitUnlockStage, isUnitUnlocked, lockedUntil } from '../src/systems/unlocks';
+import { unitPrice, weaponPrice, migrateOwned, STARTER_UNIT, STARTER_WEAPON } from '../src/systems/unlocks';
+import unitsData from '../src/data/units.json';
+import { WEAPONS } from '../src/systems/weapons';
 
-describe('유닛 해금(스테이지 클리어)', () => {
-  it('앞의 5종은 처음부터', () => {
-    for (let i = 0; i < 5; i++) expect(unitUnlockStage(i)).toBe(0);
-    expect(isUnitUnlocked(4, 0)).toBe(true);
+describe('유닛·무기 구매', () => {
+  it('기본 지급은 목록 첫 번째', () => {
+    expect(Object.keys(unitsData)[0]).toBe(STARTER_UNIT);
+    expect(WEAPONS[0].key).toBe(STARTER_WEAPON);
   });
-  it('6번째 = 2스테이지, 12번째 = 8스테이지 클리어', () => {
-    expect(unitUnlockStage(5)).toBe(2);
-    expect(unitUnlockStage(11)).toBe(8);
+  it('첫 번째는 무료, 뒤로 갈수록 비쌈', () => {
+    expect(unitPrice(0)).toBe(0);
+    expect(unitPrice(1)).toBe(150);
+    expect(unitPrice(11)).toBe(1350);
+    expect(weaponPrice(0)).toBe(0);
+    expect(weaponPrice(1)).toBe(250);
+    expect(weaponPrice(8)).toBe(1300);
   });
-  it('클리어한 최고 스테이지로 판정', () => {
-    expect(isUnitUnlocked(5, 1)).toBe(false);
-    expect(isUnitUnlocked(5, 2)).toBe(true);
-  });
-  it('lockedUntil — 해금된 유닛은 0', () => {
-    const keys = ['a', 'b', 'c', 'd', 'e', 'f', 'g'];
-    expect(lockedUntil(keys, 2, false)).toEqual({ a: 0, b: 0, c: 0, d: 0, e: 0, f: 0, g: 3 });
-  });
-  it('전체 해금 스위치 — 전부 0', () => {
-    expect(lockedUntil(['a', 'b', 'c', 'd', 'e', 'f', 'g'], 0, true)).toEqual({ a: 0, b: 0, c: 0, d: 0, e: 0, f: 0, g: 0 });
+  it('예전 저장: 기본 + 강화한 것 보유', () => {
+    expect(migrateOwned('soldier', {}).sort()).toEqual(['soldier']);
+    expect(migrateOwned('soldier', { knight: 2, mage: 0 }).sort()).toEqual(['knight', 'soldier']);
   });
 });

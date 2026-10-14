@@ -1,9 +1,10 @@
 import Phaser from 'phaser';
 import unitsData from '../data/units.json';
 import type { UnitStats } from '../types';
-import { lockedUntil } from '../systems/unlocks';
+import { unitPrice, weaponPrice } from '../systems/unlocks';
 import { iconKey, textureKey } from '../systems/sprites';
 import { meta, scaleStat } from '../systems/upgrades';
+import { bgm, sfx } from '../systems/sound';
 import { WEAPONS, weaponChargeMult, weaponDurationMult, weaponPowerMult } from '../systems/weapons';
 import { UNIT_SKILLS, skillEvery, skillMult } from '../systems/unitSkills';
 
@@ -29,6 +30,7 @@ export class UpgradeScene extends Phaser.Scene {
   }
 
   create(): void {
+    bgm(this, 'bgm_menu');
     this.add
       .text(640, 46, '🔧 강화', { fontFamily: 'sans-serif', fontSize: '38px', color: '#ffd34d' })
       .setOrigin(0.5);
@@ -124,10 +126,10 @@ export class UpgradeScene extends Phaser.Scene {
 
   private renderUnits(): void {
     const keys = Object.keys(UNITS);
-    const locks = lockedUntil(keys, meta.clearedMax);
     keys.forEach((key, i) => {
       const u = UNITS[key];
-      const locked = locks[key]; // 0 = 해금됨
+      const owned = meta.ownsUnit(key);
+      const price = unitPrice(i);
       const lv = meta.level(key);
       const icon = this.textures.exists(iconKey(key)) ? this.add.image(0, 0, iconKey(key)) : null;
       this.card(
@@ -136,11 +138,21 @@ export class UpgradeScene extends Phaser.Scene {
         icon,
         `${u.name}  Lv.${lv}`,
         `❤️ ${scaleStat(u.hp, lv)}  ⚔️ ${scaleStat(u.atk, lv)}  →  Lv.${lv + 1}: ❤️ ${scaleStat(u.hp, lv + 1)} ⚔️ ${scaleStat(u.atk, lv + 1)}`,
-        locked ? `🔒 ${locked}스테이지\n클리어` : `강화 🪙${meta.nextCost(key)}`,
-        !locked && meta.canUpgrade(key),
-        !!locked,
+        owned ? `강화 🪙${meta.nextCost(key)}` : `🛒 구매\n🪙${price}`,
+        owned ? meta.canUpgrade(key) : meta.gold >= price,
+        !owned,
         () => {
-          if (!locked && meta.upgrade(key)) this.render();
+          if (!owned) {
+            if (meta.buyUnit(key, price)) {
+              sfx(this, 'levelup');
+              this.render();
+            }
+            return;
+          }
+          if (meta.upgrade(key)) {
+            sfx(this, 'weapon');
+            this.render();
+          }
         },
         this.skillLabel(key, lv)
       );
@@ -166,17 +178,29 @@ export class UpgradeScene extends Phaser.Scene {
         ? `지속 ${pct(weaponDurationMult(lv))} → ${pct(weaponDurationMult(lv + 1))}`
         : `위력 ${pct(weaponPowerMult(lv))} → ${pct(weaponPowerMult(lv + 1))}`;
       const cost = meta.weaponNextCost(w.key);
+      const owned = meta.ownsWeapon(w.key);
+      const price = weaponPrice(i);
       this.card(
         i,
         WEAPONS.length,
         icon,
         `${w.name}  Lv.${lv}`,
         `${effect}  ·  충전 ${sec(lv)}초 → ${sec(lv + 1)}초`,
-        `강화 🪙${cost}`,
-        meta.gold >= cost,
-        false,
+        owned ? `강화 🪙${cost}` : `🛒 구매\n🪙${price}`,
+        meta.gold >= (owned ? cost : price),
+        !owned,
         () => {
-          if (meta.upgradeWeapon(w.key)) this.render();
+          if (!owned) {
+            if (meta.buyWeapon(w.key, price)) {
+              sfx(this, 'levelup');
+              this.render();
+            }
+            return;
+          }
+          if (meta.upgradeWeapon(w.key)) {
+            sfx(this, 'weapon');
+            this.render();
+          }
         }
       );
     });

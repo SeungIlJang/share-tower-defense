@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import type { UnitStats } from '../types';
 import { iconKey, textureKey } from '../systems/sprites';
 import { WEAPONS } from '../systems/weapons';
+import type { Synergy } from '../systems/synergy';
 
 export interface HudState {
   lv: number;
@@ -15,7 +16,7 @@ export interface HudState {
   beat: number; // ⏱️ 리듬 소환 마커 위치 0~1
   perfectWin: number; // 퍼펙트 허용 폭(중앙 ±)
   upg: Record<string, { lv: number; cost: number; afford: boolean }>; // 전장 실시간 강화
-  weapons: { ratio: number; ready: boolean }[]; // 특수 무기 게이지(해금된 것만)
+  weapons: ({ ratio: number; ready: boolean } | null)[]; // 특수 무기 게이지(구매 안 한 것 = null)
 }
 
 const UNIT_COLORS: Record<string, number> = {
@@ -47,6 +48,7 @@ interface Slot {
 }
 
 interface WeaponButton {
+  index: number;
   cx: number;
   cy: number;
   color: number;
@@ -80,6 +82,7 @@ export class Hud {
 
   private slots: Slot[] = [];
   private weaponBtns: WeaponButton[] = [];
+  private synergyText!: Phaser.GameObjects.Text;
   private beatMark: Phaser.GameObjects.Triangle;
   private readonly beatX = 470; // 인구 바(~440)와 에너지 바(840~) 사이
   private readonly beatW = 340;
@@ -90,12 +93,16 @@ export class Hud {
     onSpawn: (type: string) => void,
     onUpgrade: (type: string) => void,
     onWeapon: (index: number) => void,
-    weaponsUnlocked: number,
-    unitLocks: Record<string, number> // 유닛별 해금에 필요한 스테이지(0 = 사용 가능)
+    weaponOwned: boolean[], // 무기별 보유 여부
+    unitOwned: Record<string, boolean> // 유닛별 보유 여부
   ) {
     this.scene = scene;
     const d = 100;
     scene.add.rectangle(640, 22, 1280, 44, 0x0d1424, 0.8).setDepth(d);
+    this.synergyText = scene.add
+      .text(12, 52, '', { fontFamily: 'sans-serif', fontSize: '14px', fontStyle: 'bold', color: '#aef5ff', backgroundColor: '#0d1424cc', padding: { x: 8, y: 4 } })
+      .setDepth(d + 1)
+      .setVisible(false);
     this.lvText = scene.add.text(18, 22, 'LV 1', { fontFamily: 'sans-serif', fontSize: '22px', fontStyle: 'bold', color: '#ffd34d' }).setOrigin(0, 0.5).setDepth(d + 1);
     scene.add.rectangle(this.vsX + this.vsW / 2, 22, this.vsW + 4, 20, 0x000000, 0.5).setDepth(d);
     this.vsBlue = scene.add.rectangle(this.vsX, 22, this.vsW / 2, 16, 0x3aa0ff).setOrigin(0, 0.5).setDepth(d + 1);
@@ -130,14 +137,14 @@ export class Hud {
     for (let i = 0; i < UNIT_SLOTS; i++) {
       const cx = ROW_X0 + slotW / 2 + i * (slotW + gap);
       const key = keys[i];
-      if (!key || unitLocks[key]) {
-        // 데이터 없음 = '준비 중' / 아직 해금 안 됨 = 얼굴 흐리게 + 'N스테이지 클리어'
+      if (!key || !unitOwned[key]) {
+        // 데이터 없음 = '준비 중' / 구매 안 함 = 얼굴 흐리게 + '강화에서 구매'
         scene.add.rectangle(cx, cy, slotW, 74, 0x20242e).setStrokeStyle(2, 0x3a3f4a).setDepth(d);
         if (key && scene.textures.exists(iconKey(key))) {
           scene.add.image(cx, cy - 6, iconKey(key)).setDisplaySize(40, 40).setDepth(d + 1).setAlpha(0.25);
         }
         scene.add.text(cx, cy - 8, '🔒', { fontSize: '20px' }).setOrigin(0.5).setDepth(d + 2).setAlpha(0.75);
-        const msg = key ? `${unitLocks[key]}스테이지 클리어` : '준비 중';
+        const msg = key ? '🛒 강화에서 구매' : '준비 중';
         scene.add.text(cx, cy + 22, msg, { fontFamily: 'sans-serif', fontSize: '11px', color: key ? '#a8b4c8' : '#6a7488' }).setOrigin(0.5).setDepth(d + 2);
         continue;
       }
@@ -172,9 +179,9 @@ export class Hud {
         .text(cx - WEAPON_R + 2, wy + WEAPON_R - 4, String(i + 1), { fontFamily: 'sans-serif', fontSize: '11px', fontStyle: 'bold', color: '#3a2a10', backgroundColor: '#ffd34d', padding: { x: 3, y: 0 } })
         .setOrigin(0, 1)
         .setDepth(d + 4);
-      if (i >= weaponsUnlocked) {
+      if (!weaponOwned[i]) {
         scene.add.text(cx, wy, '🔒', { fontSize: '17px' }).setOrigin(0.5).setDepth(d + 2).setAlpha(0.6);
-        scene.add.text(cx, wy + WEAPON_R + 8, `${i + 1}스테이지`, { fontFamily: 'sans-serif', fontSize: '10px', color: '#7c8aa0' }).setOrigin(0.5).setDepth(d + 2);
+        scene.add.text(cx, wy + WEAPON_R + 8, '🛒 구매', { fontFamily: 'sans-serif', fontSize: '10px', color: '#7c8aa0' }).setOrigin(0.5).setDepth(d + 2);
         return;
       }
       const gauge = scene.add.graphics().setDepth(d + 1);
@@ -186,8 +193,13 @@ export class Hud {
       scene.add.text(cx, wy + WEAPON_R + 8, w.name, { fontFamily: 'sans-serif', fontSize: '11px', fontStyle: 'bold', color: '#cfe0ff' }).setOrigin(0.5).setDepth(d + 2);
       bg.setInteractive({ useHandCursor: true });
       bg.on('pointerdown', () => onWeapon(i));
-      this.weaponBtns.push({ cx, cy: wy, color: w.color, bg, gauge, ring, icon, wasReady: false });
+      this.weaponBtns.push({ index: i, cx, cy: wy, color: w.color, bg, gauge, ring, icon, wasReady: false });
     });
+  }
+
+  /** 🤝 발동 중인 조합 배지(왼쪽 위) */
+  setSynergies(list: Synergy[]): void {
+    this.synergyText.setVisible(list.length > 0).setText(list.map((s) => `${s.icon} ${s.name}`).join('   '));
   }
 
   /** 소환 실패 피드백 — 카드 흔들림 + 사유 표시 */
@@ -213,8 +225,8 @@ export class Hud {
     this.foodText.setText(`${s.food} / ${s.foodMax}`);
     this.beatMark.setX(this.beatX + this.beatW * Phaser.Math.Clamp(s.beat, 0, 1));
     // 특수 무기 게이지(위에서 시계 방향으로 채움) + 발사 가능 깜빡임
-    this.weaponBtns.forEach((b, i) => {
-      const st = s.weapons[i];
+    this.weaponBtns.forEach((b) => {
+      const st = s.weapons[b.index];
       if (!st) return;
       b.gauge.clear();
       if (st.ratio > 0) {
