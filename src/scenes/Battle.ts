@@ -51,7 +51,7 @@ const UNITS = unitsData as Record<string, UnitStats>;
 const ENEMIES = enemiesData as Record<string, EnemyStats>;
 const STAGES = stagesData as StageData[];
 
-const LANE_Y = 500;
+const LANE_Y = 440; // 하단 HUD 2단(유닛 + 특수 무기) 공간 확보
 
 export class BattleScene extends Phaser.Scene {
   private stage!: StageData;
@@ -516,7 +516,7 @@ export class BattleScene extends Phaser.Scene {
       const onHit = isMage
         ? (x: number, d: number) => this.splash(x, Math.round(d * 0.6), att.side)
         : undefined;
-      p.spawn(att.x + (att.side === 'ally' ? 14 : -14), 486, def, dmg, isMage ? 'orb' : 'arrow', onHit);
+      p.spawn(att.x + (att.side === 'ally' ? 14 : -14), LANE_Y - 14, def, dmg, isMage ? 'orb' : 'arrow', onHit);
       this.projectiles.push(p);
     } else {
       // 근접: 즉시 — 🛡️ 수호 중인 아군은 피해 없음
