@@ -323,6 +323,17 @@ def main():
             manifest = json.load(fp)
 
     previews = []
+    # extends: 같은 배치의 다른 그림(전설 스킨 등) — 원래 항목 설정을 그대로 쓰고 그림만 바꿈.
+    # 얼굴 아이콘은 원래 초상화가 아니라 새 시트 첫 프레임에서 자동으로(icon_auto)
+    raw = json.loads(json.dumps(config))
+    for type_, c in config.items():
+        if isinstance(c, dict) and c.get('extends'):
+            merged = json.loads(json.dumps(raw[c['extends']]))
+            merged.pop('icon', None)
+            merged['icon_auto'] = True
+            merged.update({k: v for k, v in c.items() if k != 'extends'})
+            config[type_] = merged
+
     for type_, c in config.items():
         if type_.startswith('_'):
             continue
@@ -351,6 +362,17 @@ def main():
             Image.fromarray(arr).resize((ICON_SIZE, ICON_SIZE), Image.LANCZOS).save(
                 os.path.join(OUT_DIR, f'icon_{type_}.png'), optimize=True)
             meta['icon'] = f'icon_{type_}.png'
+        if c.get('icon_auto') and not c.get('icon'):  # 첫 프레임 머리 부분으로 얼굴 아이콘
+            fw, fh = meta['frameWidth'], meta['frameHeight']
+            cell = np.asarray(img.convert('RGBA').crop((0, 0, fw, fh)))
+            ys, xs = np.nonzero(cell[..., 3] > 40)
+            if len(xs):
+                top, cx = ys.min(), int(np.median(xs[ys < ys.min() + (ys.max() - ys.min()) * 0.4]))
+                side = int((ys.max() - top) * 0.55)
+                box = (cx - side // 2, top, cx - side // 2 + side, top + side)
+                Image.fromarray(cell).crop(box).resize((ICON_SIZE, ICON_SIZE), Image.LANCZOS).save(
+                    os.path.join(OUT_DIR, f'icon_{type_}.png'), optimize=True)
+                meta['icon'] = f'icon_{type_}.png'
         # 확대해서 쓰는 작은 그림은 nearest(도트 선명), 축소는 linear
         manifest[type_] = {'file': f'{type_}.png', 'filter': c.get('filter', 'nearest' if meta['scale'] >= 1 else 'linear'), **meta}
         previews.append((type_, img, meta))

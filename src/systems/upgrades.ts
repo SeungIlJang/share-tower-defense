@@ -241,11 +241,11 @@ export class MetaProgress {
     return true;
   }
 
-  /** 착용/해제 전환 */
-  toggleSkin(type: string, skin: string): void {
-    if (!this.ownsSkin(type, skin)) return;
-    if (this.skinEquipped[type] === skin) delete this.skinEquipped[type];
-    else this.skinEquipped[type] = skin;
+  /** 착용 — null이면 기본 복장 */
+  equipSkin(type: string, skin: string | null): void {
+    if (skin === null) delete this.skinEquipped[type];
+    else if (this.ownsSkin(type, skin)) this.skinEquipped[type] = skin;
+    else return;
     this.save();
   }
 

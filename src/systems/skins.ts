@@ -10,14 +10,39 @@ export interface HueSwap {
 }
 
 export interface Skin {
-  id: string;
+  id: string; // 'rare' | 'legend'
   name: string;
-  grade: 'rare';
+  grade: 'rare' | 'legend';
   price: number;
-  swaps: HueSwap[];
+  swaps: HueSwap[]; // 레어: 색 바꾸기(전설은 그림이라 비어 있음)
 }
 
 export const RARE_PRICE = 500;
+export const LEGEND_PRICE = 1500;
+
+/** 🟡 전설 스킨 이름 — 그림(public/sprites/<유닛>@legend)이 있을 때만 판매 */
+export const LEGEND_NAMES: Record<string, string> = {
+  soldier: '황금 사자',
+  archer: '달빛 레인저',
+  knight: '성기사',
+  spear: '용창 기사',
+  mage: '별빛 대마법사',
+  rogue: '그림자 암살자',
+  cleric: '천사 성녀',
+  earthmage: '고대 드루이드',
+  darkmage: '공허의 마녀',
+  shield: '요새 수호자',
+  cavalry: '왕실 기병',
+  cannon: '스팀펑크 기술자',
+};
+
+/** 유닛이 가질 수 있는 스킨 목록(레어 + 그림이 있으면 전설) */
+export function skinsFor(type: string, hasLegendArt: boolean): Skin[] {
+  const out: Skin[] = [];
+  if (SKINS[type]) out.push(SKINS[type]);
+  if (hasLegendArt && LEGEND_NAMES[type]) out.push({ id: 'legend', name: LEGEND_NAMES[type], grade: 'legend', price: LEGEND_PRICE, swaps: [] });
+  return out;
+}
 
 const rare = (name: string, swaps: HueSwap[]): Skin => ({ id: 'rare', name, grade: 'rare', price: RARE_PRICE, swaps });
 

@@ -105,3 +105,11 @@ python tools/extract_sprites.py tools/sprites.config.json --preview preview.png
 ```
 - `box`: 초상화에서 얼굴 영역 `[x0, y0, x1, y1]`(정사각형 권장). 배경이 불투명하면 자동 제거
 - 초상화 원본: `images/image/All_Pixel_RPG_Assets/01_Character_Singles` → `art/portrait_*.png`(영문 이름), 창병은 시트 왼쪽 큰 그림
+
+## 스킨
+
+- 🔵 **레어**: 그림 없음 — `src/systems/skins.ts`의 색상 범위로 게임 안에서 대표 옷 색만 바꿈.
+- 🟡 **전설**: 새 그림. 설정 키는 `<유닛>@legend`, 같은 배치면 `"extends": "<유닛>"` 한 줄(얼굴 아이콘 자동).
+  원본 시트는 용량이 커서 **저장소에 넣지 않고** `D:\AI\workspace\game\images\image\legendary\`에 둔다
+  (설정 경로 `../../images/image/legendary/...`). 다시 변환하려면 그 폴더가 있어야 한다.
+- 전설 그림은 앱 시작 시 착용 중인 것만 받고, 나머지는 스킨 창을 열 때 받는다.

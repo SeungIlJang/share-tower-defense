@@ -1,6 +1,8 @@
 import Phaser from 'phaser';
 import { loadAudio } from '../systems/sound';
-import { ANIM_STATES, LOOPING, MANIFEST_URL, animKey, iconKey, parseManifest, sprites, textureKey } from '../systems/sprites';
+import { meta } from '../systems/upgrades';
+import { registerSpriteAnims } from '../systems/skinTextures';
+import { MANIFEST_URL, iconKey, parseManifest, sprites, textureKey } from '../systems/sprites';
 
 /**
  * 프리로드: sprites/manifest.json → 등록된 스프라이트시트 로드 → 애니메이션 생성 → Menu.
@@ -35,7 +37,12 @@ export class PreloadScene extends Phaser.Scene {
       this.scene.start('Menu');
       return;
     }
-    for (const type of types) {
+    // 👗 전설 스킨 등 '유닛@스킨' 그림은 착용 중인 것만(나머지는 스킨 창에서 열 때 받음)
+    const needed = types.filter((t) => {
+      const [unit, skin] = t.split('@');
+      return !skin || meta.equippedSkin(unit) === skin;
+    });
+    for (const type of needed) {
       const d = manifest[type];
       this.load.spritesheet(textureKey(type), `sprites/${d.file}`, {
         frameWidth: d.frameWidth,
@@ -44,31 +51,9 @@ export class PreloadScene extends Phaser.Scene {
       if (d.icon) this.load.image(iconKey(type), `sprites/${d.icon}`);
     }
     this.load.once(Phaser.Loader.Events.COMPLETE, () => {
-      for (const type of types) this.registerAnims(type);
+      for (const type of needed) registerSpriteAnims(this, type);
       this.scene.start('Menu');
     });
     this.load.start();
-  }
-
-  private registerAnims(type: string): void {
-    const d = sprites.manifest[type];
-    const key = textureKey(type);
-    if (!this.textures.exists(key)) {
-      delete sprites.manifest[type]; // 이미지 로드 실패 → 벡터 폴백
-      return;
-    }
-    this.textures
-      .get(key)
-      .setFilter(d.filter === 'nearest' ? Phaser.Textures.FilterMode.NEAREST : Phaser.Textures.FilterMode.LINEAR);
-    for (const s of ANIM_STATES) {
-      const a = d.anims[s];
-      if (!a || this.anims.exists(animKey(type, s))) continue;
-      this.anims.create({
-        key: animKey(type, s),
-        frames: this.anims.generateFrameNumbers(key, { frames: a.frames }),
-        frameRate: a.fps,
-        repeat: LOOPING[s] ? -1 : 0,
-      });
-    }
   }
 }

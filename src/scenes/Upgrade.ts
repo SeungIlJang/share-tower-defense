@@ -2,13 +2,13 @@ import Phaser from 'phaser';
 import unitsData from '../data/units.json';
 import type { UnitStats } from '../types';
 import { unitPrice, weaponPrice } from '../systems/unlocks';
-import { iconKey, textureKey } from '../systems/sprites';
+import { iconKey, spriteOf, textureKey } from '../systems/sprites';
 import { meta, scaleStat } from '../systems/upgrades';
 import { bgm, sfx } from '../systems/sound';
 import { WEAPONS, weaponChargeMult, weaponDurationMult, weaponPowerMult } from '../systems/weapons';
 import { UNIT_SKILLS, skillEvery, skillMult } from '../systems/unitSkills';
-import { SKINS } from '../systems/skins';
-import { ensureSkin } from '../systems/skinTextures';
+import { skinType, skinsFor } from '../systems/skins';
+import { ensureSkin, loadLook } from '../systems/skinTextures';
 
 const UNITS = unitsData as Record<string, UnitStats>;
 
@@ -174,31 +174,102 @@ export class UpgradeScene extends Phaser.Scene {
 
   /** 👗 레어 스킨 버튼 — 없으면 구매(바로 착용), 있으면 착용/해제 */
   private skinButton(key: string): { label: string; color: number; onClick: () => void } | undefined {
-    const sk = SKINS[key];
-    if (!sk) return undefined;
-    if (!meta.ownsSkin(key, sk.id)) {
-      const can = meta.gold >= sk.price;
-      return {
-        label: `👗 스킨 🪙${sk.price}`,
-        color: can ? 0x7a4ad8 : 0x8a8aa0,
-        onClick: () => {
-          if (meta.buySkin(key, sk.id, sk.price)) {
-            sfx(this, 'levelup');
-            this.render();
-          }
-        },
-      };
-    }
-    const on = meta.equippedSkin(key) === sk.id;
+    const list = skinsFor(key, !!spriteOf(skinType(key, 'legend')));
+    if (!list.length) return undefined;
+    const eq = list.find((sk) => sk.id === meta.equippedSkin(key));
     return {
-      label: on ? `👗 ${sk.name} ✓` : '👗 기본 복장',
-      color: on ? 0x3a8adf : 0x5a6a8a,
-      onClick: () => {
-        meta.toggleSkin(key, sk.id);
-        sfx(this, 'click');
-        this.render();
-      },
+      label: eq ? `${eq.grade === 'legend' ? '🟡' : '🔵'} ${eq.name}` : '👗 스킨',
+      color: eq?.grade === 'legend' ? 0xd8962a : eq ? 0x3a8adf : 0x7a4ad8,
+      onClick: () => this.openSkinPicker(key),
     };
+  }
+
+  /** 👗 스킨 고르기 — 기본 / 🔵 레어(색 바꿈) / 🟡 전설(새 그림). 없으면 구매, 있으면 착용 */
+  private openSkinPicker(key: string): void {
+    // 전설 그림을 아직 안 받았으면 받고 나서 열기
+    const legend = skinType(key, 'legend');
+    if (spriteOf(legend) && !this.textures.exists(textureKey(legend))) {
+      loadLook(this, legend, () => this.openSkinPicker(key));
+      return;
+    }
+    const layer = this.add.container(0, 0).setDepth(200);
+    const dim = this.add.rectangle(640, 360, 1280, 720, 0x000000, 0.55).setInteractive();
+    const panel = this.add.graphics();
+    panel.fillStyle(0xffffff, 0.97).fillRoundedRect(310, 150, 660, 400, 30);
+    panel.lineStyle(5, 0xa07aff, 1).strokeRoundedRect(310, 150, 660, 400, 30);
+    layer.add([dim, panel]);
+    layer.add(this.add.text(640, 188, `👗 ${UNITS[key].name} 스킨`, { fontFamily: 'sans-serif', fontSize: '28px', fontStyle: 'bold', color: '#6a4ad8' }).setOrigin(0.5));
+    layer.add(this.add.text(640, 222, `보유 🪙 ${meta.gold}`, { fontFamily: 'sans-serif', fontSize: '16px', color: '#a07a20' }).setOrigin(0.5));
+
+    const hasLegend = !!spriteOf(skinType(key, 'legend'));
+    const options: { id: string | null; name: string; grade: string; price: number; color: number }[] = [
+      { id: null, name: '기본 복장', grade: '⚪ 기본', price: 0, color: 0x8a92a0 },
+      ...skinsFor(key, hasLegend).map((sk) => ({
+        id: sk.id,
+        name: sk.name,
+        grade: sk.grade === 'legend' ? '🟡 전설' : '🔵 레어',
+        price: sk.price,
+        color: sk.grade === 'legend' ? 0xe8a000 : 0x3a8adf,
+      })),
+    ];
+    if (!hasLegend) options.push({ id: '?', name: '준비 중', grade: '🟡 전설', price: 0, color: 0xc8ccd8 });
+
+    const w = 190;
+    const x0 = 640 - ((options.length - 1) * (w + 16)) / 2;
+    options.forEach((o, i) => {
+      const x = x0 + i * (w + 16);
+      const y = 380;
+      const g = this.add.graphics();
+      const equipped = (meta.equippedSkin(key) ?? null) === o.id;
+      g.fillStyle(equipped ? 0xf0f6ff : 0xf6f6fa, 1).fillRoundedRect(x - w / 2, y - 130, w, 250, 18);
+      g.lineStyle(equipped ? 5 : 3, o.color, 1).strokeRoundedRect(x - w / 2, y - 130, w, 250, 18);
+      layer.add(g);
+      // 미리보기 — 첫 프레임
+      const look = o.id === '?' ? null : o.id ? ensureSkin(this, key, o.id) : key;
+      const def = look ? spriteOf(look) ?? spriteOf(key) : null;
+      if (look && def && this.textures.exists(textureKey(look))) {
+        const img = this.add.image(x, y - 40, textureKey(look), def.anims.idle!.frames[0]);
+        img.setScale(Math.min(110 / def.frameHeight, 150 / def.frameWidth));
+        layer.add(img);
+      } else {
+        layer.add(this.add.text(x, y - 40, '❔', { fontSize: '54px' }).setOrigin(0.5).setAlpha(0.5));
+      }
+      layer.add(this.add.text(x, y - 112, o.grade, { fontFamily: 'sans-serif', fontSize: '14px', fontStyle: 'bold', color: '#6a6a80' }).setOrigin(0.5));
+      layer.add(this.add.text(x, y + 38, o.name, { fontFamily: 'sans-serif', fontSize: '18px', fontStyle: 'bold', color: '#3a3a5a' }).setOrigin(0.5));
+
+      const owned = o.id === null || (o.id !== '?' && meta.ownsSkin(key, o.id));
+      const [label, col] =
+        o.id === '?'
+          ? ['그림 준비 중', '#8a92a0']
+          : equipped
+            ? ['✓ 착용 중', '#8a92a0']
+            : owned
+              ? ['착용하기', '#3a8adf']
+              : [`구매 🪙${o.price}`, meta.gold >= o.price ? '#2fa25a' : '#b0b4c0'];
+      const btn = this.add
+        .text(x, y + 84, label, { fontFamily: 'sans-serif', fontSize: '16px', fontStyle: 'bold', color: '#ffffff', backgroundColor: col, padding: { x: 14, y: 7 } })
+        .setOrigin(0.5);
+      layer.add(btn);
+      if (o.id === '?' || equipped) return;
+      btn.setInteractive({ useHandCursor: true });
+      btn.on('pointerdown', () => {
+        if (!owned) {
+          if (!meta.buySkin(key, o.id!, o.price)) return;
+          sfx(this, 'levelup');
+        } else {
+          meta.equipSkin(key, o.id);
+          sfx(this, 'click');
+        }
+        layer.destroy();
+        this.render();
+        this.openSkinPicker(key);
+      });
+    });
+
+    const close = this.add.text(940, 176, '✕', { fontFamily: 'sans-serif', fontSize: '28px', color: '#6a4ad8' }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+    close.on('pointerdown', () => layer.destroy());
+    dim.on('pointerdown', () => layer.destroy());
+    layer.add(close);
   }
 
   /** ✨ 유닛 스킬 안내 — Lv0: 'Lv1 해금', Lv1+: '공격 N번마다 · ×배율' */

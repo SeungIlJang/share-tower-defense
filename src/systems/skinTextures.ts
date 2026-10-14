@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { ANIM_STATES, LOOPING, animKey, iconKey, spriteOf, textureKey } from './sprites';
+import { ANIM_STATES, LOOPING, animKey, iconKey, spriteOf, sprites, textureKey } from './sprites';
 import { SKINS, recolorPixels, skinType } from './skins';
 
 /**
@@ -18,8 +18,48 @@ function recoloredCanvas(src: HTMLImageElement | HTMLCanvasElement, swaps: Param
   return c;
 }
 
+/** 로드된 스프라이트시트 → 필터·애니메이션 등록(Preload·나중 로드 공용). 실패하면 매니페스트에서 제거 */
+export function registerSpriteAnims(scene: Phaser.Scene, type: string): void {
+  const d = sprites.manifest[type];
+  const key = textureKey(type);
+  if (!d) return;
+  if (!scene.textures.exists(key)) {
+    delete sprites.manifest[type]; // 이미지 로드 실패 → 벡터 폴백
+    return;
+  }
+  scene.textures.get(key).setFilter(d.filter === 'nearest' ? Phaser.Textures.FilterMode.NEAREST : Phaser.Textures.FilterMode.LINEAR);
+  for (const s of ANIM_STATES) {
+    const a = d.anims[s];
+    if (!a || scene.anims.exists(animKey(type, s))) continue;
+    scene.anims.create({
+      key: animKey(type, s),
+      frames: scene.anims.generateFrameNumbers(key, { frames: a.frames }),
+      frameRate: a.fps,
+      repeat: LOOPING[s] ? -1 : 0,
+    });
+  }
+}
+
+/** 그림 스킨(유닛@스킨)을 아직 안 받았으면 지금 받기 → 끝나면 done */
+export function loadLook(scene: Phaser.Scene, look: string, done: () => void): void {
+  const d = sprites.manifest[look];
+  if (!d || scene.textures.exists(textureKey(look))) {
+    done();
+    return;
+  }
+  scene.load.spritesheet(textureKey(look), `sprites/${d.file}`, { frameWidth: d.frameWidth, frameHeight: d.frameHeight });
+  if (d.icon) scene.load.image(iconKey(look), `sprites/${d.icon}`);
+  scene.load.once(Phaser.Loader.Events.COMPLETE, () => {
+    registerSpriteAnims(scene, look);
+    done();
+  });
+  scene.load.start();
+}
+
 /** 스킨 텍스처·애니메이션 준비 → 쓸 이름(유닛@스킨). 원본 그림이 없으면 원래 이름 */
 export function ensureSkin(scene: Phaser.Scene, type: string, skin: string | null | undefined): string {
+  // 🟡 전설: 그림 시트(매니페스트 '유닛@legend')가 Preload에서 이미 로드됨
+  if (skin === 'legend') return scene.textures.exists(textureKey(skinType(type, skin))) ? skinType(type, skin) : type;
   const sk = skin ? SKINS[type] : undefined;
   const base = textureKey(type);
   if (!sk || sk.id !== skin || !scene.textures.exists(base)) return type;

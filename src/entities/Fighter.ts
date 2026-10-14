@@ -74,7 +74,7 @@ export class Fighter {
     this.char.x = 0;
     this.char.scaleX = side === 'enemy' ? -1 : 1;
     this.sprite = null;
-    this.spriteDef = spriteOf(type) ?? null;
+    this.spriteDef = spriteOf(look) ?? spriteOf(type) ?? null; // 전설 스킨은 자기 시트 정보
     const v = visualOf(type);
     const footOffset = v.bodyH / 2; // 벡터 캐릭터와 같은 높이에 발을 둠
     let barY = -v.bodyH / 2 - 20;
