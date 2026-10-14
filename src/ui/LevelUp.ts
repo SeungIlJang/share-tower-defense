@@ -30,7 +30,7 @@ export class LevelUpOverlay {
       c.add(s.add.text(cx, cy - 180, String(i + 1), { fontFamily: 'sans-serif', fontSize: '22px', fontStyle: 'bold', color: '#3a2a10' }).setOrigin(0.5));
       c.add(s.add.text(cx, cy - 120, def.name, { fontFamily: 'sans-serif', fontSize: '26px', fontStyle: 'bold', color: '#ffd34d', align: 'center' }).setOrigin(0.5));
       c.add(s.add.text(cx, cy - 30, def.desc, { fontFamily: 'sans-serif', fontSize: '17px', color: '#fff', align: 'center', wordWrap: { width: 210 } }).setOrigin(0.5));
-      c.add(s.add.text(cx, cy + 140, `LV  ${lv} / ${def.max}`, { fontFamily: 'sans-serif', fontSize: '22px', fontStyle: 'bold', color: maxed ? '#888' : '#7cf6ff' }).setOrigin(0.5));
+      c.add(s.add.text(cx, cy + 140, Number.isFinite(def.max) ? `LV  ${lv} / ${def.max}` : `LV  ${lv}`, { fontFamily: 'sans-serif', fontSize: '22px', fontStyle: 'bold', color: maxed ? '#888' : '#7cf6ff' }).setOrigin(0.5));
       if (!maxed) {
         card.setInteractive({ useHandCursor: true });
         card.on('pointerdown', () => {

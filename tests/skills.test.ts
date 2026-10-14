@@ -14,12 +14,17 @@ describe('skills', () => {
     expect(mimicMult(2)).toBeCloseTo(1.3);
     expect(magicMult(5)).toBeCloseTo(0.7);
     expect(supplyBonus(0)).toBe(0);
-    expect(supplyBonus(4)).toBe(20); // 최대 레벨 → 인구 40 → 60
+    expect(supplyBonus(4)).toBe(20);
+    expect(supplyBonus(10)).toBe(50); // 상한 없음
   });
 
   it('배수는 하한 유지', () => {
     expect(hasteMult(100)).toBe(0.4);
     expect(magicMult(100)).toBe(0.5);
+  });
+
+  it('보급은 상한 없이 계속 선택 가능', () => {
+    expect(anyUpgradable({ haste: 3, mimic: 9, magic: 5, supply: 999 })).toBe(true);
   });
 
   it('anyUpgradable — 전부 맥스면 false', () => {
