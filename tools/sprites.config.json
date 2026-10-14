@@ -43,6 +43,81 @@
     "height": 54,
     "fps": { "idle": 6, "walk": 11, "attack": 10, "death": 7 }
   },
+  "rogue": {
+    "icon": { "image": "../art/portrait_rogue.png", "box": [347, 140, 907, 700] },
+    "sheet": "../art/rogue_sheet.png",
+    "thresh": 18,
+    "x": [605, 1420],
+    "rows": [["idle", 0, 6], ["walk", 1, 6], ["attack", 2, 6], ["death", 4, 5]],
+    "resolution": 2,
+    "palette": true,
+    "height": 54,
+    "fps": { "idle": 6, "walk": 11, "attack": 16, "death": 9 }
+  },
+  "cleric": {
+    "icon": { "image": "../art/portrait_cleric.png", "box": [394, 140, 954, 700] },
+    "sheet": "../art/cleric_sheet.png",
+    "x": [530, 1280],
+    "rows": [["idle", 0, 6], ["walk", 1, 6], ["attack", 2, 6], ["death", 4, 5]],
+    "resolution": 2,
+    "palette": true,
+    "height": 54,
+    "fps": { "idle": 6, "walk": 10, "attack": 10, "death": 8 }
+  },
+  "earthmage": {
+    "icon": { "image": "../art/portrait_earthmage.png", "box": [358, 230, 958, 830] },
+    "image": "../art/portrait_earthmage.png",
+    "alpha_min": 40,
+    "resolution": 2,
+    "palette": true,
+    "height": 58
+  },
+  "darkmage": {
+    "_comment": "V1 시트의 후드 쓴 암흑마법사(투명 배경). x 끝은 날아가는 구슬 제외",
+    "icon": { "image": "../art/characters_enemies_v1_sheet.png", "box": [568, 70, 668, 170], "alpha_min": 40 },
+    "sheet": "../art/characters_enemies_v1_sheet.png",
+    "mask": [[540, 0, 770, 400]],
+    "x": [770, 1072],
+    "bands": [[40, 98], [100, 156], [158, 214], [223, 275], [282, 316]],
+    "alpha_min": 140,
+    "rows": [["idle", 0, 5], ["walk", 1, 5], ["attack", 2, 5, [0, 1, 2, 3]], ["death", 4, 3, [0, 1, 2]]],
+    "height": 56,
+    "fps": { "idle": 6, "walk": 9, "attack": 10, "death": 6 }
+  },
+  "shield": {
+    "icon": { "image": "../art/shieldbearer_sheet.png", "box": [150, 240, 350, 440] },
+    "sheet": "../art/shieldbearer_sheet.png",
+    "mask": [[440, 480, 550, 545]],
+    "x": [536, 1440],
+    "rows": [["idle", 0, 6], ["walk", 1, 6], ["attack", 2, 6], ["death", 4, 6]],
+    "resolution": 2,
+    "palette": true,
+    "height": 62,
+    "fps": { "idle": 5, "walk": 8, "attack": 11, "death": 8 }
+  },
+  "cavalry": {
+    "icon": { "image": "../art/cavalry_sheet.png", "box": [95, 320, 275, 500] },
+    "sheet": "../art/cavalry_sheet.png",
+    "mask": [[0, 0, 420, 110], [395, 140, 500, 185], [395, 320, 497, 365], [395, 505, 503, 550], [395, 700, 500, 745], [395, 875, 480, 925]],
+    "x": [405, 1440],
+    "rows": [["idle", 0, 5], ["walk", 1, 5], ["attack", 2, 5], ["death", 4, 5]],
+    "resolution": 2,
+    "palette": true,
+    "height": 72,
+    "fps": { "idle": 5, "walk": 10, "attack": 10, "death": 8 }
+  },
+  "cannon": {
+    "icon": { "image": "../art/cannoneer_sheet.png", "box": [55, 310, 265, 520] },
+    "sheet": "../art/cannoneer_sheet.png",
+    "strip_lines": false,
+    "mask": [[0, 0, 560, 105], [405, 144, 477, 180], [405, 324, 486, 361], [405, 512, 509, 547], [405, 707, 463, 743], [405, 885, 483, 921]],
+    "x": [405, 1440],
+    "rows": [["idle", 0, 5], ["walk", 1, 5], ["attack", 2, 5], ["death", 4, 5]],
+    "resolution": 2,
+    "palette": true,
+    "height": 60,
+    "fps": { "idle": 5, "walk": 9, "attack": 9, "death": 8 }
+  },
   "goblin": { "image": "../../idle-hero-app/www/assets/mon/goblin.png", "height": 44 },
   "orc": { "image": "../../idle-hero-app/www/assets/mon/orc.png", "mirror": true, "height": 62 },
   "wolf": { "image": "../../idle-hero-app/www/assets/mon/wolf.png", "height": 40 },
@@ -66,5 +141,15 @@
     "resolution": 2,
     "palette": true,
     "height": 130
+  },
+  "weapon_icons": {
+    "_comment": "특수 무기 9종 버튼 아이콘(순서 = WEAPONS 순서). 프레임 i = i번째 무기",
+    "image": "../art/weapon_icons_grid.png",
+    "crops": [[0, 0, 418, 418], [418, 0, 836, 418], [836, 0, 1254, 418], [0, 418, 418, 836], [418, 418, 836, 836], [836, 418, 1254, 836], [0, 836, 418, 1254], [418, 836, 836, 1254], [836, 836, 1254, 1254]],
+    "keep_all": true,
+    "center": true,
+    "resolution": 2,
+    "palette": true,
+    "height": 40
   }
 }

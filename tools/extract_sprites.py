@@ -148,9 +148,15 @@ def split_frames(fg, expected):
 
 
 def extract_sheet(cfg):
-    rgb = np.asarray(Image.open(cfg['sheet']).convert('RGB'))
+    src = Image.open(cfg['sheet'])
+    rgb = np.asarray(src.convert('RGB')).copy()
+    if 'A' in src.getbands():  # 투명 배경 시트 → 투명한 곳을 눈에 띄는 단색(마젠타)으로 칠해 배경으로 인식
+        alpha = np.asarray(src.convert('RGBA'))[..., 3]
+        rgb[alpha < cfg.get('alpha_min', 40)] = (255, 0, 255)
+    for x0m, y0m, x1m, y1m in cfg.get('mask', []):  # 라벨 글자 등 프레임에 붙는 영역 → 배경색으로 지움
+        rgb[y0m:y1m, x0m:x1m] = rgb[0, 0]
     x0, x1 = cfg['x']
-    bands = detect_bands(rgb, x0, x1)
+    bands = [tuple(b) for b in cfg['bands']] if cfg.get('bands') else detect_bands(rgb, x0, x1)  # 행 간격이 좁으면 직접 지정
     rows = {}
     for row in cfg['rows']:
         state, row_idx, n = row[:3]
@@ -158,7 +164,7 @@ def extract_sheet(cfg):
         y0, y1 = bands[row_idx]
         pad = 6
         crop = rgb[max(0, y0 - pad):y1 + pad, x0:x1]
-        fg = foreground(crop, cfg.get('thresh', 40), strip_lines=True)
+        fg = foreground(crop, cfg.get('thresh', 40), strip_lines=cfg.get('strip_lines', True))
         frames = split_frames(fg, n)
         if keep is not None and len(frames) == n:
             frames = [frames[k] for k in keep]
@@ -218,6 +224,8 @@ def load_static(path, cfg, crop=None):
         img = img.crop(tuple(crop))
         x0 = crop[0]
     arr = np.asarray(img).copy()
+    if cfg.get('alpha_min'):  # 거의 투명한 배경(알파 1~2 등) 제거
+        arr[..., 3][arr[..., 3] < cfg['alpha_min']] = 0
     if (arr[..., 3] == 255).all():  # 투명도 없는 그림(JPG 등) → 테두리 배경색 제거
         arr[..., 3] = foreground(arr[..., :3], cfg.get('thresh', 40), holes=cfg.get('holes', False)) * 255
     if not cfg.get('keep_all'):
@@ -263,7 +271,7 @@ def extract_static(cfg):
     sheet = Image.new('RGBA', (cw * len(imgs), ch), (0, 0, 0, 0))
     for k, (im, x) in enumerate(zip(imgs, xs)):  # 바닥(발)은 칸 아래에 맞춤
         cell = Image.new('RGBA', (w, h), (0, 0, 0, 0))
-        cell.alpha_composite(im, (x, h - im.height))
+        cell.alpha_composite(im, (x, (h - im.height) // 2 if cfg.get('center') else h - im.height))
         if f < 1.0:
             cell = cell.resize((cw, ch), Image.LANCZOS)
         sheet.alpha_composite(cell, (k * cw, 0))
@@ -331,12 +339,15 @@ def main():
             ic = c['icon']
             face = Image.open(os.path.normpath(os.path.join(base, ic['image']))).convert('RGBA').crop(tuple(ic['box']))
             arr = np.asarray(face).copy()
+            if c.get('alpha_min'):
+                arr[..., 3][arr[..., 3] < c['alpha_min']] = 0
             if (arr[..., 3] == 255).all():  # 불투명 배경(시트 남색 등) 제거
                 arr[..., 3] = foreground(arr[..., :3], 40) * 255
             Image.fromarray(arr).resize((ICON_SIZE, ICON_SIZE), Image.LANCZOS).save(
                 os.path.join(OUT_DIR, f'icon_{type_}.png'), optimize=True)
             meta['icon'] = f'icon_{type_}.png'
-        manifest[type_] = {'file': f'{type_}.png', 'filter': 'linear', **meta}
+        # 확대해서 쓰는 작은 그림은 nearest(도트 선명), 축소는 linear
+        manifest[type_] = {'file': f'{type_}.png', 'filter': c.get('filter', 'nearest' if meta['scale'] >= 1 else 'linear'), **meta}
         previews.append((type_, img, meta))
         print(f"  → {meta['frameWidth']}x{meta['frameHeight']} scale {meta['scale']}")
 
