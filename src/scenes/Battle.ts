@@ -16,6 +16,7 @@ import { xpToNext, hasteMult, mimicMult, magicMult, supplyBonus, anyUpgradable }
 import { Hud } from '../ui/Hud';
 import { LevelUpOverlay } from '../ui/LevelUp';
 import { showRewarded } from '../systems/ads';
+import { lockedUntil } from '../systems/unlocks';
 import {
   WEAPONS,
   WeaponCharge,
@@ -165,7 +166,8 @@ export class BattleScene extends Phaser.Scene {
       (type) => this.trySpawnUnit(type),
       (type) => this.doBattleUpgrade(type),
       (i) => this.fireWeapon(i),
-      this.weapons.length
+      this.weapons.length,
+      this.unitLocks
     );
     // 키보드 1~9 = 특수 무기
     this.input.keyboard?.on('keydown', (ev: KeyboardEvent) => {
@@ -243,10 +245,15 @@ export class BattleScene extends Phaser.Scene {
     return f;
   }
 
+  /** 유닛별 해금 스테이지(0 = 사용 가능) — 스테이지 클리어로 6번째부터 하나씩 해금 */
+  private get unitLocks(): Record<string, number> {
+    return lockedUntil(Object.keys(UNITS), meta.clearedMax);
+  }
+
   private trySpawnUnit(type: string): void {
     if (this.over || this.picking) return;
     const base = UNITS[type];
-    if (!base) return;
+    if (!base || this.unitLocks[type]) return; // 🔒 아직 해금 안 된 유닛
     if (this.usedFood() + base.pop > this.foodMax) {
       this.hud.deny(type, 'food'); // 인구 초과 안내
       return;

@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import unitsData from '../data/units.json';
 import type { UnitStats } from '../types';
+import { lockedUntil } from '../systems/unlocks';
 import { meta, scaleStat } from '../systems/upgrades';
 
 const UNITS = unitsData as Record<string, UnitStats>;
@@ -42,11 +43,13 @@ export class UpgradeScene extends Phaser.Scene {
     this.goldText.setText(`보유 🪙 ${meta.gold}`);
 
     const keys = Object.keys(UNITS);
+    const locks = lockedUntil(keys, meta.clearedMax);
     keys.forEach((key, i) => {
       const u = UNITS[key];
+      const locked = locks[key]; // 0 = 해금됨
       const lv = meta.level(key);
       const y = 170 + i * 110;
-      const canUp = meta.canUpgrade(key);
+      const canUp = !locked && meta.canUpgrade(key);
       const cost = meta.nextCost(key);
 
       const row = this.add.rectangle(640, y, 760, 92, 0x1a2338).setStrokeStyle(2, 0x33406a);
@@ -65,7 +68,7 @@ export class UpgradeScene extends Phaser.Scene {
         .setStrokeStyle(2, canUp ? 0x5cff9e : 0x555)
         .setInteractive({ useHandCursor: true });
       const btnText = this.add
-        .text(880, y, `강화\n🪙${cost}`, {
+        .text(880, y, locked ? `🔒 ${locked}스테이지\n클리어` : `강화\n🪙${cost}`, {
           fontFamily: 'sans-serif',
           fontSize: '16px',
           color: '#fff',
@@ -73,7 +76,7 @@ export class UpgradeScene extends Phaser.Scene {
         })
         .setOrigin(0.5);
       btn.on('pointerdown', () => {
-        if (meta.upgrade(key)) this.render();
+        if (!locked && meta.upgrade(key)) this.render();
       });
       this.layer.add([row, name, stat, btn, btnText]);
     });

@@ -83,7 +83,8 @@ export class Hud {
     onSpawn: (type: string) => void,
     onUpgrade: (type: string) => void,
     onWeapon: (index: number) => void,
-    weaponsUnlocked: number
+    weaponsUnlocked: number,
+    unitLocks: Record<string, number> // 유닛별 해금에 필요한 스테이지(0 = 사용 가능)
   ) {
     this.scene = scene;
     const d = 100;
@@ -122,10 +123,15 @@ export class Hud {
     for (let i = 0; i < UNIT_SLOTS; i++) {
       const cx = ROW_X0 + slotW / 2 + i * (slotW + gap);
       const key = keys[i];
-      if (!key) {
+      if (!key || unitLocks[key]) {
+        // 데이터 없음 = '준비 중' / 아직 해금 안 됨 = 얼굴 흐리게 + 'N스테이지 클리어'
         scene.add.rectangle(cx, cy, slotW, 74, 0x20242e).setStrokeStyle(2, 0x3a3f4a).setDepth(d);
-        scene.add.text(cx, cy - 8, '🔒', { fontSize: '20px' }).setOrigin(0.5).setDepth(d + 1).setAlpha(0.6);
-        scene.add.text(cx, cy + 18, '준비 중', { fontFamily: 'sans-serif', fontSize: '11px', color: '#6a7488' }).setOrigin(0.5).setDepth(d + 1);
+        if (key && scene.textures.exists(iconKey(key))) {
+          scene.add.image(cx, cy - 6, iconKey(key)).setDisplaySize(40, 40).setDepth(d + 1).setAlpha(0.25);
+        }
+        scene.add.text(cx, cy - 8, '🔒', { fontSize: '20px' }).setOrigin(0.5).setDepth(d + 2).setAlpha(0.75);
+        const msg = key ? `${unitLocks[key]}스테이지 클리어` : '준비 중';
+        scene.add.text(cx, cy + 22, msg, { fontFamily: 'sans-serif', fontSize: '11px', color: key ? '#a8b4c8' : '#6a7488' }).setOrigin(0.5).setDepth(d + 2);
         continue;
       }
       const u = units[key];
