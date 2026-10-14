@@ -1067,5 +1067,197 @@
         "fps": 2
       }
     }
+  },
+  "fx_soldier": {
+    "file": "fx_soldier.png",
+    "filter": "linear",
+    "frameWidth": 117,
+    "frameHeight": 122,
+    "scale": 0.656,
+    "footY": 122,
+    "anims": {
+      "idle": {
+        "frames": [
+          0
+        ],
+        "fps": 1
+      }
+    }
+  },
+  "fx_archer": {
+    "file": "fx_archer.png",
+    "filter": "linear",
+    "frameWidth": 124,
+    "frameHeight": 79,
+    "scale": 0.582,
+    "footY": 79,
+    "anims": {
+      "idle": {
+        "frames": [
+          0
+        ],
+        "fps": 1
+      }
+    }
+  },
+  "fx_knight": {
+    "file": "fx_knight.png",
+    "filter": "linear",
+    "frameWidth": 125,
+    "frameHeight": 109,
+    "scale": 0.771,
+    "footY": 109,
+    "anims": {
+      "idle": {
+        "frames": [
+          0
+        ],
+        "fps": 1
+      }
+    }
+  },
+  "fx_mage": {
+    "file": "fx_mage.png",
+    "filter": "linear",
+    "frameWidth": 109,
+    "frameHeight": 112,
+    "scale": 0.821,
+    "footY": 112,
+    "anims": {
+      "idle": {
+        "frames": [
+          0
+        ],
+        "fps": 1
+      }
+    }
+  },
+  "fx_rogue": {
+    "file": "fx_rogue.png",
+    "filter": "linear",
+    "frameWidth": 192,
+    "frameHeight": 141,
+    "scale": 0.511,
+    "footY": 141,
+    "anims": {
+      "idle": {
+        "frames": [
+          0
+        ],
+        "fps": 1
+      }
+    }
+  },
+  "fx_cleric": {
+    "file": "fx_cleric.png",
+    "filter": "linear",
+    "frameWidth": 167,
+    "frameHeight": 109,
+    "scale": 0.771,
+    "footY": 109,
+    "anims": {
+      "idle": {
+        "frames": [
+          0
+        ],
+        "fps": 1
+      }
+    }
+  },
+  "fx_earthmage": {
+    "file": "fx_earthmage.png",
+    "filter": "linear",
+    "frameWidth": 95,
+    "frameHeight": 88,
+    "scale": 0.864,
+    "footY": 88,
+    "anims": {
+      "idle": {
+        "frames": [
+          0
+        ],
+        "fps": 1
+      }
+    }
+  },
+  "fx_darkmage": {
+    "file": "fx_darkmage.png",
+    "filter": "nearest",
+    "frameWidth": 76,
+    "frameHeight": 65,
+    "scale": 1.292,
+    "footY": 65,
+    "anims": {
+      "idle": {
+        "frames": [
+          0
+        ],
+        "fps": 1
+      }
+    }
+  },
+  "fx_spear": {
+    "file": "fx_spear.png",
+    "filter": "linear",
+    "frameWidth": 205,
+    "frameHeight": 104,
+    "scale": 0.5,
+    "footY": 104,
+    "anims": {
+      "idle": {
+        "frames": [
+          0
+        ],
+        "fps": 1
+      }
+    }
+  },
+  "fx_shield": {
+    "file": "fx_shield.png",
+    "filter": "linear",
+    "frameWidth": 287,
+    "frameHeight": 184,
+    "scale": 0.5,
+    "footY": 184,
+    "anims": {
+      "idle": {
+        "frames": [
+          0
+        ],
+        "fps": 1
+      }
+    }
+  },
+  "fx_cavalry": {
+    "file": "fx_cavalry.png",
+    "filter": "linear",
+    "frameWidth": 325,
+    "frameHeight": 128,
+    "scale": 0.5,
+    "footY": 128,
+    "anims": {
+      "idle": {
+        "frames": [
+          0
+        ],
+        "fps": 1
+      }
+    }
+  },
+  "fx_cannon": {
+    "file": "fx_cannon.png",
+    "filter": "linear",
+    "frameWidth": 427,
+    "frameHeight": 224,
+    "scale": 0.5,
+    "footY": 224,
+    "anims": {
+      "idle": {
+        "frames": [
+          0
+        ],
+        "fps": 1
+      }
+    }
   }
 }
