@@ -94,7 +94,7 @@ const UNITS = unitsData as Record<string, UnitStats>;
 const ENEMIES = enemiesData as Record<string, EnemyStats>;
 const STAGES = stagesData as StageData[];
 
-const LANE_Y = 410; // 하단 HUD 2단(유닛 + 특수 무기, 490~) 위 전장 바닥
+const LANE_Y = 340; // 하단 HUD 2단(유닛 카드 + 특수 무기, 410~) 위 전장 바닥
 const REACH = 14 * (UNIT_SCALE - 1) * 2; // 커진 몸집만큼 사거리 여유(겹침 방지)
 const BASE_REACH = REACH + 18; // 커진 기지 앞에서 멈춤
 

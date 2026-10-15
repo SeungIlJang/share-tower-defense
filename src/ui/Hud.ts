@@ -59,7 +59,11 @@ interface WeaponButton {
   wasReady: boolean;
 }
 
-const WEAPON_R = 30;
+const WEAPON_R = 32;
+const CARD_W = 140; // 📱 유닛 카드(가로 스크롤)
+const CARD_H = 160;
+const CARD_GAP = 8;
+const CARD_CY = 528;
 const UNIT_SLOTS = 12; // 유닛 칸 수(유닛 데이터보다 많으면 나머지는 잠금 '준비 중')
 const ROW_X0 = 4; // 하단 두 줄 모두 화면 폭을 꽉 채움
 const ROW_W = 1280 - ROW_X0 * 2;
@@ -81,6 +85,8 @@ export class Hud {
   private foodText: Phaser.GameObjects.Text;
 
   private slots: Slot[] = [];
+  private strip!: Phaser.GameObjects.Container; // 유닛 카드 줄(가로 스크롤)
+  private dragged = false;
   private weaponBtns: WeaponButton[] = [];
   private synergyText!: Phaser.GameObjects.Text;
   private beatMark: Phaser.GameObjects.Triangle;
@@ -113,9 +119,9 @@ export class Hud {
     this.goldText = scene.add.text(1262, 22, '🪙 0', { fontFamily: 'sans-serif', fontSize: '22px', fontStyle: 'bold', color: '#ffd34d' }).setOrigin(1, 0.5).setDepth(d + 1);
 
     // 하단 HUD 판(전장과 구분)
-    scene.add.rectangle(640, 605, 1280, 230, 0x0b0f1a, 0.92).setDepth(d - 1);
-    scene.add.rectangle(640, 490, 1280, 2, 0x3a4560).setDepth(d - 1);
-    const by = 510;
+    scene.add.rectangle(640, 565, 1280, 310, 0x0b0f1a, 0.92).setDepth(d - 1);
+    scene.add.rectangle(640, 410, 1280, 2, 0x3a4560).setDepth(d - 1);
+    const by = 428;
     scene.add.rectangle(240, by, 400, 22, 0x000000, 0.5).setDepth(d);
     this.foodFill = scene.add.rectangle(42, by, 396, 18, 0xe0a24e).setOrigin(0, 0.5).setDepth(d + 1);
     this.foodText = scene.add.text(240, by, '', { fontFamily: 'sans-serif', fontSize: '15px', fontStyle: 'bold', color: '#fff' }).setOrigin(0.5).setDepth(d + 2);
@@ -133,54 +139,87 @@ export class Hud {
     scene.add.rectangle(this.beatX + this.beatW / 2, beatY, this.beatW * 0.16, 12, 0x3fd06a).setDepth(d + 1); // 퍼펙트 존
     this.beatMark = scene.add.triangle(this.beatX + this.beatW / 2, beatY, 0, -10, 10, -10, 5, 2, 0xffffff).setDepth(d + 2);
 
-    // 하단 1단: 유닛 12칸(화면 폭 꽉) — 유닛 데이터 수만큼 쓰고 나머지는 잠금
-    const keys = Object.keys(units);
-    const gap = 6;
-    const slotW = (ROW_W - gap * (UNIT_SLOTS - 1)) / UNIT_SLOTS; // ≈100px
-    const cy = 580;
-    const slotH = 100;
-    for (let i = 0; i < UNIT_SLOTS; i++) {
-      const cx = ROW_X0 + slotW / 2 + i * (slotW + gap);
-      const key = keys[i];
+    // 하단 1단: 유닛 카드(큰 카드, 가로 스크롤) — 보유 유닛 먼저, 나머지는 잠금
+    const keys = Object.keys(units).sort((x, y) => Number(!unitOwned[x]) - Number(!unitOwned[y]));
+    while (keys.length < UNIT_SLOTS) keys.push('');
+    const strip = scene.add.container(0, 0).setDepth(d);
+    this.strip = strip;
+    const cy = CARD_CY;
+    const add = <T extends Phaser.GameObjects.GameObject>(o: T): T => {
+      strip.add(o);
+      return o;
+    };
+    const tap = (o: Phaser.GameObjects.Rectangle, fn: () => void): void => {
+      o.setInteractive({ useHandCursor: true });
+      o.on('pointerup', () => {
+        if (!this.dragged) fn(); // 끌어서 넘긴 경우는 소환 안 함
+      });
+    };
+    keys.forEach((key, i) => {
+      const cx = ROW_X0 + CARD_W / 2 + i * (CARD_W + CARD_GAP);
       if (!key || !unitOwned[key]) {
         // 데이터 없음 = '준비 중' / 구매 안 함 = 얼굴 흐리게 + '강화에서 구매'
-        scene.add.rectangle(cx, cy, slotW, slotH, 0x20242e).setStrokeStyle(2, 0x3a3f4a).setDepth(d);
-        if (key && scene.textures.exists(iconKey(key))) {
-          scene.add.image(cx, cy - 6, iconKey(key)).setDisplaySize(56, 56).setDepth(d + 1).setAlpha(0.25);
-        }
-        scene.add.text(cx, cy - 6, '🔒', { fontSize: '24px' }).setOrigin(0.5).setDepth(d + 2).setAlpha(0.75);
-        const msg = key ? '🛒 강화에서 구매' : '준비 중';
-        scene.add.text(cx, cy + 36, msg, { fontFamily: 'sans-serif', fontSize: '12px', color: key ? '#a8b4c8' : '#6a7488' }).setOrigin(0.5).setDepth(d + 2);
-        continue;
+        add(scene.add.rectangle(cx, cy, CARD_W, CARD_H, 0x20242e).setStrokeStyle(2, 0x3a3f4a));
+        if (key && scene.textures.exists(iconKey(key))) add(scene.add.image(cx, cy - 10, iconKey(key)).setDisplaySize(72, 72).setAlpha(0.25));
+        add(scene.add.text(cx, cy - 10, '🔒', { fontSize: '30px' }).setOrigin(0.5).setAlpha(0.75));
+        if (key) add(scene.add.text(cx, cy + 46, units[key].name, { fontFamily: 'sans-serif', fontSize: '17px', fontStyle: 'bold', color: '#7c8698' }).setOrigin(0.5));
+        add(scene.add.text(cx, cy + 68, key ? '🛒 강화에서 구매' : '준비 중', { fontFamily: 'sans-serif', fontSize: '14px', color: key ? '#a8b4c8' : '#6a7488' }).setOrigin(0.5));
+        return;
       }
       const u = units[key];
       const col = UNIT_COLORS[key] ?? 0x4a9eff;
-      const rect = scene.add.rectangle(cx, cy, slotW, slotH, 0x2a3348).setStrokeStyle(3, col).setDepth(d);
-      // 윗줄: 레벨(좌) · 전장 강화 버튼(우) / 아랫부분: 얼굴 + 이름 + 비용
-      const lvText = scene.add.text(cx - 46, cy - 35, 'Lv1', { fontFamily: 'sans-serif', fontSize: '13px', fontStyle: 'bold', color: '#ffd34d' }).setOrigin(0, 0.5).setDepth(d + 2);
-      const icon = scene.add.rectangle(cx - 20, cy + 1, 46, 46, col).setDepth(d + 1);
+      const rect = add(scene.add.rectangle(cx, cy, CARD_W, CARD_H, 0x2a3348).setStrokeStyle(3, col));
+      // 윗줄: 레벨(좌) · 전장 강화 버튼(우) / 가운데 얼굴 / 아래 이름 + 비용
+      const lvText = add(scene.add.text(cx - CARD_W / 2 + 8, cy - 62, 'Lv1', { fontFamily: 'sans-serif', fontSize: '16px', fontStyle: 'bold', color: '#ffd34d' }).setOrigin(0, 0.5));
+      const icon = add(scene.add.rectangle(cx, cy - 6, 70, 70, col));
       const faceKey = scene.textures.exists(iconKey(looks[key] ?? key)) ? iconKey(looks[key] ?? key) : iconKey(key);
-      const face = scene.textures.exists(faceKey)
-        ? scene.add.image(cx - 20, cy + 1, faceKey).setDisplaySize(46, 46).setDepth(d + 2)
-        : null;
+      const face = scene.textures.exists(faceKey) ? add(scene.add.image(cx, cy - 6, faceKey).setDisplaySize(70, 70)) : null;
       if (face) icon.setFillStyle(0x1a2133).setStrokeStyle(2, col); // 얼굴 뒤는 어두운 바탕 + 유닛 색 테두리
-      const label = scene.add.text(cx, cy + 36, u.name, { fontFamily: 'sans-serif', fontSize: u.name.length >= 5 ? '13px' : '15px', fontStyle: 'bold', color: '#fff' }).setOrigin(0.5).setDepth(d + 1);
-      const cost = scene.add.text(cx + 8, cy + 1, `⚡${u.cost}
-🍖${u.pop}`, { fontFamily: 'sans-serif', fontSize: '12px', lineSpacing: 1, color: '#cfe' }).setOrigin(0, 0.5).setDepth(d + 1);
-      rect.setInteractive({ useHandCursor: true });
-      rect.on('pointerdown', () => onSpawn(key));
-      // 🛠️ 전장 실시간 강화 버튼(카드 우상단) — 탭 영역이 카드보다 위라 소환과 분리됨
-      const upBtn = scene.add.rectangle(cx + 24, cy - 35, 48, 24, 0x2f7a4d).setStrokeStyle(1, 0x5cff9e).setDepth(d + 2).setInteractive({ useHandCursor: true });
-      const upText = scene.add.text(cx + 24, cy - 35, '⬆', { fontFamily: 'sans-serif', fontSize: '13px', fontStyle: 'bold', color: '#fff' }).setOrigin(0.5).setDepth(d + 3);
-      upBtn.on('pointerdown', () => onUpgrade(key));
+      const label = add(scene.add.text(cx, cy + 45, u.name, { fontFamily: 'sans-serif', fontSize: u.name.length >= 5 ? '17px' : '19px', fontStyle: 'bold', color: '#fff' }).setOrigin(0.5));
+      const cost = add(scene.add.text(cx, cy + 67, `⚡${u.cost}  🍖${u.pop}`, { fontFamily: 'sans-serif', fontSize: '15px', fontStyle: 'bold', color: '#cfe' }).setOrigin(0.5));
+      tap(rect, () => onSpawn(key));
+      // 🛠️ 전장 실시간 강화 버튼(카드 우상단) — 소환 탭과 분리
+      const upBtn = add(scene.add.rectangle(cx + CARD_W / 2 - 36, cy - 62, 62, 28, 0x2f7a4d).setStrokeStyle(1, 0x5cff9e));
+      const upText = add(scene.add.text(cx + CARD_W / 2 - 36, cy - 62, '⬆', { fontFamily: 'sans-serif', fontSize: '15px', fontStyle: 'bold', color: '#fff' }).setOrigin(0.5));
+      tap(upBtn, () => onUpgrade(key));
       this.slots.push({ key, cx, rect, label, cost, icon, face, upBtn, upText, lvText });
+    });
+    // ↔ 가로 스크롤(끌기·마우스 휠) — 화면보다 넓을 때만
+    const stripW = ROW_X0 * 2 + keys.length * (CARD_W + CARD_GAP) - CARD_GAP;
+    const minX = Math.min(0, 1280 - stripW);
+    let downX: number | null = null;
+    let startX = 0;
+    const inStrip = (p: Phaser.Input.Pointer): boolean => Math.abs(p.y - cy) <= CARD_H / 2;
+    scene.input.on('pointerdown', (p: Phaser.Input.Pointer) => {
+      this.dragged = false;
+      if (!inStrip(p)) return;
+      downX = p.x;
+      startX = strip.x;
+    });
+    scene.input.on('pointermove', (p: Phaser.Input.Pointer) => {
+      if (downX === null || !p.isDown) return;
+      const dx = p.x - downX;
+      if (Math.abs(dx) > 10) this.dragged = true;
+      if (this.dragged) strip.x = Phaser.Math.Clamp(startX + dx, minX, 0);
+    });
+    scene.input.on('pointerup', () => {
+      downX = null;
+    });
+    scene.input.on('wheel', (p: Phaser.Input.Pointer, _o: unknown, dx: number, dy: number) => {
+      if (inStrip(p)) strip.x = Phaser.Math.Clamp(strip.x - (dx || dy), minX, 0);
+    });
+    if (minX < 0) {
+      // 오른쪽에 더 있다는 표시
+      const hint = scene.add.text(1272, cy, '▶', { fontSize: '22px', color: '#ffffff' }).setOrigin(1, 0.5).setDepth(d + 5).setAlpha(0.7);
+      scene.tweens.add({ targets: hint, x: 1262, duration: 500, yoyo: true, repeat: -1 });
+      scene.events.on(Phaser.Scenes.Events.UPDATE, () => hint.setVisible(strip.x > minX + 4));
     }
 
     // 하단 2단: 특수 무기 9버튼(게이지가 차면 발사, 단축키 1~9). 유닛 줄과 같은 폭으로, 스테이지에 따라 앞에서부터 해금
     const wStep = (ROW_W - WEAPON_R * 2) / (WEAPONS.length - 1);
     WEAPONS.forEach((w, i) => {
       const cx = ROW_X0 + WEAPON_R + i * wStep;
-      const wy = 666;
+      const wy = 656;
       const bg = scene.add.circle(cx, wy, WEAPON_R, 0x1a2133).setStrokeStyle(3, 0x3a4560).setDepth(d);
       scene.add
         .text(cx - WEAPON_R + 2, wy + WEAPON_R - 4, String(i + 1), { fontFamily: 'sans-serif', fontSize: '12px', fontStyle: 'bold', color: '#3a2a10', backgroundColor: '#ffd34d', padding: { x: 3, y: 0 } })
@@ -215,8 +254,8 @@ export class Hud {
     if (!slot) return;
     this.scene.tweens.add({ targets: slot.rect, x: slot.cx + 6, duration: 50, yoyo: true, repeat: 2 });
     const msg = reason === 'energy' ? '⚡ 부족!' : '🍖 꽉 참!';
-    const t = this.scene.add.text(slot.cx, 520, msg, { fontFamily: 'sans-serif', fontSize: '18px', fontStyle: 'bold', color: '#ff7a7a' }).setOrigin(0.5).setDepth(130);
-    this.scene.tweens.add({ targets: t, y: 470, alpha: 0, duration: 650, onComplete: () => t.destroy() });
+    const t = this.scene.add.text(slot.cx + this.strip.x, 440, msg, { fontFamily: 'sans-serif', fontSize: '18px', fontStyle: 'bold', color: '#ff7a7a' }).setOrigin(0.5).setDepth(130);
+    this.scene.tweens.add({ targets: t, y: 395, alpha: 0, duration: 650, onComplete: () => t.destroy() });
   }
 
   update(s: HudState): void {
