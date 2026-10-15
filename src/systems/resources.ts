@@ -22,6 +22,11 @@ export class ResourceSystem {
     }
   }
 
+  /** 상한 올리기 — 🔋 마력 폭주 각성 */
+  raiseCap(n: number): void {
+    this.cap += n;
+  }
+
   get max(): number {
     return this.cap;
   }

@@ -14,7 +14,7 @@ import { ResourceSystem } from '../systems/resources';
 import { WaveSystem } from '../systems/waves';
 import { computeDamage, attackCooldown, inRange } from '../systems/combat';
 import { meta, applyUpgrade } from '../systems/upgrades';
-import { xpToNext, hasteMult, mimicMult, magicMult, supplyBonus, anyUpgradable } from '../systems/skills';
+import { xpToNext, hasteMult, mimicMult, magicMult, supplyBonus, anyUpgradable, rollChoices, awakened, SKILL_BY_KEY, vigorMult, rechargeMult, powerMult, critChance, chargeMult, type SkillDef } from '../systems/skills';
 import { Hud } from '../ui/Hud';
 import { LevelUpOverlay } from '../ui/LevelUp';
 import { showRewarded } from '../systems/ads';
@@ -50,8 +50,8 @@ const EVENT_FIRST = 35; // 특수 웨이브 첫 발생(초)
 const EVENT_EVERY = 40; // 이후 간격(초)
 const STUN_TINT = 0x9a9a9a;
 
-const CRIT_CHANCE = 0.1; // 아군 일반 공격 치명타 확률
-const CRIT_MULT = 1.5;
+const CRIT_MULT = 1.5; // 치명타 배수(확률은 skills.critChance — 기본 10%)
+const CRIT_MULT_AWAKE = 2.25; // 🎯 일격필살 각성
 import {
   WEAPONS,
   WeaponCharge,
@@ -125,6 +125,10 @@ export class BattleScene extends Phaser.Scene {
   // 레벨업 스킬(한 판 로그라이트)
   private level = 1;
   private xp = 0;
+  private rerolls = 1; // 🎲 레벨업 다시 뽑기(한 판 1회)
+  private choices: SkillDef[] = []; // 지금 보여 주는 레벨업 후보
+  private freeSummons = 0; // 🎁 무료 소환 남은 횟수
+  private summonCount = 0; // 💎 마나 순환(5번째마다 공짜)
   private xpNext = xpToNext(1);
   private skills: Record<string, number> = {};
   private picking = false;
@@ -216,6 +220,10 @@ export class BattleScene extends Phaser.Scene {
     this.xp = 0;
     this.xpNext = xpToNext(1);
     this.skills = {};
+    this.rerolls = 1;
+    this.choices = [];
+    this.freeSummons = 0;
+    this.summonCount = 0;
     this.picking = false;
     this.levelUp = new LevelUpOverlay(this);
     this.synergies = [];
@@ -288,7 +296,16 @@ export class BattleScene extends Phaser.Scene {
     // 키보드 1~9 = 특수 무기
     this.input.keyboard?.on('keydown', (ev: KeyboardEvent) => {
       const n = Number(ev.key);
-      if (Number.isInteger(n) && n >= 1 && n <= 9) this.fireWeapon(n - 1);
+      if (!Number.isInteger(n) || n < 1 || n > 9) return;
+      if (this.picking && this.levelUp.open) {
+        const c = this.choices[n - 1]; // 레벨업 중엔 1~3 = 카드 고르기
+        if (c) {
+          this.levelUp.hide();
+          this.pickSkill(c.key);
+        }
+        return;
+      }
+      this.fireWeapon(n - 1);
     });
 
     // 보스 HP 바(상단, 보스 등장 시만)
@@ -400,7 +417,8 @@ export class BattleScene extends Phaser.Scene {
       this.hud.deny(type, 'food'); // 인구 초과 안내
       return;
     }
-    const energyCost = Math.round(base.cost * magicMult(this.skills.magic ?? 0)); // 마법 숙련
+    // 💎 소환 할인 / 🎁 무료 소환 / 💎 마나 순환(각성: 5번째마다 공짜)
+    const energyCost = this.nextSummonFree() ? 0 : Math.round(base.cost * magicMult(this.skills.magic ?? 0));
     if (!this.energy.spend(energyCost)) {
       this.hud.deny(type, 'energy'); // 에너지 부족 안내
       return;
@@ -409,7 +427,10 @@ export class BattleScene extends Phaser.Scene {
     const perfect = Math.abs(this.beat - 0.5) <= BattleScene.PERFECT_WIN; // ⏱️ 타이밍 명중
     const pm = perfect ? 1.3 : 1;
     const bm = 1 + (this.battleUpg[type] ?? 0) * 0.2; // 🛠️ 전장 강화
-    const stats = { ...m, hp: Math.round(m.hp * bm * pm), atk: Math.round(m.atk * bm * pm) };
+    if (this.freeSummons > 0) this.freeSummons--;
+    this.summonCount++;
+    const vm = vigorMult(this.skills.vigor ?? 0); // ❤️ 튼튼한 몸
+    const stats = { ...m, hp: Math.round(m.hp * bm * pm * vm), atk: Math.round(m.atk * bm * pm) };
     const u = this.unitPool.acquire();
     u.spawn(this.playerBase.x + 50, LANE_Y, stats, type, 'ally', this.looks[type] ?? type); // 👗 착용 스킨
     u.pop = base.pop;
@@ -474,7 +495,7 @@ export class BattleScene extends Phaser.Scene {
     const food = this.usedFood();
     for (const k of Object.keys(UNITS)) {
       const u = UNITS[k];
-      const ec = Math.round(u.cost * magicMult(this.skills.magic ?? 0));
+      const ec = this.nextSummonFree() ? 0 : Math.round(u.cost * magicMult(this.skills.magic ?? 0));
       m[k] = this.energy.amount >= ec && food + u.pop <= this.foodMax;
     }
     return m;
@@ -486,13 +507,12 @@ export class BattleScene extends Phaser.Scene {
       this.xp -= this.xpNext;
       this.level++;
       this.xpNext = xpToNext(this.level);
+      this.levelUpBurst();
       if (anyUpgradable(this.skills)) {
         this.picking = true;
         sfx(this, 'levelup');
-        this.levelUp.show(this.skills, (key) => {
-          this.skills[key] = (this.skills[key] ?? 0) + 1;
-          this.picking = false;
-        });
+        this.choices = rollChoices(this.skills, Math.random);
+        this.showLevelUp();
         break; // 한 번에 한 레벨만 선택(나머지는 선택 후 이어서)
       }
     }
@@ -573,12 +593,13 @@ export class BattleScene extends Phaser.Scene {
     }
 
     this.clock += dt;
-    for (const w of this.weapons) w?.update(dt);
+    const wc = chargeMult(this.skills.charge ?? 0); // 🔥 무기 충전
+    for (const w of this.weapons) w?.update(dt * wc);
     const frozen = this.clock < this.frozenUntil;
     const guard = this.clock < this.guardUntil;
     const berserk = this.clock < this.berserkUntil;
 
-    this.energy.update(dt);
+    this.energy.update(dt * rechargeMult(this.skills.recharge ?? 0)); // 🔋 에너지 충전
     for (const ev of this.waves.update(dt)) this.spawnEnemy(ev.type);
 
     // 적 기지가 병력을 계속 생산(기지 파괴 전까지) → 기지를 부숴야 생산이 멈춤
@@ -733,30 +754,43 @@ export class BattleScene extends Phaser.Scene {
       const lv = meta.level(att.type);
       att.swings++;
       if (lv > 0 && UNIT_SKILLS[att.type] && isSkillSwing(att.swings, lv)) {
-        this.castSkill(att, def, lv, berserk ? BERSERK_ATK : 1);
+        this.castSkill(att, def, lv, (berserk ? BERSERK_ATK : 1) * powerMult(this.skills.power ?? 0));
         let scd = attackCooldown(att.stats.atkSpeed) * hasteMult(this.skills.haste ?? 0);
         if (berserk) scd *= BERSERK_COOLDOWN;
         att.cooldown = scd;
         return;
       }
     }
-    const crit = att.side === 'ally' && Math.random() < CRIT_CHANCE; // 💥 치명타
-    const synAtk = att.side === 'ally' ? synergyMult(this.synergies, att.type, 'atk') : 1; // 🤝 조합
-    let dmg = computeDamage(att.stats.atk * (berserk ? BERSERK_ATK : 1) * (crit ? CRIT_MULT : 1) * synAtk, def.stats.def);
-    if (def.side === 'ally') dmg = Math.max(1, Math.round(dmg * synergyMult(this.synergies, def.type, 'guard')));
+    const ally = att.side === 'ally';
+    const crit = ally && Math.random() < critChance(this.skills.crit ?? 0); // 💥 치명타(🎯 스킬로 증가)
+    const critMul = awakened(this.skills, 'power') ? CRIT_MULT_AWAKE : CRIT_MULT; // 💪 일격필살
+    const synAtk = ally ? synergyMult(this.synergies, att.type, 'atk') * powerMult(this.skills.power ?? 0) : 1; // 🤝 조합 · 💪 공격력
+    let dmg = computeDamage(att.stats.atk * (berserk ? BERSERK_ATK : 1) * (crit ? critMul : 1) * synAtk, def.stats.def);
+    if (def.side === 'ally') {
+      dmg = Math.max(1, Math.round(dmg * synergyMult(this.synergies, def.type, 'guard')));
+      if (awakened(this.skills, 'vigor')) dmg = Math.max(1, Math.round(dmg * 0.85)); // ❤️ 강철 피부
+    }
+    // 🎯 연쇄 폭발(각성): 치명타 때 주변 적도 절반 피해
+    const chainDmg = Math.round(dmg * 0.5);
+    const chain = crit && awakened(this.skills, 'crit') ? (x: number): void => this.splash(x, chainDmg, 'ally') : null;
     if (att.stats.range >= BattleScene.RANGED) {
       // 원거리: 궁수=화살(직선·빠름), 마법사=마법 구슬(느림·명중 시 광역)
       const p = this.projPool.acquire();
       const splashMul = SPLASH[att.type];
-      const onHit = splashMul
-        ? (x: number, d: number) => this.splash(x, Math.round(d * splashMul), att.side)
-        : undefined;
+      const onHit =
+        splashMul || chain
+          ? (x: number, d: number) => {
+              if (splashMul) this.splash(x, Math.round(d * splashMul), att.side);
+              chain?.(x);
+            }
+          : undefined;
       p.spawn(att.x + (att.side === 'ally' ? 14 : -14), LANE_Y - 24, def, dmg, ORB_UNITS.has(att.type) ? 'orb' : 'arrow', onHit, ORB_COLOR[att.type], crit);
       if (att.side === 'ally') sfx(this, ORB_UNITS.has(att.type) ? 'magic' : 'arrow');
       this.projectiles.push(p);
     } else {
       // 근접: 즉시 — 🛡️ 수호 중인 아군은 피해 없음
       if (!(def.side === 'ally' && this.clock < this.guardUntil)) def.takeDamage(dmg, crit);
+      chain?.(def.x);
       sfx(this, att.side === 'ally' ? 'slash' : 'hit');
     }
     att.lunge(); // 공격 찌르기 모션
@@ -764,6 +798,7 @@ export class BattleScene extends Phaser.Scene {
     if (att.side === 'ally') cd *= hasteMult(this.skills.haste ?? 0); // 신속 오라
     if (berserk) cd *= BERSERK_COOLDOWN;
     if (att.side === 'ally') cd *= synergyMult(this.synergies, att.type, 'speed');
+    if (ally && awakened(this.skills, 'haste') && Math.random() < 0.2) cd = 0.12; // ⚔️ 연속 공격
     att.cooldown = cd;
   }
 
@@ -867,6 +902,7 @@ export class BattleScene extends Phaser.Scene {
     const needsEnemy = ['meteor', 'arrows', 'lightning', 'shockwave', 'snipe'].includes(def.key);
     if (needsEnemy && live.length === 0) return;
     charge.fire();
+    if (awakened(this.skills, 'charge')) charge.fill(0.3); // 🔥 무기 달인
     this.track('weapons');
     this.banner(`${def.icon} ${def.name}!`, def.color);
     sfx(this, def.key === 'heal' ? 'heal' : def.key === 'meteor' || def.key === 'shockwave' ? 'boom_big' : 'weapon');
@@ -964,6 +1000,60 @@ export class BattleScene extends Phaser.Scene {
   }
 
   /** 무기 이름 배너 */
+  /** 다음 소환이 공짜인가 — 🎁 무료 소환 남음 / 💎 마나 순환(각성: 5번째마다) */
+  private nextSummonFree(): boolean {
+    return this.freeSummons > 0 || (awakened(this.skills, 'magic') && this.summonCount % 5 === 4);
+  }
+
+  /** 레벨업 카드 보여 주기(다시 뽑기 포함) */
+  private showLevelUp(): void {
+    this.levelUp.show(
+      this.skills,
+      this.choices,
+      this.rerolls,
+      (key) => this.pickSkill(key),
+      () => {
+        if (this.rerolls <= 0) return;
+        this.rerolls--;
+        sfx(this, 'click');
+        this.choices = rollChoices(this.skills, Math.random);
+        this.showLevelUp();
+      }
+    );
+  }
+
+  /** 레벨업 스킬 적용 — 즉시 효과는 바로, 나머지는 레벨 +1(MAX면 ✨ 각성) */
+  private pickSkill(key: string): void {
+    const def = SKILL_BY_KEY[key];
+    this.picking = false;
+    this.choices = [];
+    if (!def) return;
+    if (def.instant) {
+      if (key === 'energyNow') this.energy.add(this.energy.max);
+      else if (key === 'repair') this.playerBase.heal(Math.round(this.playerBase.maxHp * 0.3));
+      else if (key === 'freeSummon') this.freeSummons += 3;
+      this.banner(`${def.icon} ${def.name}!`, 0x7cff9a);
+      return;
+    }
+    this.skills[key] = (this.skills[key] ?? 0) + 1;
+    if (def.awaken && this.skills[key] >= def.max) {
+      if (key === 'recharge') this.energy.raiseCap(50); // 🔋 마력 폭주
+      sfx(this, 'levelup');
+      this.banner(`✨ 각성! ${def.awaken.name}`, 0xffe14d);
+    }
+  }
+
+  /** 🎉 레벨업 순간 보너스 — 에너지 +30 · 아군 20% 회복 · 적 밀쳐내기 + 반짝 */
+  private levelUpBurst(): void {
+    this.energy.add(30);
+    for (const u of this.units) if (u.active) u.heal(Math.round(u.maxHp * 0.2));
+    for (const e of this.enemies) if (e.active && !BOSS.has(e.type)) e.moveBy(Math.min(40, Math.max(0, this.enemyBase.x - 50 - e.x)));
+    const ring = this.add.circle(this.playerBase.x + 80, LANE_Y - 30, 30).setStrokeStyle(8, 0xffe14d).setDepth(85);
+    this.tweens.add({ targets: ring, scale: 14, alpha: 0, duration: 650, onComplete: () => ring.destroy() });
+    const flash = this.add.rectangle(640, 360, 1280, 720, 0xfff6c0, 0.35).setDepth(84);
+    this.tweens.add({ targets: flash, alpha: 0, duration: 400, onComplete: () => flash.destroy() });
+  }
+
   private banner(text: string, color: number): void {
     const t = this.add
       .text(640, 230, text, {

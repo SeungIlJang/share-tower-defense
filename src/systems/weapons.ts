@@ -97,6 +97,11 @@ export class WeaponCharge {
     this.value = 0;
     return true;
   }
+
+  /** 게이지 일부 채우기(0~1) — 🔥 무기 달인 각성 */
+  fill(r: number): void {
+    this.value = Math.min(1, this.value + r);
+  }
 }
 
 /** 메테오 착탄 지점 — 우리 기지에 가장 가까운 적 무리의 평균 위치 */
