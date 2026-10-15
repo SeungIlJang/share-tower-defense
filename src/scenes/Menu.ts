@@ -207,25 +207,26 @@ export class MenuScene extends Phaser.Scene {
     const layer = this.add.container(0, 0).setDepth(100);
     const dim = this.add.rectangle(640, 360, 1280, 720, 0x000000, 0.45).setInteractive();
     const g = this.add.graphics();
-    g.fillStyle(0x2fa25a, 0.35).fillRoundedRect(350, 112, 580, 500, 34);
-    g.fillStyle(0xffffff, 0.97).fillRoundedRect(350, 104, 580, 500, 34);
-    g.lineStyle(5, 0x5cd88a, 1).strokeRoundedRect(350, 104, 580, 500, 34);
+    // 📱 휴대폰에서도 잘 보이게 화면 대부분을 쓰는 큰 창
+    g.fillStyle(0x2fa25a, 0.35).fillRoundedRect(160, 32, 960, 672, 40);
+    g.fillStyle(0xffffff, 0.97).fillRoundedRect(160, 22, 960, 672, 40);
+    g.lineStyle(6, 0x5cd88a, 1).strokeRoundedRect(160, 22, 960, 672, 40);
     layer.add([dim, g]);
-    const title = this.add.text(640, 148, '🎁 보상', { fontFamily: 'sans-serif', fontSize: '34px', fontStyle: 'bold', color: '#2fa25a' }).setOrigin(0.5);
-    const goldLbl = this.add.text(640, 186, `보유 🪙 ${meta.gold}`, { fontFamily: 'sans-serif', fontSize: '18px', fontStyle: 'bold', color: '#c08a20' }).setOrigin(0.5);
+    const title = this.add.text(640, 70, '🎁 보상', { fontFamily: 'sans-serif', fontSize: '46px', fontStyle: 'bold', color: '#2fa25a' }).setOrigin(0.5);
+    const goldLbl = this.add.text(640, 118, `보유 🪙 ${meta.gold}`, { fontFamily: 'sans-serif', fontSize: '26px', fontStyle: 'bold', color: '#c08a20' }).setOrigin(0.5);
     layer.add([title, goldLbl]);
-    this.tweens.add({ targets: title, y: 142, duration: 900, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
+    this.tweens.add({ targets: title, y: 64, duration: 900, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
 
     const card = (y: number, h: number, color: number): void => {
       const cg = this.add.graphics();
-      cg.fillStyle(color, 1).fillRoundedRect(376, y, 528, h, 20);
+      cg.fillStyle(color, 1).fillRoundedRect(190, y, 900, h, 26);
       layer.add(cg);
     };
 
     // 📅 일일 출석 — 7일 동그라미(받은 날 도장, 오늘 반짝)
-    card(210, 196, 0xeefaf2);
+    card(148, 296, 0xeefaf2);
     const canDaily = meta.canClaimDaily();
-    const dailyTitle = this.add.text(400, 236, '', { fontFamily: 'sans-serif', fontSize: '19px', fontStyle: 'bold', color: '#2a6a3a' }).setOrigin(0, 0.5);
+    const dailyTitle = this.add.text(220, 184, '', { fontFamily: 'sans-serif', fontSize: '28px', fontStyle: 'bold', color: '#2a6a3a' }).setOrigin(0, 0.5);
     layer.add(dailyTitle);
     const dayDots: Phaser.GameObjects.Container[] = [];
     const drawDays = (): void => {
@@ -234,28 +235,28 @@ export class MenuScene extends Phaser.Scene {
       const today = Math.min(6, meta.dailyDayNumber() - 1); // 0~6 (7일 이후는 마지막 칸)
       const claimedToday = !meta.canClaimDaily();
       for (let i = 0; i < 7; i++) {
-        const x = 418 + i * 74;
-        const y = 290;
+        const x = 640 + (i - 3) * 122;
+        const y = 268;
         const done = i < today || (i === today && claimedToday);
         const isToday = i === today && !claimedToday;
         const c = this.add.container(x, y);
-        const bg = this.add.circle(0, 0, 28, done ? 0x5cd88a : isToday ? 0xffd34d : 0xffffff).setStrokeStyle(3, done ? 0x2fa25a : isToday ? 0xe8a000 : 0xc8e8d0);
+        const bg = this.add.circle(0, 0, 46, done ? 0x5cd88a : isToday ? 0xffd34d : 0xffffff).setStrokeStyle(4, done ? 0x2fa25a : isToday ? 0xe8a000 : 0xc8e8d0);
         c.add(bg);
-        c.add(this.add.text(0, -6, done ? '✔' : '🪙', { fontSize: done ? '22px' : '18px', color: '#ffffff' }).setOrigin(0.5));
-        c.add(this.add.text(0, 14, `${dailyAmount(i)}`, { fontFamily: 'sans-serif', fontSize: '11px', fontStyle: 'bold', color: done ? '#ffffff' : '#8a6a20' }).setOrigin(0.5));
-        c.add(this.add.text(0, 40, `${i + 1}일`, { fontFamily: 'sans-serif', fontSize: '12px', color: '#5a7a6a' }).setOrigin(0.5));
-        if (isToday) this.tweens.add({ targets: c, scale: 1.12, duration: 450, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
+        c.add(this.add.text(0, -12, done ? '✔' : '🪙', { fontSize: done ? '36px' : '30px', color: '#ffffff' }).setOrigin(0.5));
+        c.add(this.add.text(0, 22, `${dailyAmount(i)}`, { fontFamily: 'sans-serif', fontSize: '20px', fontStyle: 'bold', color: done ? '#ffffff' : '#8a6a20' }).setOrigin(0.5));
+        c.add(this.add.text(0, 68, `${i + 1}일`, { fontFamily: 'sans-serif', fontSize: '22px', fontStyle: 'bold', color: '#5a7a6a' }).setOrigin(0.5));
+        if (isToday) this.tweens.add({ targets: c, scale: 1.1, duration: 450, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
         layer.add(c);
         dayDots.push(c);
       }
       dailyTitle.setText(`📅 일일 출석  ·  연속 ${meta.dailyDayNumber()}일째`);
     };
     drawDays();
-    const dailyBtn = cuteButton(this, 640, 372, 220, 46, canDaily ? '오늘 출석 받기!' : '내일 또 만나요 ⏰', canDaily ? 0x5cd88a : 0xc0c8d0, canDaily ? 0x2fa25a : 0x9098a8, '18px', () => {
+    const dailyBtn = cuteButton(this, 640, 396, 340, 66, canDaily ? '오늘 출석 받기!' : '내일 또 만나요 ⏰', canDaily ? 0x5cd88a : 0xc0c8d0, canDaily ? 0x2fa25a : 0x9098a8, '28px', () => {
       const got = meta.claimDaily();
       if (got <= 0) return;
       sfx(this, 'coin', 2);
-      this.floatGold(640, 300, got);
+      this.floatGold(640, 230, got);
       goldLbl.setText(`보유 🪙 ${meta.gold}`);
       drawDays();
       (dailyBtn.list[1] as Phaser.GameObjects.Text).setText('내일 또 만나요 ⏰');
@@ -266,27 +267,27 @@ export class MenuScene extends Phaser.Scene {
     layer.add(dailyBtn);
 
     // 💤 방치 보상 — 쌓인 시간 막대
-    card(422, 150, 0xfff6e0);
+    card(462, 210, 0xfff6e0);
     const IDLE_CAP_MS = 8 * 3600_000;
-    const idleTitle = this.add.text(400, 448, '💤 방치 보상  (최대 8시간)', { fontFamily: 'sans-serif', fontSize: '19px', fontStyle: 'bold', color: '#8a5a10' }).setOrigin(0, 0.5);
+    const idleTitle = this.add.text(220, 500, '💤 방치 보상  (최대 8시간)', { fontFamily: 'sans-serif', fontSize: '28px', fontStyle: 'bold', color: '#8a5a10' }).setOrigin(0, 0.5);
     const bar = this.add.graphics();
-    const idleDesc = this.add.text(400, 504, '', { fontFamily: 'sans-serif', fontSize: '15px', color: '#9a7a40' }).setOrigin(0, 0.5);
+    const idleDesc = this.add.text(220, 620, '', { fontFamily: 'sans-serif', fontSize: '25px', fontStyle: 'bold', color: '#9a7a40' }).setOrigin(0, 0.5);
     layer.add([idleTitle, bar, idleDesc]);
     const drawIdle = (): void => {
       const ratio = Math.min(1, (Date.now() - meta.lastSeen) / IDLE_CAP_MS);
       bar.clear();
-      bar.fillStyle(0xf3e2b8, 1).fillRoundedRect(400, 470, 300, 16, 8);
-      bar.fillStyle(0xffb02e, 1).fillRoundedRect(400, 470, Math.max(16, 300 * ratio), 16, 8);
+      bar.fillStyle(0xf3e2b8, 1).fillRoundedRect(220, 548, 580, 30, 15);
+      bar.fillStyle(0xffb02e, 1).fillRoundedRect(220, 548, Math.max(30, 580 * ratio), 30, 15);
       const pend = meta.pendingIdle();
       idleDesc.setText(pend > 0 ? `그동안 모은 골드 🪙 ${pend}` : '조금 더 기다리면 쌓여요 😴');
     };
     drawIdle();
     const idleOk = meta.pendingIdle() > 0;
-    const idleBtn = cuteButton(this, 806, 490, 150, 46, idleOk ? '받기!' : '쌓는 중…', idleOk ? 0xffb02e : 0xc0c8d0, idleOk ? 0xd8862a : 0x9098a8, '18px', () => {
+    const idleBtn = cuteButton(this, 945, 584, 230, 70, idleOk ? '받기!' : '쌓는 중…', idleOk ? 0xffb02e : 0xc0c8d0, idleOk ? 0xd8862a : 0x9098a8, '28px', () => {
       const got = meta.claimIdle();
       if (got <= 0) return;
       sfx(this, 'coin', 2);
-      this.floatGold(806, 470, got);
+      this.floatGold(945, 540, got);
       goldLbl.setText(`보유 🪙 ${meta.gold}`);
       drawIdle();
       (idleBtn.list[1] as Phaser.GameObjects.Text).setText('쌓는 중…');
@@ -296,7 +297,7 @@ export class MenuScene extends Phaser.Scene {
     if (!idleOk) idleBtn.disableInteractive().setAlpha(0.7);
     layer.add(idleBtn);
 
-    const close = this.add.text(898, 136, '✕', { fontFamily: 'sans-serif', fontSize: '30px', color: '#2fa25a' }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+    const close = this.add.text(1078, 66, '✕', { fontFamily: 'sans-serif', fontSize: '44px', fontStyle: 'bold', color: '#2fa25a', padding: { x: 10, y: 4 } }).setOrigin(0.5).setInteractive({ useHandCursor: true });
     close.on('pointerdown', () => layer.destroy());
     dim.on('pointerdown', () => layer.destroy());
     layer.add(close);
