@@ -3,6 +3,7 @@ import { damageStage, spriteOf, textureKey } from '../systems/sprites';
 
 const RECT_W = 60;
 const RECT_H = 110;
+const BASE_SCALE = 1.35; // 📱 휴대폰용 확대
 
 /**
  * 기지(성) — HP가 0이 되면 패배.
@@ -36,9 +37,9 @@ export class Base {
       this.sprite = scene.add
         .sprite(x, ground, textureKey(spriteKey), this.stages[0])
         .setOrigin(0.5, def.footY / def.frameHeight)
-        .setScale(def.scale)
+        .setScale(def.scale * BASE_SCALE)
         .setDepth(-1); // 유닛보다 뒤
-      barY = ground - def.footY * def.scale - 8;
+      barY = ground - def.footY * def.scale * BASE_SCALE - 8;
     } else {
       scene.add.rectangle(x, y, RECT_W, RECT_H, color).setStrokeStyle(3, 0xffffff, 0.3);
     }

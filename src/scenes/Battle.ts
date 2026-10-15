@@ -7,6 +7,7 @@ import { Unit } from '../entities/Unit';
 import { Enemy } from '../entities/Enemy';
 import { Projectile } from '../entities/Projectile';
 import { Base } from '../entities/Base';
+import { UNIT_SCALE } from '../entities/Fighter';
 import { Pool } from '../utils/pool';
 import { ResourceSystem } from '../systems/resources';
 import { WaveSystem } from '../systems/waves';
@@ -93,7 +94,9 @@ const UNITS = unitsData as Record<string, UnitStats>;
 const ENEMIES = enemiesData as Record<string, EnemyStats>;
 const STAGES = stagesData as StageData[];
 
-const LANE_Y = 440; // 하단 HUD 2단(유닛 + 특수 무기) 공간 확보
+const LANE_Y = 410; // 하단 HUD 2단(유닛 + 특수 무기, 490~) 위 전장 바닥
+const REACH = 14 * (UNIT_SCALE - 1) * 2; // 커진 몸집만큼 사거리 여유(겹침 방지)
+const BASE_REACH = REACH + 18; // 커진 기지 앞에서 멈춤
 
 export class BattleScene extends Phaser.Scene {
   private stage!: StageData;
@@ -166,6 +169,41 @@ export class BattleScene extends Phaser.Scene {
     this.stage = this.endless ? endlessStage() : STAGES.find((s) => s.id === data.stageId) ?? STAGES[0];
   }
 
+  /** 🌄 전장 배경 — 하늘 그라데이션 · 달 · 별 · 먼 언덕 2겹(위쪽 빈 공간 채우기) */
+  private drawBackdrop(sky: number, lane: number, line: number): void {
+    const mix = (a: number, b: number, t: number): number => {
+      const ca = Phaser.Display.Color.IntegerToColor(a);
+      const cb = Phaser.Display.Color.IntegerToColor(b);
+      return Phaser.Display.Color.GetColor(ca.red + (cb.red - ca.red) * t, ca.green + (cb.green - ca.green) * t, ca.blue + (cb.blue - ca.blue) * t);
+    };
+    const g = this.add.graphics().setDepth(-9);
+    const horizon = mix(sky, line, 0.55);
+    g.fillGradientStyle(sky, sky, horizon, horizon, 1);
+    g.fillRect(0, 44, 1280, LANE_Y - 44);
+    // 달
+    g.fillStyle(0xfff4c8, 0.12);
+    g.fillCircle(980, 130, 58);
+    g.fillStyle(0xfff4c8, 0.85);
+    g.fillCircle(980, 130, 34);
+    // 먼 언덕(뒤) → 가까운 언덕(앞)
+    const hills = (baseY: number, amp: number, color: number, seed: number): void => {
+      g.fillStyle(color, 1);
+      g.beginPath();
+      g.moveTo(0, LANE_Y);
+      for (let x = 0; x <= 1280; x += 20) g.lineTo(x, baseY - amp * (0.55 + 0.45 * Math.sin(x / 140 + seed) * Math.cos(x / 310 + seed * 2)));
+      g.lineTo(1280, LANE_Y);
+      g.closePath();
+      g.fillPath();
+    };
+    hills(LANE_Y - 120, 90, mix(sky, line, 0.35), 1.3);
+    hills(LANE_Y - 40, 70, mix(sky, lane, 0.8), 4.1);
+    // 반짝이는 별
+    for (let i = 0; i < 26; i++) {
+      const st = this.add.circle(Phaser.Math.Between(10, 1270), Phaser.Math.Between(56, LANE_Y - 170), Phaser.Math.FloatBetween(1, 2.4), 0xffffff, 0.8).setDepth(-8);
+      this.tweens.add({ targets: st, alpha: 0.15, duration: Phaser.Math.Between(900, 2200), yoyo: true, repeat: -1, delay: Phaser.Math.Between(0, 2000) });
+    }
+  }
+
   create(): void {
     this.over = false;
     this.paused = false;
@@ -189,7 +227,8 @@ export class BattleScene extends Phaser.Scene {
     // 배경 + 레인
     const [sky, lane, line] = THEMES[this.endless ? 'endless' : this.stage.world === 2 ? 'desert' : 'forest'];
     this.add.rectangle(640, 360, 1280, 720, sky).setDepth(-10);
-    this.add.rectangle(640, LANE_Y + 40, 1280, 90, lane).setDepth(-5);
+    this.drawBackdrop(sky, lane, line);
+    this.add.rectangle(640, LANE_Y + 40, 1280, 80, lane).setDepth(-5);
     this.add.rectangle(640, LANE_Y + 2, 1280, 3, line).setDepth(-4);
 
     this.playerBase = new Base(this, 90, LANE_Y - 10, this.stage.baseHp, 0x2f6fe0, 'base_ally');
@@ -579,11 +618,11 @@ export class BattleScene extends Phaser.Scene {
       }
       const target = this.nearest(u.x, this.enemies) as Enemy | null;
       u.cooldown -= dt;
-      if (target && inRange(u.x, target.x, u.stats.range)) {
+      if (target && inRange(u.x, target.x, u.stats.range + REACH)) {
         this.attack(u, target);
       } else if (target) {
         u.moveBy(u.stats.speed * dt);
-      } else if (inRange(u.x, this.enemyBase.x, u.stats.range)) {
+      } else if (inRange(u.x, this.enemyBase.x, u.stats.range + BASE_REACH)) {
         if (u.cooldown <= 0) {
           this.enemyBase.takeDamage(computeDamage(u.stats.atk * (berserk ? BERSERK_ATK : 1), 0));
           u.cooldown = attackCooldown(u.stats.atkSpeed) * (berserk ? BERSERK_COOLDOWN : 1);
@@ -604,11 +643,11 @@ export class BattleScene extends Phaser.Scene {
       if (BOSS.has(e.type)) this.bossPattern(e, dt);
       const target = this.nearest(e.x, this.units) as Unit | null;
       e.cooldown -= dt;
-      if (target && inRange(e.x, target.x, e.stats.range)) {
+      if (target && inRange(e.x, target.x, e.stats.range + REACH)) {
         this.attack(e, target);
       } else if (target) {
         e.moveBy(-e.stats.speed * e.speedMult * dt);
-      } else if (inRange(e.x, this.playerBase.x, e.stats.range)) {
+      } else if (inRange(e.x, this.playerBase.x, e.stats.range + BASE_REACH)) {
         if (e.cooldown <= 0) {
           this.playerBase.takeDamage(computeDamage(e.stats.atk, 0));
           e.cooldown = attackCooldown(e.stats.atkSpeed);
@@ -712,7 +751,7 @@ export class BattleScene extends Phaser.Scene {
       const onHit = splashMul
         ? (x: number, d: number) => this.splash(x, Math.round(d * splashMul), att.side)
         : undefined;
-      p.spawn(att.x + (att.side === 'ally' ? 14 : -14), LANE_Y - 14, def, dmg, ORB_UNITS.has(att.type) ? 'orb' : 'arrow', onHit, ORB_COLOR[att.type], crit);
+      p.spawn(att.x + (att.side === 'ally' ? 14 : -14), LANE_Y - 24, def, dmg, ORB_UNITS.has(att.type) ? 'orb' : 'arrow', onHit, ORB_COLOR[att.type], crit);
       if (att.side === 'ally') sfx(this, ORB_UNITS.has(att.type) ? 'magic' : 'arrow');
       this.projectiles.push(p);
     } else {

@@ -4,6 +4,9 @@ import { applyDamage } from '../systems/combat';
 import { buildChar, visualOf } from './visuals';
 import { animKey, resolveState, spriteOf, textureKey, type AnimState, type SpriteDef } from '../systems/sprites';
 
+/** 📱 유닛 표시 배율 — 휴대폰에서 잘 보이게 전체 크기 확대(능력치·사거리는 그대로) */
+export const UNIT_SCALE = 1.5;
+
 /**
  * 전투 유닛 공통 베이스. 스프라이트 매니페스트에 있는 타입은 픽셀아트 스프라이트,
  * 없는 타입은 벡터 도형(몸/머리/무기)으로 그린다.
@@ -67,7 +70,7 @@ export class Fighter {
     this.summonT = 0;
     this.elite = false;
     this.baseTint = null;
-    this.root.setScale(1);
+    this.root.setScale(UNIT_SCALE);
 
     // 외형 재구성
     this.char.removeAll(true);
@@ -107,7 +110,7 @@ export class Fighter {
   makeElite(): void {
     this.elite = true;
     this.baseTint = 0xffe08a;
-    this.root.setScale(1.3);
+    this.root.setScale(UNIT_SCALE * 1.3);
     if (this.sprite) this.applyTint(this.sprite);
     this.updateHp();
   }
@@ -160,7 +163,7 @@ export class Fighter {
 
   /** 💥 피해 숫자(적이 맞을 때) — 치명타는 크고 주황색 */
   private damageNumber(dmg: number, crit: boolean): void {
-    const y = this.root.y - 40 - Math.random() * 12;
+    const y = this.root.y - 40 * UNIT_SCALE - Math.random() * 12;
     const t = this.scene.add
       .text(this.root.x + (Math.random() * 16 - 8), y, crit ? `${dmg}!` : String(dmg), {
         fontFamily: 'sans-serif',
@@ -224,7 +227,7 @@ export class Fighter {
     const corpse = this.scene.add
       .sprite(this.root.x, this.root.y + s.y, s.texture.key)
       .setOrigin(s.originX, s.originY)
-      .setScale(d.scale)
+      .setScale(d.scale * this.root.scale)
       .setFlipX(this.side === 'enemy')
       .setDepth(this.root.depth);
     corpse.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => {
