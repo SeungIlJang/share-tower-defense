@@ -59,14 +59,16 @@ interface WeaponButton {
   wasReady: boolean;
 }
 
-const WEAPON_R = 32;
+const WEAPON_R = 34;
+const W_CARD_W = 150; // 📱 특수 무기 카드(가로 스크롤)
+const W_CARD_H = 100;
+const W_CARD_CY = 664;
 const CARD_W = 140; // 📱 유닛 카드(가로 스크롤)
 const CARD_H = 160;
 const CARD_GAP = 8;
 const CARD_CY = 528;
 const UNIT_SLOTS = 12; // 유닛 칸 수(유닛 데이터보다 많으면 나머지는 잠금 '준비 중')
-const ROW_X0 = 4; // 하단 두 줄 모두 화면 폭을 꽉 채움
-const ROW_W = 1280 - ROW_X0 * 2;
+const ROW_X0 = 4; // 카드 줄 왼쪽 여백
 
 /** 전투 HUD — 상단(LV·VS·골드) + 하단 2단(유닛 12슬롯 / 특수 무기 9버튼) + 에너지/식량 바 */
 export class Hud {
@@ -184,16 +186,58 @@ export class Hud {
       tap(upBtn, () => onUpgrade(key));
       this.slots.push({ key, cx, rect, label, cost, icon, face, upBtn, upText, lvText });
     });
-    // ↔ 가로 스크롤(끌기·마우스 휠) — 화면보다 넓을 때만
-    const stripW = ROW_X0 * 2 + keys.length * (CARD_W + CARD_GAP) - CARD_GAP;
-    const minX = Math.min(0, 1280 - stripW);
+    this.scroller(strip, cy, CARD_H, keys.length * (CARD_W + CARD_GAP) - CARD_GAP, d);
+
+    // 하단 2단: 특수 무기 카드 9장(게이지가 차면 발사, 단축키 1~9) — 가로 스크롤
+    const wStrip = scene.add.container(0, 0).setDepth(d);
+    const wy = W_CARD_CY;
+    WEAPONS.forEach((w, i) => {
+      const x = ROW_X0 + W_CARD_W / 2 + i * (W_CARD_W + CARD_GAP);
+      const cx = x - W_CARD_W / 2 + 8 + WEAPON_R; // 원(아이콘)은 카드 왼쪽
+      const tx = cx + WEAPON_R + 8; // 글씨는 오른쪽
+      const owned = weaponOwned[i];
+      const card = scene.add.rectangle(x, wy, W_CARD_W, W_CARD_H, owned ? 0x1e2740 : 0x20242e).setStrokeStyle(2, owned ? 0x3a4560 : 0x33373f);
+      const bg = scene.add.circle(cx, wy, WEAPON_R, 0x1a2133).setStrokeStyle(3, 0x3a4560);
+      const num = scene.add
+        .text(x - W_CARD_W / 2 + 4, wy - W_CARD_H / 2 + 4, String(i + 1), { fontFamily: 'sans-serif', fontSize: '14px', fontStyle: 'bold', color: '#3a2a10', backgroundColor: '#ffd34d', padding: { x: 4, y: 0 } })
+        .setOrigin(0, 0);
+      wStrip.add([card, bg]);
+      if (!owned) {
+        wStrip.add([
+          scene.add.text(cx, wy, '🔒', { fontSize: '24px' }).setOrigin(0.5).setAlpha(0.6),
+          scene.add.text(tx, wy - 12, w.name, { fontFamily: 'sans-serif', fontSize: '16px', fontStyle: 'bold', color: '#7c8698' }).setOrigin(0, 0.5),
+          scene.add.text(tx, wy + 14, '🛒 구매', { fontFamily: 'sans-serif', fontSize: '13px', color: '#7c8aa0' }).setOrigin(0, 0.5),
+          num,
+        ]);
+        return;
+      }
+      const gauge = scene.add.graphics();
+      const ring = scene.add.circle(cx, wy, WEAPON_R + 3).setStrokeStyle(3, w.color).setVisible(false);
+      const iconTex = textureKey('weapon_icons'); // public/sprites 무기 아이콘 시트(프레임 i = i번째 무기)
+      const icon = scene.textures.exists(iconTex)
+        ? scene.add.image(cx, wy, iconTex, i).setDisplaySize(WEAPON_R * 1.45, WEAPON_R * 1.45)
+        : scene.add.text(cx, wy, w.icon, { fontSize: '30px' }).setOrigin(0.5);
+      const name = scene.add.text(tx, wy, w.name, { fontFamily: 'sans-serif', fontSize: w.name.length >= 4 ? '15px' : '17px', fontStyle: 'bold', color: '#cfe0ff' }).setOrigin(0, 0.5);
+      wStrip.add([gauge, icon, ring, name, num]);
+      card.setInteractive({ useHandCursor: true });
+      card.on('pointerup', () => {
+        if (!this.dragged) onWeapon(i);
+      });
+      this.weaponBtns.push({ index: i, cx, cy: wy, color: w.color, bg, gauge, ring, icon, wasReady: false });
+    });
+    this.scroller(wStrip, wy, W_CARD_H, WEAPONS.length * (W_CARD_W + CARD_GAP) - CARD_GAP, d);
+  }
+
+  /** ↔ 가로 스크롤 줄(끌기·마우스 휠) — 화면보다 넓을 때만 움직이고 ▶ 표시 */
+  private scroller(strip: Phaser.GameObjects.Container, cy: number, h: number, contentW: number, depth: number): void {
+    const scene = this.scene;
+    const minX = Math.min(0, 1280 - (contentW + ROW_X0 * 2));
     let downX: number | null = null;
     let startX = 0;
-    const inStrip = (p: Phaser.Input.Pointer): boolean => Math.abs(p.y - cy) <= CARD_H / 2;
+    const inStrip = (p: Phaser.Input.Pointer): boolean => Math.abs(p.y - cy) <= h / 2;
     scene.input.on('pointerdown', (p: Phaser.Input.Pointer) => {
       this.dragged = false;
-      if (!inStrip(p)) return;
-      downX = p.x;
+      downX = inStrip(p) ? p.x : null;
       startX = strip.x;
     });
     scene.input.on('pointermove', (p: Phaser.Input.Pointer) => {
@@ -209,38 +253,10 @@ export class Hud {
       if (inStrip(p)) strip.x = Phaser.Math.Clamp(strip.x - (dx || dy), minX, 0);
     });
     if (minX < 0) {
-      // 오른쪽에 더 있다는 표시
-      const hint = scene.add.text(1272, cy, '▶', { fontSize: '22px', color: '#ffffff' }).setOrigin(1, 0.5).setDepth(d + 5).setAlpha(0.7);
+      const hint = scene.add.text(1272, cy, '▶', { fontSize: '22px', color: '#ffffff' }).setOrigin(1, 0.5).setDepth(depth + 5).setAlpha(0.7);
       scene.tweens.add({ targets: hint, x: 1262, duration: 500, yoyo: true, repeat: -1 });
       scene.events.on(Phaser.Scenes.Events.UPDATE, () => hint.setVisible(strip.x > minX + 4));
     }
-
-    // 하단 2단: 특수 무기 9버튼(게이지가 차면 발사, 단축키 1~9). 유닛 줄과 같은 폭으로, 스테이지에 따라 앞에서부터 해금
-    const wStep = (ROW_W - WEAPON_R * 2) / (WEAPONS.length - 1);
-    WEAPONS.forEach((w, i) => {
-      const cx = ROW_X0 + WEAPON_R + i * wStep;
-      const wy = 656;
-      const bg = scene.add.circle(cx, wy, WEAPON_R, 0x1a2133).setStrokeStyle(3, 0x3a4560).setDepth(d);
-      scene.add
-        .text(cx - WEAPON_R + 2, wy + WEAPON_R - 4, String(i + 1), { fontFamily: 'sans-serif', fontSize: '12px', fontStyle: 'bold', color: '#3a2a10', backgroundColor: '#ffd34d', padding: { x: 3, y: 0 } })
-        .setOrigin(0, 1)
-        .setDepth(d + 4);
-      if (!weaponOwned[i]) {
-        scene.add.text(cx, wy, '🔒', { fontSize: '20px' }).setOrigin(0.5).setDepth(d + 2).setAlpha(0.6);
-        scene.add.text(cx, wy + WEAPON_R + 10, '🛒 구매', { fontFamily: 'sans-serif', fontSize: '12px', color: '#7c8aa0' }).setOrigin(0.5).setDepth(d + 2);
-        return;
-      }
-      const gauge = scene.add.graphics().setDepth(d + 1);
-      const ring = scene.add.circle(cx, wy, WEAPON_R + 3).setStrokeStyle(3, w.color).setDepth(d + 3).setVisible(false);
-      const iconTex = textureKey('weapon_icons'); // public/sprites 무기 아이콘 시트(프레임 i = i번째 무기)
-      const icon = scene.textures.exists(iconTex)
-        ? scene.add.image(cx, wy, iconTex, i).setDisplaySize(WEAPON_R * 1.45, WEAPON_R * 1.45).setDepth(d + 2)
-        : scene.add.text(cx, wy, w.icon, { fontSize: '27px' }).setOrigin(0.5).setDepth(d + 2);
-      scene.add.text(cx, wy + WEAPON_R + 10, w.name, { fontFamily: 'sans-serif', fontSize: '13px', fontStyle: 'bold', color: '#cfe0ff' }).setOrigin(0.5).setDepth(d + 2);
-      bg.setInteractive({ useHandCursor: true });
-      bg.on('pointerdown', () => onWeapon(i));
-      this.weaponBtns.push({ index: i, cx, cy: wy, color: w.color, bg, gauge, ring, icon, wasReady: false });
-    });
   }
 
   /** 🤝 발동 중인 조합 배지(왼쪽 위) */
