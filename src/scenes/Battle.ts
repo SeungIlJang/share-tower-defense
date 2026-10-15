@@ -8,6 +8,7 @@ import { Enemy } from '../entities/Enemy';
 import { Projectile } from '../entities/Projectile';
 import { Base } from '../entities/Base';
 import { UNIT_SCALE } from '../entities/Fighter';
+import { FOOD_BASE, energyMax, energyRate, popBonus } from '../systems/baseUpgrades';
 import { Pool } from '../utils/pool';
 import { ResourceSystem } from '../systems/resources';
 import { WaveSystem } from '../systems/waves';
@@ -102,7 +103,6 @@ export class BattleScene extends Phaser.Scene {
   private stage!: StageData;
   private energy!: ResourceSystem;
   private runGold = 0;
-  private static readonly FOOD_BASE = 40;
   private battleUpg: Record<string, number> = {}; // 전장 실시간 강화 레벨
   private waves!: WaveSystem;
   private hud!: Hud;
@@ -244,7 +244,7 @@ export class BattleScene extends Phaser.Scene {
         .setDepth(101);
     }
 
-    this.energy = new ResourceSystem(40, 9, 100); // 소환 에너지(초당 9, 상한 100)
+    this.energy = new ResourceSystem(40, energyRate(meta.baseLevel('energy')), energyMax(meta.baseLevel('energy'))); // 소환 에너지(기본 초당 9·상한 100, 🏰 기지 강화로 증가)
     this.runGold = 0;
     this.battleUpg = {};
     this.waves = new WaveSystem(this.stage);
@@ -376,9 +376,9 @@ export class BattleScene extends Phaser.Scene {
     layer.add([resume, mute, quit]);
   }
 
-  /** 최대 인구 = 기본 40 + 보급 스킬 */
+  /** 최대 인구 = 기본 40 + 🏰 기지 강화 + 보급 스킬 */
   private get foodMax(): number {
-    return BattleScene.FOOD_BASE + supplyBonus(this.skills.supply ?? 0);
+    return FOOD_BASE + popBonus(meta.baseLevel('pop')) + supplyBonus(this.skills.supply ?? 0);
   }
 
   private usedFood(): number {

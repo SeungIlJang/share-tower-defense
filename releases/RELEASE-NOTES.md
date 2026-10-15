@@ -69,7 +69,7 @@
 ---
 
 ### ⚠️ 출시 전 확인
-- [ ] **광고 ID**: 아직 구글 테스트 ID(`src/systems/ads.ts` `USE_TEST_ADS = true`) → 실제 리워드 광고단위 ID로 교체 후 games 레포 배포
+- [ ] **광고**: 출시 전이라 꺼 둠(`src/systems/ads.ts` `ADS_ENABLED = false` — 광고 버튼은 바로 보상). 출시 때 실제 리워드 광고단위 ID 입력 + `USE_TEST_ADS = false` + `ADS_ENABLED = true` 후 games 레포 배포
 - [ ] 새 AAB: `versionCode 2` / `versionName 1.1`, 업로드 키(`linedefense-upload.jks`)로 서명
 - [ ] 스토어 스크린샷 교체(`store-assets/shot*.png`는 v1.0 화면)
 - [ ] 스토어 '자세한 설명'(STORE-LISTING.md) 새 기능 반영

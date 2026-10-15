@@ -9,10 +9,11 @@ import { WEAPONS, weaponChargeMult, weaponDurationMult, weaponPowerMult } from '
 import { UNIT_SKILLS, skillEvery, skillMult } from '../systems/unitSkills';
 import { skinType, skinsFor } from '../systems/skins';
 import { ensureSkin, loadLook } from '../systems/skinTextures';
+import { BASE_MAX_LV, BASE_UPGRADES } from '../systems/baseUpgrades';
 
 const UNITS = unitsData as Record<string, UnitStats>;
 
-type Tab = 'units' | 'weapons';
+type Tab = 'units' | 'weapons' | 'base';
 
 /** 지속시간이 핵심인 무기(위력 대신 지속시간 표시) */
 const DURATION_WEAPONS = new Set(['freeze', 'guard', 'berserk']);
@@ -42,8 +43,9 @@ export class UpgradeScene extends Phaser.Scene {
 
     // 탭
     const tabs: [Tab, string, number][] = [
-      ['units', '🛡️ 유닛 강화', 540],
-      ['weapons', '🔥 특수 무기 강화', 740],
+      ['units', '🛡️ 유닛 강화', 430],
+      ['weapons', '🔥 특수 무기 강화', 640],
+      ['base', '🏰 기지 강화', 850],
     ];
     for (const [key, label, x] of tabs) {
       const t = this.add
@@ -81,7 +83,8 @@ export class UpgradeScene extends Phaser.Scene {
       t.setBackgroundColor(on ? '#3a7bff' : '#20304e').setColor(on ? '#fff' : '#8ea0c0');
     }
     if (this.tab === 'units') this.renderUnits();
-    else this.renderWeapons();
+    else if (this.tab === 'weapons') this.renderWeapons();
+    else this.renderBase();
   }
 
   /** 2열 격자의 i번째 칸 위치 */
@@ -278,6 +281,35 @@ export class UpgradeScene extends Phaser.Scene {
     if (!sk) return '';
     if (lv <= 0) return `✨${sk.name} (강화 시 해금)`;
     return `✨${sk.name} · ${skillEvery(lv)}타마다 ×${skillMult(lv).toFixed(1)}`;
+  }
+
+  /** 🏰 기지 강화 — 인구 상한 · 소환 에너지(충전·상한) */
+  private renderBase(): void {
+    BASE_UPGRADES.forEach((b, i) => {
+      const lv = meta.baseLevel(b.key);
+      const cost = meta.baseNextCost(b.key);
+      this.card(
+        i,
+        BASE_UPGRADES.length,
+        null,
+        `${b.icon} ${b.name}  Lv.${lv}${lv >= BASE_MAX_LV ? ' (MAX)' : ''}`,
+        cost === null ? b.effect(lv) : `${b.effect(lv)}  →  ${b.effect(lv + 1)}`,
+        cost === null ? 'MAX' : `강화 🪙${cost}`,
+        cost !== null && meta.gold >= cost,
+        false,
+        () => {
+          if (meta.upgradeBase(b.key)) {
+            sfx(this, 'weapon');
+            this.render();
+          }
+        }
+      );
+    });
+    this.layer.add(
+      this.add
+        .text(640, GRID_TOP + 150, `전투 중 레벨업 '보급'과 함께 쌓여요 · 최대 Lv.${BASE_MAX_LV}`, { fontFamily: 'sans-serif', fontSize: '16px', color: '#9fb3d0' })
+        .setOrigin(0.5)
+    );
   }
 
   private renderWeapons(): void {

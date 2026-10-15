@@ -4,6 +4,7 @@ import { weaponUpgradeCost } from './weapons';
 import { STARTER_UNIT, STARTER_WEAPON, migrateOwned } from './unlocks';
 import { addStats, dailyMissions, type Mission, type Stats } from './missions';
 import { pushRecord, type EndlessRecord } from './endless';
+import { BASE_MAX_LV, baseUpgradeCost, type BaseKey } from './baseUpgrades';
 
 /** 강화 순수 계산 (Vitest 검증) */
 
@@ -53,6 +54,7 @@ export class MetaProgress {
   gold = 0;
   levels: Record<string, number> = {};
   weaponLevels: Record<string, number> = {}; // 특수 무기 영구 강화 레벨
+  baseLevels: Record<string, number> = {}; // 🏰 기지 강화(인구·소환) 레벨
   stars: Record<string, number> = {}; // 스테이지별 최고 별(1~3)
   ownedUnits: string[] = [STARTER_UNIT]; // 구매한 유닛
   ownedWeapons: string[] = [STARTER_WEAPON]; // 구매한 특수 무기
@@ -295,6 +297,25 @@ export class MetaProgress {
     return true;
   }
 
+  baseLevel(key: BaseKey): number {
+    return this.baseLevels[key] ?? 0;
+  }
+
+  /** 🏰 기지 강화 다음 비용(최대 레벨이면 null) */
+  baseNextCost(key: BaseKey): number | null {
+    const lv = this.baseLevel(key);
+    return lv >= BASE_MAX_LV ? null : baseUpgradeCost(lv);
+  }
+
+  upgradeBase(key: BaseKey): boolean {
+    const cost = this.baseNextCost(key);
+    if (cost === null || this.gold < cost) return false;
+    this.gold -= cost;
+    this.baseLevels[key] = this.baseLevel(key) + 1;
+    this.save();
+    return true;
+  }
+
   addGold(amount: number): void {
     this.gold += amount;
     this.save();
@@ -307,6 +328,7 @@ export class MetaProgress {
         gold?: number;
         levels?: Record<string, number>;
         weaponLevels?: Record<string, number>;
+        baseLevels?: Record<string, number>;
         stars?: Record<string, number>;
         ownedUnits?: string[];
         ownedWeapons?: string[];
@@ -324,6 +346,7 @@ export class MetaProgress {
       this.gold = obj.gold ?? 0;
       this.levels = obj.levels ?? {};
       this.weaponLevels = obj.weaponLevels ?? {};
+      this.baseLevels = obj.baseLevels ?? {};
       this.stars = obj.stars ?? {};
       this.ownedUnits = obj.ownedUnits ?? migrateOwned(STARTER_UNIT, this.levels);
       this.ownedWeapons = obj.ownedWeapons ?? migrateOwned(STARTER_WEAPON, this.weaponLevels);
@@ -349,6 +372,7 @@ export class MetaProgress {
         gold: this.gold,
         levels: this.levels,
         weaponLevels: this.weaponLevels,
+        baseLevels: this.baseLevels,
         stars: this.stars,
         ownedUnits: this.ownedUnits,
         ownedWeapons: this.ownedWeapons,

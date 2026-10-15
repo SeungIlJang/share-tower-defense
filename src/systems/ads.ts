@@ -11,6 +11,9 @@ const TEST_REWARD_IOS = 'ca-app-pub-3940256099942544/1712485313';
 
 // 출시 시 여기에 실제 ID를 넣고 USE_TEST_ADS=false 로 바꾸세요.
 const USE_TEST_ADS = true;
+
+/** 🚫 출시 전: 광고를 아예 띄우지 않고 바로 보상(웹과 동일). 출시 때 true로 */
+const ADS_ENABLED = false;
 const PROD_REWARD_ANDROID = ''; // TODO: 실제 Android 리워드 광고단위 ID
 const PROD_REWARD_IOS = ''; // TODO: 실제 iOS 리워드 광고단위 ID
 
@@ -33,7 +36,7 @@ function rewardAdId(): string {
 let initialized = false;
 
 export async function initAds(): Promise<void> {
-  if (!isNative() || initialized) return;
+  if (!ADS_ENABLED || !isNative() || initialized) return;
   try {
     const { AdMob } = await import('@capacitor-community/admob');
     await AdMob.initialize({ initializeForTesting: USE_TEST_ADS });
@@ -51,8 +54,8 @@ const wait = (ms: number): Promise<void> =>
  * 웹/개발 환경은 광고가 없으므로 시뮬레이션으로 true 반환.
  */
 export async function showRewarded(): Promise<boolean> {
-  if (!isNative()) {
-    await wait(500); // 웹: 광고 없음(개발 편의상 보상 지급)
+  if (!ADS_ENABLED || !isNative()) {
+    await wait(500); // 웹·출시 전: 광고 없음(보상은 바로 지급)
     return true;
   }
   try {
