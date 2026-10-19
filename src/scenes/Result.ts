@@ -3,6 +3,13 @@ import { meta } from '../systems/upgrades';
 import { showRewarded } from '../systems/ads';
 import { cuteButton, cuteTitle, drawSky } from '../ui/cute';
 import { sfx } from '../systems/sound';
+import unitsData from '../data/units.json';
+import type { UnitStats } from '../types';
+import { formatTime, nextUnitToBuy } from '../systems/pacing';
+import { unitPrice } from '../systems/unlocks';
+import { iconKey } from '../systems/sprites';
+
+const UNITS = unitsData as Record<string, UnitStats>;
 
 interface ResultData {
   win: boolean;
@@ -14,6 +21,8 @@ interface ResultData {
   mode?: 'endless'; // ♾️ 무한 모드 결과
   wave?: number;
   newBest?: boolean;
+  time?: number; // ⏱️ 클리어 시간(초)
+  timeRec?: 'first' | 'best' | null; // 첫 기록 / 신기록
 }
 
 /** 결과 화면 — 별 평가 연출 + 보상 + 광고 2배 */
@@ -42,9 +51,21 @@ export class ResultScene extends Phaser.Scene {
     const title = cuteTitle(this, 640, 150, win ? '🏆 승리!' : '💦 패배…', 60, win ? '#2fa25a' : '#d04a5a');
     title.setScale(0.3);
     this.tweens.add({ targets: title, scale: 1, duration: 420, ease: 'Back.easeOut' });
+    // 관문 · ⏱️ 클리어 시간(+ 최고 기록 / 신기록)
+    const { time, timeRec } = this.resultData;
+    const best = meta.bestTimes[stageId];
+    const timeTxt = win && time !== undefined ? `   ·   ⏱️ ${formatTime(time)}${timeRec ? '' : `  (최고 ${formatTime(best ?? time)})`}` : '';
     this.add
-      .text(640, 210, `관문 ${stageId}`, { fontFamily: 'sans-serif', fontSize: '20px', fontStyle: 'bold', color: '#5a6a9a' })
+      .text(640, 210, `관문 ${stageId}${timeTxt}`, { fontFamily: 'sans-serif', fontSize: '20px', fontStyle: 'bold', color: '#5a6a9a' })
       .setOrigin(0.5);
+    if (timeRec === 'best') {
+      const nb = this.add
+        .text(860, 186, '🏆 신기록!', { fontFamily: 'sans-serif', fontSize: '22px', fontStyle: 'bold', color: '#ff4d6a', stroke: '#ffffff', strokeThickness: 4 })
+        .setOrigin(0.5)
+        .setAngle(8);
+      this.tweens.add({ targets: nb, scale: 1.15, duration: 380, yoyo: true, repeat: -1 });
+    }
+    this.nextUnitCard();
 
     // ⭐ 별 3개 — 하나씩 쿵 떨어지며 켜짐
     for (let i = 0; i < 3; i++) {
@@ -122,6 +143,30 @@ export class ResultScene extends Phaser.Scene {
 
     cuteButton(this, 480, 640, 220, 60, '🔄 다시', 0x4a8bff, 0x2a5fd0, '24px', () => this.scene.start('Battle', { stageId }));
     cuteButton(this, 800, 640, 260, 60, '🗺️ 스테이지 선택', 0x5cd88a, 0x2fa25a, '22px', () => this.scene.start('StageSelect'));
+  }
+
+  /** 🔜 다음에 살 수 있는 유닛 미리보기(오른쪽 카드) → 강화 화면으로 */
+  private nextUnitCard(): void {
+    const keys = Object.keys(UNITS);
+    const next = nextUnitToBuy(keys, (k) => meta.ownsUnit(k));
+    if (!next) return;
+    const price = unitPrice(next.index);
+    const x = 1110;
+    const y = 330;
+    const g = this.add.graphics();
+    g.fillStyle(0xffffff, 0.92).fillRoundedRect(x - 130, y - 150, 260, 300, 28);
+    g.lineStyle(4, 0xffb02e, 1).strokeRoundedRect(x - 130, y - 150, 260, 300, 28);
+    this.add.text(x, y - 120, '🔜 다음 동료', { fontFamily: 'sans-serif', fontSize: '20px', fontStyle: 'bold', color: '#d8862a' }).setOrigin(0.5);
+    if (this.textures.exists(iconKey(next.key))) {
+      const face = this.add.image(x, y - 32, iconKey(next.key)).setDisplaySize(110, 110);
+      this.tweens.add({ targets: face, y: y - 40, duration: 700, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
+    }
+    this.add.text(x, y + 44, UNITS[next.key].name, { fontFamily: 'sans-serif', fontSize: '26px', fontStyle: 'bold', color: '#3a3a5a' }).setOrigin(0.5);
+    const can = meta.gold >= price;
+    this.add
+      .text(x, y + 78, can ? `🪙 ${price} — 지금 살 수 있어요!` : `🪙 ${price} (${price - meta.gold} 부족)`, { fontFamily: 'sans-serif', fontSize: '15px', fontStyle: 'bold', color: can ? '#2fa25a' : '#9a7a40' })
+      .setOrigin(0.5);
+    cuteButton(this, x, y + 118, 200, 42, '🛒 강화에서 구매', can ? 0xffb02e : 0xc0c8d0, can ? 0xd8862a : 0x9098a8, '17px', () => this.scene.start('Upgrade'));
   }
 
   /** ♾️ 무한 모드 결과 — 버틴 웨이브 · 신기록 · 명예의 전당 */

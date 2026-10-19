@@ -9,6 +9,7 @@ import { Projectile } from '../entities/Projectile';
 import { Base } from '../entities/Base';
 import { UNIT_SCALE } from '../entities/Fighter';
 import { FOOD_BASE, energyMax, energyRate, popBonus } from '../systems/baseUpgrades';
+import { summonCooldown } from '../systems/pacing';
 import { Pool } from '../utils/pool';
 import { ResourceSystem } from '../systems/resources';
 import { WaveSystem } from '../systems/waves';
@@ -129,6 +130,7 @@ export class BattleScene extends Phaser.Scene {
   private choices: SkillDef[] = []; // 지금 보여 주는 레벨업 후보
   private freeSummons = 0; // 🎁 무료 소환 남은 횟수
   private summonCount = 0; // 💎 마나 순환(5번째마다 공짜)
+  private summonCd: Record<string, number> = {}; // ⏱️ 유닛별 소환 대기(남은 초)
   private xpNext = xpToNext(1);
   private skills: Record<string, number> = {};
   private picking = false;
@@ -224,6 +226,7 @@ export class BattleScene extends Phaser.Scene {
     this.choices = [];
     this.freeSummons = 0;
     this.summonCount = 0;
+    this.summonCd = {};
     this.picking = false;
     this.levelUp = new LevelUpOverlay(this);
     this.synergies = [];
@@ -413,6 +416,10 @@ export class BattleScene extends Phaser.Scene {
     if (this.over || this.picking) return;
     const base = UNITS[type];
     if (!base || !meta.ownsUnit(type)) return; // 🔒 구매 안 한 유닛
+    if ((this.summonCd[type] ?? 0) > 0) {
+      this.hud.deny(type, 'cooldown'); // ⏱️ 아직 대기 중
+      return;
+    }
     if (this.usedFood() + base.pop > this.foodMax) {
       this.hud.deny(type, 'food'); // 인구 초과 안내
       return;
@@ -429,6 +436,7 @@ export class BattleScene extends Phaser.Scene {
     const bm = 1 + (this.battleUpg[type] ?? 0) * 0.2; // 🛠️ 전장 강화
     if (this.freeSummons > 0) this.freeSummons--;
     this.summonCount++;
+    this.summonCd[type] = summonCooldown(base.cost); // ⏱️ 같은 유닛 재소환 대기
     const vm = vigorMult(this.skills.vigor ?? 0); // ❤️ 튼튼한 몸
     const stats = { ...m, hp: Math.round(m.hp * bm * pm * vm), atk: Math.round(m.atk * bm * pm) };
     const u = this.unitPool.acquire();
@@ -490,13 +498,20 @@ export class BattleScene extends Phaser.Scene {
     return m;
   }
 
+  /** ⏱️ 유닛별 남은 대기 비율(1=방금 소환, 0=준비됨) */
+  private cdMap(): Record<string, number> {
+    const m: Record<string, number> = {};
+    for (const [k, left] of Object.entries(this.summonCd)) if (left > 0) m[k] = left / summonCooldown(UNITS[k].cost);
+    return m;
+  }
+
   private affordMap(): Record<string, boolean> {
     const m: Record<string, boolean> = {};
     const food = this.usedFood();
     for (const k of Object.keys(UNITS)) {
       const u = UNITS[k];
       const ec = this.nextSummonFree() ? 0 : Math.round(u.cost * magicMult(this.skills.magic ?? 0));
-      m[k] = this.energy.amount >= ec && food + u.pop <= this.foodMax;
+      m[k] = this.energy.amount >= ec && food + u.pop <= this.foodMax && (this.summonCd[k] ?? 0) <= 0;
     }
     return m;
   }
@@ -600,6 +615,7 @@ export class BattleScene extends Phaser.Scene {
     const berserk = this.clock < this.berserkUntil;
 
     this.energy.update(dt * rechargeMult(this.skills.recharge ?? 0)); // 🔋 에너지 충전
+    for (const k in this.summonCd) this.summonCd[k] = Math.max(0, this.summonCd[k] - dt);
     for (const ev of this.waves.update(dt)) this.spawnEnemy(ev.type);
 
     // 적 기지가 병력을 계속 생산(기지 파괴 전까지) → 기지를 부숴야 생산이 멈춤
@@ -698,6 +714,7 @@ export class BattleScene extends Phaser.Scene {
       foodMax: this.foodMax,
       linePos: this.linePos(),
       afford: this.affordMap(),
+      cd: this.cdMap(),
       beat: this.beat,
       perfectWin: BattleScene.PERFECT_WIN,
       upg: this.upgMap(),
@@ -1349,6 +1366,9 @@ export class BattleScene extends Phaser.Scene {
       meta.addGold(earned); // 처치 골드 + 승리 보너스 + 새 별 보너스(강화용)
       meta.clearStage(this.stage.id); // 다음 스테이지 해금
     }
+    // ⏱️ 클리어 시간(게임 시간 기준 — 배속과 무관)
+    const time = Math.round(this.clock);
+    const timeRec = win ? meta.recordTime(this.stage.id, time) : null;
     if (win) {
       this.track('clears');
     }
@@ -1357,7 +1377,7 @@ export class BattleScene extends Phaser.Scene {
     sfx(this, win ? 'win' : 'lose');
     this.slowmo = 1;
     this.time.delayedCall(600, () =>
-      this.scene.start('Result', { win, stageId: this.stage.id, earned, stars, prevStars, starGold })
+      this.scene.start('Result', { win, stageId: this.stage.id, earned, stars, prevStars, starGold, time, timeRec })
     );
   }
 }

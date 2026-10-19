@@ -5,6 +5,7 @@ import { STARTER_UNIT, STARTER_WEAPON, migrateOwned } from './unlocks';
 import { addStats, dailyMissions, type Mission, type Stats } from './missions';
 import { pushRecord, type EndlessRecord } from './endless';
 import { BASE_MAX_LV, baseUpgradeCost, type BaseKey } from './baseUpgrades';
+import { timeRecord } from './pacing';
 
 /** 강화 순수 계산 (Vitest 검증) */
 
@@ -56,6 +57,7 @@ export class MetaProgress {
   weaponLevels: Record<string, number> = {}; // 특수 무기 영구 강화 레벨
   baseLevels: Record<string, number> = {}; // 🏰 기지 강화(인구·소환) 레벨
   stars: Record<string, number> = {}; // 스테이지별 최고 별(1~3)
+  bestTimes: Record<string, number> = {}; // ⏱️ 스테이지별 최단 클리어 시간(초)
   ownedUnits: string[] = [STARTER_UNIT]; // 구매한 유닛
   ownedWeapons: string[] = [STARTER_WEAPON]; // 구매한 특수 무기
   totals: Stats = {}; // 업적용 누적 기록
@@ -316,6 +318,16 @@ export class MetaProgress {
     return true;
   }
 
+  /** ⏱️ 클리어 시간 기록 → 'first'(첫 기록) / 'best'(신기록) / null */
+  recordTime(stageId: number, sec: number): 'first' | 'best' | null {
+    const r = timeRecord(this.bestTimes[stageId], sec);
+    if (r) {
+      this.bestTimes[stageId] = sec;
+      this.save();
+    }
+    return r;
+  }
+
   addGold(amount: number): void {
     this.gold += amount;
     this.save();
@@ -330,6 +342,7 @@ export class MetaProgress {
         weaponLevels?: Record<string, number>;
         baseLevels?: Record<string, number>;
         stars?: Record<string, number>;
+        bestTimes?: Record<string, number>;
         ownedUnits?: string[];
         ownedWeapons?: string[];
         totals?: Stats;
@@ -348,6 +361,7 @@ export class MetaProgress {
       this.weaponLevels = obj.weaponLevels ?? {};
       this.baseLevels = obj.baseLevels ?? {};
       this.stars = obj.stars ?? {};
+      this.bestTimes = obj.bestTimes ?? {};
       this.ownedUnits = obj.ownedUnits ?? migrateOwned(STARTER_UNIT, this.levels);
       this.ownedWeapons = obj.ownedWeapons ?? migrateOwned(STARTER_WEAPON, this.weaponLevels);
       this.totals = obj.totals ?? {};
@@ -374,6 +388,7 @@ export class MetaProgress {
         weaponLevels: this.weaponLevels,
         baseLevels: this.baseLevels,
         stars: this.stars,
+        bestTimes: this.bestTimes,
         ownedUnits: this.ownedUnits,
         ownedWeapons: this.ownedWeapons,
         totals: this.totals,

@@ -13,6 +13,7 @@ export interface HudState {
   foodMax: number;
   linePos: number; // 0(우리 기지) ~ 1(적 기지)
   afford: Record<string, boolean>; // 유닛별 지금 소환 가능 여부
+  cd: Record<string, number>; // ⏱️ 유닛별 소환 대기 남은 비율(0~1)
   beat: number; // ⏱️ 리듬 소환 마커 위치 0~1
   perfectWin: number; // 퍼펙트 허용 폭(중앙 ±)
   upg: Record<string, { lv: number; cost: number; afford: boolean }>; // 전장 실시간 강화
@@ -45,6 +46,7 @@ interface Slot {
   upBtn: Phaser.GameObjects.Rectangle;
   upText: Phaser.GameObjects.Text;
   lvText: Phaser.GameObjects.Text;
+  cdShade: Phaser.GameObjects.Rectangle; // ⏱️ 소환 대기 — 위에서부터 어둡게 덮음
 }
 
 interface WeaponButton {
@@ -184,7 +186,8 @@ export class Hud {
       const upBtn = add(scene.add.rectangle(cx + CARD_W / 2 - 36, cy - 62, 62, 28, 0x2f7a4d).setStrokeStyle(1, 0x5cff9e));
       const upText = add(scene.add.text(cx + CARD_W / 2 - 36, cy - 62, '⬆', { fontFamily: 'sans-serif', fontSize: '15px', fontStyle: 'bold', color: '#fff' }).setOrigin(0.5));
       tap(upBtn, () => onUpgrade(key));
-      this.slots.push({ key, cx, rect, label, cost, icon, face, upBtn, upText, lvText });
+      const cdShade = add(scene.add.rectangle(cx, cy - CARD_H / 2, CARD_W, 0, 0x000000, 0.6).setOrigin(0.5, 0));
+      this.slots.push({ key, cx, rect, label, cost, icon, face, upBtn, upText, lvText, cdShade });
     });
     this.scroller(strip, cy, CARD_H, keys.length * (CARD_W + CARD_GAP) - CARD_GAP, d);
 
@@ -265,11 +268,11 @@ export class Hud {
   }
 
   /** 소환 실패 피드백 — 카드 흔들림 + 사유 표시 */
-  deny(key: string, reason: 'energy' | 'food'): void {
+  deny(key: string, reason: 'energy' | 'food' | 'cooldown'): void {
     const slot = this.slots.find((s) => s.key === key);
     if (!slot) return;
     this.scene.tweens.add({ targets: slot.rect, x: slot.cx + 6, duration: 50, yoyo: true, repeat: 2 });
-    const msg = reason === 'energy' ? '⚡ 부족!' : '🍖 꽉 참!';
+    const msg = reason === 'energy' ? '⚡ 부족!' : reason === 'food' ? '🍖 꽉 참!' : '⏱️ 대기 중!';
     const t = this.scene.add.text(slot.cx + this.strip.x, 440, msg, { fontFamily: 'sans-serif', fontSize: '18px', fontStyle: 'bold', color: '#ff7a7a' }).setOrigin(0.5).setDepth(130);
     this.scene.tweens.add({ targets: t, y: 395, alpha: 0, duration: 650, onComplete: () => t.destroy() });
   }
@@ -315,6 +318,7 @@ export class Hud {
       slot.label.setAlpha(a);
       slot.cost.setAlpha(ok ? 1 : 0.6);
       slot.cost.setColor(ok ? '#aef5b0' : '#ff9a9a');
+      slot.cdShade.setSize(CARD_W, CARD_H * Math.min(1, s.cd[slot.key] ?? 0)); // ⏱️ 대기 중이면 어둡게 덮고 아래로 줄어듦
       const up = s.upg[slot.key];
       if (up) {
         slot.lvText.setText(`Lv${up.lv}`);
