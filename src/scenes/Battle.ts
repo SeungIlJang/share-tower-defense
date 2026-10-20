@@ -101,6 +101,7 @@ const STAGES = stagesData as StageData[];
 const LANE_Y = 340; // 하단 HUD 2단(유닛 카드 + 특수 무기, 410~) 위 전장 바닥
 const REACH = 14 * (UNIT_SCALE - 1) * 2; // 커진 몸집만큼 사거리 여유(겹침 방지)
 const BASE_REACH = REACH + 18; // 커진 기지 앞에서 멈춤
+const BASE_STOP = 30; // 성을 이보다 더 넘어갈 수 없음(성 중심 기준)
 
 export class BattleScene extends Phaser.Scene {
   private stage!: StageData;
@@ -704,9 +705,8 @@ export class BattleScene extends Phaser.Scene {
       u.cooldown -= dt;
       if (target && inRange(u.x, target.x, u.stats.range + REACH)) {
         this.attack(u, target);
-      } else if (target) {
-        u.moveBy(u.stats.speed * dt);
-      } else if (inRange(u.x, this.enemyBase.x, u.stats.range + BASE_REACH)) {
+      } else if (!this.enemyBase.destroyed && inRange(u.x, this.enemyBase.x, u.stats.range + BASE_REACH)) {
+        // 🏰 적 기지에 닿으면 더 지나가지 않고 기지를 공격(다른 적을 쫓느라 지나치지 않게)
         if (u.cooldown <= 0) {
           this.enemyBase.takeDamage(computeDamage(u.stats.atk * (berserk ? BERSERK_ATK : 1), 0));
           u.cooldown = attackCooldown(u.stats.atkSpeed) * (berserk ? BERSERK_COOLDOWN : 1);
@@ -730,9 +730,8 @@ export class BattleScene extends Phaser.Scene {
       e.cooldown -= dt;
       if (target && inRange(e.x, target.x, e.stats.range + REACH)) {
         this.attack(e, target);
-      } else if (target) {
-        e.moveBy(-e.stats.speed * e.speedMult * dt);
       } else if (inRange(e.x, this.playerBase.x, e.stats.range + BASE_REACH)) {
+        // 🏰 우리 성에 닿으면 더 지나가지 않고 성을 공격(뒤쪽 영웅·유닛을 쫓느라 지나치지 않게)
         if (e.cooldown <= 0) {
           this.playerBase.takeDamage(computeDamage(e.stats.atk, 0));
           e.cooldown = attackCooldown(e.stats.atkSpeed);
@@ -744,6 +743,9 @@ export class BattleScene extends Phaser.Scene {
         e.moveBy(-e.stats.speed * e.speedMult * dt);
       }
     }
+
+    // 🏰 성을 지나간 전투원은 성 앞으로 되돌림(밀쳐내기·끌어당기기 등으로 넘어간 경우)
+    this.keepOffBases();
 
     // 투사체 이동/명중
     for (const p of this.projectiles) {
@@ -1121,6 +1123,15 @@ export class BattleScene extends Phaser.Scene {
   /** ⭕ 지금 오라 반지름(영구 강화 + 레벨업 '오라 확장' + 각성) */
   private auraR(): number {
     return auraRadius(meta.heroLevel('aura'), this.skills.auraSize ?? 0, awakened(this.skills, 'auraSize'));
+  }
+
+  /** 🏰 적은 우리 성 앞, 아군은 적 성 앞까지만 */
+  private keepOffBases(): void {
+    const enemyMin = this.playerBase.x + BASE_STOP;
+    for (const e of this.enemies) if (e.active && e.x < enemyMin) e.moveBy(enemyMin - e.x);
+    if (this.enemyBase.destroyed) return;
+    const allyMax = this.enemyBase.x - BASE_STOP;
+    for (const u of this.units) if (u.active && u.x > allyMax) u.moveBy(allyMax - u.x);
   }
 
   private inHeroAura(x: number): boolean {
