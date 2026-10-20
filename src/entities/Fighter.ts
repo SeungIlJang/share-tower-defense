@@ -205,6 +205,16 @@ export class Fighter {
     this.lunge();
   }
 
+  /** 몸 크기 배율(👑 영웅 등) */
+  setBodyScale(m: number): void {
+    this.root.setScale(UNIT_SCALE * m);
+  }
+
+  /** 바라보는 방향(1=오른쪽, -1=왼쪽) — 👑 영웅이 뒤로 걸을 때 */
+  faceDir(d: 1 | -1): void {
+    this.char.scaleX = d;
+  }
+
   /** 제자리 대기(사거리 안에서 쿨다운 중) */
   idle(): void {
     this.play('idle');

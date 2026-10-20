@@ -10,6 +10,8 @@ import { Base } from '../entities/Base';
 import { UNIT_SCALE } from '../entities/Fighter';
 import { FOOD_BASE, energyMax, energyRate, popBonus } from '../systems/baseUpgrades';
 import { summonCooldown } from '../systems/pacing';
+import { HERO_TYPE, HERO_LOOKS, HERO_REGEN, HERO_SKILLS, AURA_ATK, AURA_GUARD, AURA_RADIUS, MANA_MAX, MANA_REGEN, MANA_START, MACE_MULT, MACE_RANGE, heroStats, inAura, maceTargets, stepToward } from '../systems/hero';
+import { HERO_PANEL_X, HERO_BTN_R, HERO_BTN_Y } from '../ui/Hud';
 import { Pool } from '../utils/pool';
 import { ResourceSystem } from '../systems/resources';
 import { WaveSystem } from '../systems/waves';
@@ -131,6 +133,13 @@ export class BattleScene extends Phaser.Scene {
   private freeSummons = 0; // 🎁 무료 소환 남은 횟수
   private summonCount = 0; // 💎 마나 순환(5번째마다 공짜)
   private summonCd: Record<string, number> = {}; // ⏱️ 유닛별 소환 대기(남은 초)
+  private hero!: Unit; // 👑 영웅(쓰러지면 패배)
+  private heroTarget: number | null = null; // 탭한 이동 목표 x
+  private heroDir = 0; // 키보드 A/D 이동(-1/0/1)
+  private heroFlag!: Phaser.GameObjects.Text; // 이동 목표 깃발
+  private aura!: Phaser.GameObjects.Container; // ⭕ 오라 원
+  private mana!: ResourceSystem; // 💧 영웅 스킬 전용
+  private heroCd: number[] = []; // 영웅 스킬별 남은 대기(초)
   private xpNext = xpToNext(1);
   private skills: Record<string, number> = {};
   private picking = false;
@@ -245,6 +254,7 @@ export class BattleScene extends Phaser.Scene {
     this.playerBase = new Base(this, 90, LANE_Y - 10, this.stage.baseHp, 0x2f6fe0, 'base_ally');
     // 무한 모드: 적 기지는 부서지지 않는 생산 기지(버틴 웨이브가 기록)
     this.enemyBase = new Base(this, 1190, LANE_Y - 10, this.endless ? 1e9 : this.stage.baseHp, 0xc0392b, 'base_enemy');
+    this.spawnHero();
     this.waveNo = 0;
     this.waveText = null;
     if (this.endless) {
@@ -294,9 +304,30 @@ export class BattleScene extends Phaser.Scene {
       (i) => this.fireWeapon(i),
       this.weapons.map((w) => !!w),
       this.unitOwned,
-      this.looks
+      this.looks,
+      (i) => this.castHeroSkill(i)
     );
     // 키보드 1~9 = 특수 무기
+    this.input.keyboard?.on('keydown', (ev: KeyboardEvent) => {
+      const k = ev.key.toLowerCase();
+      if (k === 'a' || k === 'arrowleft') this.heroDir = -1;
+      else if (k === 'd' || k === 'arrowright') this.heroDir = 1;
+      const hs = HERO_SKILLS.findIndex((s) => s.hotkey.toLowerCase() === k);
+      if (hs >= 0) this.castHeroSkill(hs);
+    });
+    this.input.keyboard?.on('keyup', (ev: KeyboardEvent) => {
+      const k = ev.key.toLowerCase();
+      if ((k === 'a' || k === 'arrowleft') && this.heroDir < 0) this.heroDir = 0;
+      if ((k === 'd' || k === 'arrowright') && this.heroDir > 0) this.heroDir = 0;
+    });
+    // 👑 전장을 탭하면 영웅이 그 자리로 이동(하단 HUD·상단 바·영웅 스킬 버튼 제외)
+    this.input.on('pointerdown', (p: Phaser.Input.Pointer) => {
+      if (this.over || this.picking || this.paused || this.reviving || !this.hero?.active) return;
+      if (p.y < 60 || p.y > 405) return;
+      if (p.x > HERO_PANEL_X - HERO_SKILLS.length * (HERO_BTN_R * 2 + 14) - 10 && p.y < HERO_BTN_Y + HERO_BTN_R + 10) return; // 영웅 스킬 버튼·마나 바
+      this.heroTarget = p.x;
+      this.heroFlag.setPosition(Phaser.Math.Clamp(p.x, this.playerBase.x + 40, this.enemyBase.x - 70), LANE_Y - 4).setVisible(true).setAlpha(1);
+    });
     this.input.keyboard?.on('keydown', (ev: KeyboardEvent) => {
       const n = Number(ev.key);
       if (!Number.isInteger(n) || n < 1 || n > 9) return;
@@ -616,6 +647,9 @@ export class BattleScene extends Phaser.Scene {
 
     this.energy.update(dt * rechargeMult(this.skills.recharge ?? 0)); // 🔋 에너지 충전
     for (const k in this.summonCd) this.summonCd[k] = Math.max(0, this.summonCd[k] - dt);
+    this.mana.update(dt);
+    this.heroCd = this.heroCd.map((c) => Math.max(0, c - dt));
+    this.updateHero(dt);
     for (const ev of this.waves.update(dt)) this.spawnEnemy(ev.type);
 
     // 적 기지가 병력을 계속 생산(기지 파괴 전까지) → 기지를 부숴야 생산이 멈춤
@@ -672,13 +706,14 @@ export class BattleScene extends Phaser.Scene {
       }
     }
 
-    // 적: 아군 추격/공격, 없으면 전진 → 플레이어 기지 공격
+    // 적: 아군 추격/공격, 없으면 전진 → 플레이어 기지 공격 (👑 영웅도 노림)
+    const allyTargets: Unit[] = this.hero?.active ? [...this.units, this.hero] : this.units;
     for (const e of this.enemies) {
       if (!e.active) continue;
       e.setStatus(frozen ? FROZEN_TINT : null, frozen);
       if (frozen) continue; // ❄️ 빙결: 이동·공격 정지
       if (BOSS.has(e.type)) this.bossPattern(e, dt);
-      const target = this.nearest(e.x, this.units) as Unit | null;
+      const target = this.nearest(e.x, allyTargets) as Unit | null;
       e.cooldown -= dt;
       if (target && inRange(e.x, target.x, e.stats.range + REACH)) {
         this.attack(e, target);
@@ -705,6 +740,12 @@ export class BattleScene extends Phaser.Scene {
 
     this.cleanupDead();
     this.updateBossBar();
+    this.hud.updateHero(
+      this.mana.amount,
+      this.mana.max,
+      HERO_SKILLS.map((s, i) => ({ cd: (this.heroCd[i] ?? 0) / s.cooldown, enough: this.mana.amount >= s.mana && this.hero?.active })),
+      this.hero?.active ? this.hero.hp / this.hero.maxHp : 0
+    );
     this.hud.update({
       lv: this.level,
       gold: this.runGold,
@@ -771,7 +812,7 @@ export class BattleScene extends Phaser.Scene {
       const lv = meta.level(att.type);
       att.swings++;
       if (lv > 0 && UNIT_SKILLS[att.type] && isSkillSwing(att.swings, lv)) {
-        this.castSkill(att, def, lv, (berserk ? BERSERK_ATK : 1) * powerMult(this.skills.power ?? 0));
+        this.castSkill(att, def, lv, (berserk ? BERSERK_ATK : 1) * powerMult(this.skills.power ?? 0) * (this.inHeroAura(att.x) ? AURA_ATK : 1));
         let scd = attackCooldown(att.stats.atkSpeed) * hasteMult(this.skills.haste ?? 0);
         if (berserk) scd *= BERSERK_COOLDOWN;
         att.cooldown = scd;
@@ -781,11 +822,13 @@ export class BattleScene extends Phaser.Scene {
     const ally = att.side === 'ally';
     const crit = ally && Math.random() < critChance(this.skills.crit ?? 0); // 💥 치명타(🎯 스킬로 증가)
     const critMul = awakened(this.skills, 'power') ? CRIT_MULT_AWAKE : CRIT_MULT; // 💪 일격필살
-    const synAtk = ally ? synergyMult(this.synergies, att.type, 'atk') * powerMult(this.skills.power ?? 0) : 1; // 🤝 조합 · 💪 공격력
+    const auraAtk = ally && this.inHeroAura(att.x) ? AURA_ATK : 1; // ⭕ 오라
+    const synAtk = ally ? synergyMult(this.synergies, att.type, 'atk') * powerMult(this.skills.power ?? 0) * auraAtk : 1; // 🤝 조합 · 💪 공격력
     let dmg = computeDamage(att.stats.atk * (berserk ? BERSERK_ATK : 1) * (crit ? critMul : 1) * synAtk, def.stats.def);
     if (def.side === 'ally') {
       dmg = Math.max(1, Math.round(dmg * synergyMult(this.synergies, def.type, 'guard')));
       if (awakened(this.skills, 'vigor')) dmg = Math.max(1, Math.round(dmg * 0.85)); // ❤️ 강철 피부
+      if (this.inHeroAura(def.x)) dmg = Math.max(1, Math.round(dmg * AURA_GUARD)); // ⭕ 오라
     }
     // 🎯 연쇄 폭발(각성): 치명타 때 주변 적도 절반 피해
     const chainDmg = Math.round(dmg * 0.5);
@@ -1017,6 +1060,116 @@ export class BattleScene extends Phaser.Scene {
   }
 
   /** 무기 이름 배너 */
+  /** 👑 영웅 등장 + ⭕ 오라 원 + 이동 깃발 + 💧 마나 */
+  private spawnHero(): void {
+    const look = HERO_LOOKS.find((l) => this.textures.exists(textureKey(l))) ?? HERO_TYPE;
+    this.hero = new Unit(this);
+    this.hero.spawn(this.playerBase.x + 90, LANE_Y, heroStats(this.stage.id, this.endless ? 1 : this.stage.enemyMult ?? 1), HERO_TYPE, 'ally', look);
+    this.hero.setBodyScale(1.3);
+    this.heroTarget = null;
+    this.heroDir = 0;
+    this.heroCd = HERO_SKILLS.map(() => 0);
+    this.mana = new ResourceSystem(MANA_START, MANA_REGEN, MANA_MAX);
+    // 바닥 오라 — 납작한 노란 타원 + 바깥 점선 느낌(천천히 숨쉬기)
+    const fill = this.add.ellipse(0, 0, AURA_RADIUS * 2, 46, 0xffd34d, 0.13);
+    const ring = this.add.ellipse(0, 0, AURA_RADIUS * 2, 46).setStrokeStyle(4, 0xffd34d, 0.85);
+    const inner = this.add.ellipse(0, 0, AURA_RADIUS * 1.2, 26).setStrokeStyle(2, 0xfff0a0, 0.6);
+    this.aura = this.add.container(this.hero.x, LANE_Y + 34, [fill, ring, inner]).setDepth(-3);
+    this.tweens.add({ targets: [ring, inner], scaleX: 1.04, scaleY: 1.12, alpha: 0.5, duration: 900, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
+    this.heroFlag = this.add.text(0, 0, '🚩', { fontSize: '26px' }).setOrigin(0.2, 1).setDepth(60).setVisible(false);
+    // 처음 두 관문은 조작 안내
+    if (!this.endless && this.stage.id <= 2) {
+      const tip = this.add
+        .text(640, 150, ['👆 전장을 누르면 👑영웅이 그 자리로 가요', '⭕ 노란 원 안의 아군이 강해져요 · 🔨 J 철퇴 던지기', '⚠️ 영웅이 쓰러지면 패배!'].join('\n'), {
+          fontFamily: 'sans-serif',
+          fontSize: '20px',
+          fontStyle: 'bold',
+          color: '#ffffff',
+          align: 'center',
+          lineSpacing: 6,
+          backgroundColor: '#0d1424cc',
+          padding: { x: 18, y: 12 },
+        })
+        .setOrigin(0.5)
+        .setDepth(95);
+      this.tweens.add({ targets: tip, alpha: 0, delay: 6000, duration: 600, onComplete: () => tip.destroy() });
+    }
+  }
+
+  private inHeroAura(x: number): boolean {
+    return !!this.hero?.active && inAura(x, this.hero.x, AURA_RADIUS);
+  }
+
+  /** 👑 영웅 — 탭/키로 이동, 서 있을 땐 가까운 적·적 기지 공격, 조금씩 체력 회복 */
+  private updateHero(dt: number): void {
+    const h = this.hero;
+    if (!h?.active) return;
+    h.heal(h.maxHp * HERO_REGEN * dt);
+    h.cooldown -= dt;
+    const min = this.playerBase.x + 40;
+    const max = this.enemyBase.x - 70;
+    const goal = this.heroDir !== 0 ? h.x + this.heroDir * 200 : this.heroTarget;
+    if (goal !== null && Math.abs(Phaser.Math.Clamp(goal, min, max) - h.x) > 2) {
+      const nx = stepToward(h.x, goal, h.stats.speed, dt, min, max);
+      h.faceDir(nx < h.x ? -1 : 1);
+      h.moveBy(nx - h.x);
+    } else {
+      this.heroTarget = null;
+      if (this.heroFlag.visible) this.tweens.add({ targets: this.heroFlag, alpha: 0, duration: 200, onComplete: () => this.heroFlag.setVisible(false) });
+      h.faceDir(1);
+      const target = this.nearest(h.x, this.enemies) as Enemy | null;
+      if (target && inRange(h.x, target.x, h.stats.range + REACH + 10)) {
+        this.attack(h, target);
+      } else if (!this.enemyBase.destroyed && inRange(h.x, this.enemyBase.x, h.stats.range + BASE_REACH + 30)) {
+        if (h.cooldown <= 0) {
+          this.enemyBase.takeDamage(computeDamage(h.stats.atk, 0));
+          h.cooldown = attackCooldown(h.stats.atkSpeed);
+          h.lunge();
+        } else h.idle();
+      } else {
+        h.idle();
+      }
+    }
+    this.aura.x = h.x;
+  }
+
+  /** 👑 영웅 스킬 사용 — 💧 마나 + 대기시간 */
+  private castHeroSkill(i: number): void {
+    if (this.over || this.picking || this.paused || this.reviving || !this.hero?.active) return;
+    const sk = HERO_SKILLS[i];
+    if (!sk || (this.heroCd[i] ?? 0) > 0) return;
+    if (!this.mana.spend(sk.mana)) {
+      this.hud.heroDeny('💧 마나 부족!');
+      return;
+    }
+    this.heroCd[i] = sk.cooldown;
+    if (sk.key === 'mace') this.throwMace();
+  }
+
+  /** 🔨 철퇴 던지기 — 앞으로 빙글빙글 날아가 가까운 적 2명 관통 */
+  private throwMace(): void {
+    const h = this.hero;
+    const targets = maceTargets(h.x, this.enemies);
+    const dmg = Math.round(h.stats.atk * MACE_MULT * powerMult(this.skills.power ?? 0));
+    const endX = targets.length ? targets[targets.length - 1].x : h.x + MACE_RANGE;
+    h.lunge();
+    sfx(this, 'slash');
+    const m = this.add.text(h.x + 20, LANE_Y - 60, '🔨', { fontSize: '34px' }).setOrigin(0.5).setDepth(80);
+    this.tweens.add({ targets: m, angle: 720, duration: 320 });
+    this.tweens.add({
+      targets: m,
+      x: endX,
+      y: LANE_Y - 30,
+      duration: 320,
+      ease: 'Quad.easeIn',
+      onComplete: () => {
+        for (const e of targets) if (e.active) e.takeDamage(computeDamage(dmg, e.stats.def), true);
+        if (targets.length) sfx(this, 'hit');
+        this.tweens.add({ targets: m, alpha: 0, y: m.y - 30, duration: 200, onComplete: () => m.destroy() });
+      },
+    });
+  }
+
   /** 다음 소환이 공짜인가 — 🎁 무료 소환 남음 / 💎 마나 순환(각성: 5번째마다) */
   private nextSummonFree(): boolean {
     return this.freeSummons > 0 || (awakened(this.skills, 'magic') && this.summonCount % 5 === 4);
@@ -1064,6 +1217,7 @@ export class BattleScene extends Phaser.Scene {
   private levelUpBurst(): void {
     this.energy.add(30);
     for (const u of this.units) if (u.active) u.heal(Math.round(u.maxHp * 0.2));
+    if (this.hero?.active) this.hero.heal(Math.round(this.hero.maxHp * 0.2));
     for (const e of this.enemies) if (e.active && !BOSS.has(e.type)) e.moveBy(Math.min(40, Math.max(0, this.enemyBase.x - 50 - e.x)));
     const ring = this.add.circle(this.playerBase.x + 80, LANE_Y - 30, 30).setStrokeStyle(8, 0xffe14d).setDepth(85);
     this.tweens.add({ targets: ring, scale: 14, alpha: 0, duration: 650, onComplete: () => ring.destroy() });
@@ -1274,6 +1428,15 @@ export class BattleScene extends Phaser.Scene {
   private checkEnd(): void {
     // 승리 = 적 생산기지 파괴 / 패배 = 우리 기지 파괴
     if (!this.endless && this.enemyBase.destroyed) return this.end(true);
+    if (this.hero && this.hero.hp <= 0 && this.hero.active) {
+      // 👑 영웅이 쓰러지면 바로 패배
+      this.hero.playDeath();
+      this.puff(this.hero.x, 0xffd34d);
+      this.hero.deactivate();
+      this.aura.setVisible(false);
+      this.banner('👑 영웅이 쓰러졌어요…', 0xff7a8a);
+      return this.end(false);
+    }
     if (this.playerBase.destroyed) {
       if (!this.revivedOnce) {
         this.offerRevive(); // 광고 보고 부활 1회 제안

@@ -3,6 +3,7 @@ import type { UnitStats } from '../types';
 import { iconKey, textureKey } from '../systems/sprites';
 import { WEAPONS } from '../systems/weapons';
 import type { Synergy } from '../systems/synergy';
+import { HERO_SKILLS } from '../systems/hero';
 
 export interface HudState {
   lv: number;
@@ -62,6 +63,9 @@ interface WeaponButton {
 }
 
 const WEAPON_R = 34;
+export const HERO_PANEL_X = 1200; // 👑 영웅 스킬 버튼 x
+export const HERO_BTN_R = 40;
+export const HERO_BTN_Y = 114; // 적 기지 그림(위쪽 ~165)보다 위
 const W_CARD_W = 150; // 📱 특수 무기 카드(가로 스크롤)
 const W_CARD_H = 100;
 const W_CARD_CY = 664;
@@ -92,6 +96,11 @@ export class Hud {
   private strip!: Phaser.GameObjects.Container; // 유닛 카드 줄(가로 스크롤)
   private dragged = false;
   private weaponBtns: WeaponButton[] = [];
+  private heroBtns: { bg: Phaser.GameObjects.Arc; shade: Phaser.GameObjects.Graphics; cx: number; cy: number }[] = [];
+  private manaFill!: Phaser.GameObjects.Rectangle;
+  private manaText!: Phaser.GameObjects.Text;
+  private heroHpFill!: Phaser.GameObjects.Rectangle;
+  private heroHpText!: Phaser.GameObjects.Text;
   private synergyText!: Phaser.GameObjects.Text;
   private beatMark: Phaser.GameObjects.Triangle;
   private readonly beatX = 470; // 인구 바(~440)와 에너지 바(840~) 사이
@@ -105,10 +114,12 @@ export class Hud {
     onWeapon: (index: number) => void,
     weaponOwned: boolean[], // 무기별 보유 여부
     unitOwned: Record<string, boolean>, // 유닛별 보유 여부
-    looks: Record<string, string> = {} // 👗 스킨 적용 얼굴(유닛@스킨)
+    looks: Record<string, string> = {}, // 👗 스킨 적용 얼굴(유닛@스킨)
+    onHeroSkill: (index: number) => void = () => {} // 👑 영웅 스킬
   ) {
     this.scene = scene;
     const d = 100;
+    this.buildHeroPanel(onHeroSkill, d);
     scene.add.rectangle(640, 22, 1280, 44, 0x0d1424, 0.8).setDepth(d);
     this.synergyText = scene.add
       .text(12, 52, '', { fontFamily: 'sans-serif', fontSize: '14px', fontStyle: 'bold', color: '#aef5ff', backgroundColor: '#0d1424cc', padding: { x: 8, y: 4 } })
@@ -260,6 +271,61 @@ export class Hud {
       scene.tweens.add({ targets: hint, x: 1262, duration: 500, yoyo: true, repeat: -1 });
       scene.events.on(Phaser.Scenes.Events.UPDATE, () => hint.setVisible(strip.x > minX + 4));
     }
+  }
+
+  /** 👑 영웅 스킬 버튼 + 💧 마나 바 — 전장 오른쪽 위(하단 HUD와 겹치지 않게) */
+  private buildHeroPanel(onHeroSkill: (index: number) => void, d: number): void {
+    const s = this.scene;
+    const x = HERO_PANEL_X;
+    // 👑 영웅 체력(쓰러지면 패배) — 마나 바 왼쪽
+    s.add.rectangle(x - 150, 60, 136, 24, 0x000000, 0.55).setDepth(d);
+    this.heroHpFill = s.add.rectangle(x - 214, 60, 128, 16, 0x5cff9e).setOrigin(0, 0.5).setDepth(d + 1);
+    this.heroHpText = s.add.text(x - 150, 60, '', { fontFamily: 'sans-serif', fontSize: '13px', fontStyle: 'bold', color: '#fff' }).setOrigin(0.5).setDepth(d + 2);
+    s.add.rectangle(x, 60, 136, 24, 0x000000, 0.55).setDepth(d);
+    this.manaFill = s.add.rectangle(x - 64, 60, 128, 16, 0x4a9eff).setOrigin(0, 0.5).setDepth(d + 1);
+    this.manaText = s.add.text(x, 60, '', { fontFamily: 'sans-serif', fontSize: '13px', fontStyle: 'bold', color: '#fff' }).setOrigin(0.5).setDepth(d + 2);
+    HERO_SKILLS.forEach((sk, i) => {
+      const cy = HERO_BTN_Y;
+      const bx = x - i * (HERO_BTN_R * 2 + 14); // 스킬이 늘면 왼쪽으로
+      const bg = s.add.circle(bx, cy, HERO_BTN_R, 0x1a2133, 0.92).setStrokeStyle(4, 0xffd34d).setDepth(d);
+      s.add.text(bx, cy - 4, sk.icon, { fontSize: '32px' }).setOrigin(0.5).setDepth(d + 2);
+      s.add.text(bx, cy + 26, `💧${sk.mana}`, { fontFamily: 'sans-serif', fontSize: '13px', fontStyle: 'bold', color: '#aee0ff' }).setOrigin(0.5).setDepth(d + 2);
+      s.add
+        .text(bx - HERO_BTN_R + 2, cy - HERO_BTN_R + 2, sk.hotkey, { fontFamily: 'sans-serif', fontSize: '13px', fontStyle: 'bold', color: '#3a2a10', backgroundColor: '#ffd34d', padding: { x: 4, y: 0 } })
+        .setDepth(d + 3);
+      const shade = s.add.graphics().setDepth(d + 1);
+      bg.setInteractive({ useHandCursor: true });
+      bg.on('pointerdown', () => onHeroSkill(i));
+      this.heroBtns.push({ bg, shade, cx: bx, cy });
+    });
+  }
+
+  /** 👑 마나·스킬 대기 표시 */
+  updateHero(mana: number, manaMax: number, skills: { cd: number; enough: boolean }[], heroHp = 1): void {
+    const r = Phaser.Math.Clamp(heroHp, 0, 1);
+    const danger = r < 0.3;
+    this.heroHpFill.setSize(128 * r, 16).setFillStyle(danger ? 0xff4a4a : r < 0.6 ? 0xffc04a : 0x5cff9e);
+    this.heroHpFill.setAlpha(danger && Math.floor(this.scene.time.now / 250) % 2 === 0 ? 0.4 : 1); // 위험하면 깜빡
+    this.heroHpText.setText(`👑 ${Math.round(r * 100)}%`);
+    this.manaFill.setSize(128 * Phaser.Math.Clamp(mana / manaMax, 0, 1), 16);
+    this.manaText.setText(`💧 ${Math.floor(mana)} / ${manaMax}`);
+    this.heroBtns.forEach((b, i) => {
+      const st = skills[i];
+      b.shade.clear();
+      if (!st) return;
+      if (st.cd > 0) {
+        b.shade.fillStyle(0x000000, 0.6);
+        b.shade.slice(b.cx, b.cy, HERO_BTN_R - 2, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * st.cd, false);
+        b.shade.fillPath();
+      }
+      b.bg.setAlpha(st.enough ? 1 : 0.45);
+    });
+  }
+
+  /** 마나 부족 등 안내(영웅 스킬 버튼 옆) */
+  heroDeny(msg: string): void {
+    const t = this.scene.add.text(HERO_PANEL_X - 60, HERO_BTN_Y, msg, { fontFamily: 'sans-serif', fontSize: '18px', fontStyle: 'bold', color: '#ff9a9a' }).setOrigin(1, 0.5).setDepth(130);
+    this.scene.tweens.add({ targets: t, x: t.x - 20, alpha: 0, duration: 700, onComplete: () => t.destroy() });
   }
 
   /** 🤝 발동 중인 조합 배지(왼쪽 위) */
