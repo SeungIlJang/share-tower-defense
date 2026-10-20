@@ -63,7 +63,7 @@ interface WeaponButton {
 }
 
 const WEAPON_R = 34;
-export const HERO_PANEL_X = 1200; // 👑 영웅 스킬 버튼 x
+export const HERO_PANEL_X = 1010; // 👑 영웅 스킬 버튼 x(적 성 그림 왼쪽 — 성 꼭대기·체력 바를 가리지 않게)
 export const HERO_BTN_R = 40;
 export const HERO_BTN_Y = 114; // 적 기지 그림(위쪽 ~165)보다 위
 const W_CARD_W = 150; // 📱 특수 무기 카드(가로 스크롤)
@@ -178,7 +178,10 @@ export class Hud {
         add(scene.add.rectangle(cx, cy, CARD_W, CARD_H, 0x20242e).setStrokeStyle(2, 0x3a3f4a));
         if (key && scene.textures.exists(iconKey(key))) add(scene.add.image(cx, cy - 10, iconKey(key)).setDisplaySize(72, 72).setAlpha(0.25));
         add(scene.add.text(cx, cy - 10, '🔒', { fontSize: '30px' }).setOrigin(0.5).setAlpha(0.75));
-        if (key) add(scene.add.text(cx, cy + 46, units[key].name, { fontFamily: 'sans-serif', fontSize: '17px', fontStyle: 'bold', color: '#7c8698' }).setOrigin(0.5));
+        if (key) {
+          add(scene.add.rectangle(cx, cy + 46, CARD_W - 10, 26, 0x000000, 0.5)); // 이름 판
+          add(scene.add.text(cx, cy + 46, units[key].name, { fontFamily: 'sans-serif', fontSize: units[key].name.length >= 5 ? '17px' : '19px', fontStyle: 'bold', color: '#e6ecf5', stroke: '#000000', strokeThickness: 3 }).setOrigin(0.5));
+        }
         add(scene.add.text(cx, cy + 68, key ? '🛒 강화에서 구매' : '준비 중', { fontFamily: 'sans-serif', fontSize: '14px', color: key ? '#a8b4c8' : '#6a7488' }).setOrigin(0.5));
         return;
       }
@@ -191,7 +194,8 @@ export class Hud {
       const faceKey = scene.textures.exists(iconKey(looks[key] ?? key)) ? iconKey(looks[key] ?? key) : iconKey(key);
       const face = scene.textures.exists(faceKey) ? add(scene.add.image(cx, cy - 6, faceKey).setDisplaySize(70, 70)) : null;
       if (face) icon.setFillStyle(0x1a2133).setStrokeStyle(2, col); // 얼굴 뒤는 어두운 바탕 + 유닛 색 테두리
-      const label = add(scene.add.text(cx, cy + 45, u.name, { fontFamily: 'sans-serif', fontSize: u.name.length >= 5 ? '17px' : '19px', fontStyle: 'bold', color: '#fff' }).setOrigin(0.5));
+      add(scene.add.rectangle(cx, cy + 45, CARD_W - 10, 28, 0x000000, 0.55)); // 이름 판(휴대폰에서도 잘 보이게)
+      const label = add(scene.add.text(cx, cy + 45, u.name, { fontFamily: 'sans-serif', fontSize: u.name.length >= 5 ? '19px' : '22px', fontStyle: 'bold', color: '#ffffff', stroke: '#000000', strokeThickness: 4 }).setOrigin(0.5));
       const cost = add(scene.add.text(cx, cy + 67, `⚡${u.cost}  🍖${u.pop}`, { fontFamily: 'sans-serif', fontSize: '15px', fontStyle: 'bold', color: '#cfe' }).setOrigin(0.5));
       tap(rect, () => onSpawn(key));
       // 🛠️ 전장 실시간 강화 버튼(카드 우상단) — 소환 탭과 분리
@@ -383,7 +387,7 @@ export class Hud {
       slot.rect.setAlpha(a);
       slot.icon.setAlpha(a);
       slot.face?.setAlpha(a);
-      slot.label.setAlpha(a);
+      slot.label.setAlpha(ok ? 1 : 0.85); // 이름은 소환 못 할 때도 잘 보이게
       slot.cost.setAlpha(ok ? 1 : 0.6);
       slot.cost.setColor(ok ? '#aef5b0' : '#ff9a9a');
       slot.cdShade.setSize(CARD_W, CARD_H * Math.min(1, s.cd[slot.key] ?? 0)); // ⏱️ 대기 중이면 어둡게 덮고 아래로 줄어듦

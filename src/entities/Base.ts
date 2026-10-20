@@ -3,7 +3,7 @@ import { damageStage, spriteOf, textureKey } from '../systems/sprites';
 
 const RECT_W = 60;
 const RECT_H = 110;
-const BASE_SCALE = 1.35; // 📱 휴대폰용 확대
+const BASE_SCALE = 1.9; // 🏰 성의 위압감 — 크게
 
 /**
  * 기지(성) — HP가 0이 되면 패배.
@@ -17,6 +17,7 @@ export class Base {
   hp: number;
   readonly maxHp: number;
   readonly x: number;
+  readonly top: number = 0; // 성 꼭대기 y(체력 바 위치)
 
   constructor(
     private scene: Phaser.Scene,
@@ -39,11 +40,14 @@ export class Base {
         .setOrigin(0.5, def.footY / def.frameHeight)
         .setScale(def.scale * BASE_SCALE)
         .setDepth(-1); // 유닛보다 뒤
+      const w = def.frameWidth * def.scale * BASE_SCALE;
+      scene.add.ellipse(x, ground + 4, w * 0.9, 26, 0x000000, 0.35).setDepth(-2); // 바닥 그림자(묵직하게)
       barY = ground - def.footY * def.scale * BASE_SCALE - 8;
     } else {
       scene.add.rectangle(x, y, RECT_W, RECT_H, color).setStrokeStyle(3, 0xffffff, 0.3);
     }
-    this.hpBar = scene.add.rectangle(x - 30, barY, 60, 8, 0x5cff9e).setOrigin(0, 0.5);
+    this.top = barY;
+    this.hpBar = scene.add.rectangle(x - 40, barY, 80, 10, 0x5cff9e).setOrigin(0, 0.5);
   }
 
   takeDamage(dmg: number): void {
@@ -63,7 +67,7 @@ export class Base {
   }
 
   private refresh(): void {
-    this.hpBar.setSize(Math.max(0, (this.hp / this.maxHp) * 60), 8);
+    this.hpBar.setSize(Math.max(0, (this.hp / this.maxHp) * 80), 10);
     if (this.sprite && this.stages.length > 1) {
       this.sprite.setFrame(this.stages[damageStage(this.hp, this.maxHp, this.stages.length)]);
     }

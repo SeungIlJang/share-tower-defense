@@ -100,8 +100,9 @@ const STAGES = stagesData as StageData[];
 
 const LANE_Y = 340; // 하단 HUD 2단(유닛 카드 + 특수 무기, 410~) 위 전장 바닥
 const REACH = 14 * (UNIT_SCALE - 1) * 2; // 커진 몸집만큼 사거리 여유(겹침 방지)
-const BASE_REACH = REACH + 18; // 커진 기지 앞에서 멈춤
-const BASE_STOP = 30; // 성을 이보다 더 넘어갈 수 없음(성 중심 기준)
+const BASE_REACH = REACH + 40; // 커진 기지 앞에서 멈춤
+const BASE_STOP = 55; // 성을 이보다 더 넘어갈 수 없음(성 중심 기준)
+const BASE_FRONT = 75; // 성 앞(등장 위치·밀쳐내기 한계) — 성 중심에서 이만큼
 
 export class BattleScene extends Phaser.Scene {
   private stage!: StageData;
@@ -253,14 +254,14 @@ export class BattleScene extends Phaser.Scene {
     this.add.rectangle(640, LANE_Y + 40, 1280, 80, lane).setDepth(-5);
     this.add.rectangle(640, LANE_Y + 2, 1280, 3, line).setDepth(-4);
 
-    this.playerBase = new Base(this, 90, LANE_Y - 10, this.stage.baseHp, 0x2f6fe0, 'base_ally');
+    this.playerBase = new Base(this, 105, LANE_Y - 10, this.stage.baseHp, 0x2f6fe0, 'base_ally');
     // 무한 모드: 적 기지는 부서지지 않는 생산 기지(버틴 웨이브가 기록)
-    this.enemyBase = new Base(this, 1190, LANE_Y - 10, this.endless ? 1e9 : this.stage.baseHp, 0xc0392b, 'base_enemy');
+    this.enemyBase = new Base(this, 1175, LANE_Y - 10, this.endless ? 1e9 : this.stage.baseHp, 0xc0392b, 'base_enemy');
     this.spawnHero();
     this.waveNo = 0;
     this.waveText = null;
     if (this.endless) {
-      this.add.text(1190, LANE_Y - 128, '∞', { fontFamily: 'sans-serif', fontSize: '30px', fontStyle: 'bold', color: '#d8b0ff', stroke: '#2a1a4a', strokeThickness: 5 }).setOrigin(0.5).setDepth(60);
+      this.add.text(this.enemyBase.x, this.enemyBase.top - 26, '∞', { fontFamily: 'sans-serif', fontSize: '30px', fontStyle: 'bold', color: '#d8b0ff', stroke: '#2a1a4a', strokeThickness: 5 }).setOrigin(0.5).setDepth(60);
       this.waveText = this.add
         .text(900, 22, '', { fontFamily: 'sans-serif', fontSize: '20px', fontStyle: 'bold', color: '#d8b0ff' })
         .setOrigin(0.5)
@@ -483,7 +484,7 @@ export class BattleScene extends Phaser.Scene {
     const vm = vigorMult(this.skills.vigor ?? 0); // ❤️ 튼튼한 몸
     const stats = { ...m, hp: Math.round(m.hp * bm * pm * vm), atk: Math.round(m.atk * bm * pm) };
     const u = this.unitPool.acquire();
-    u.spawn(this.playerBase.x + 50, LANE_Y, stats, type, 'ally', this.looks[type] ?? type); // 👗 착용 스킨
+    u.spawn(this.playerBase.x + BASE_FRONT, LANE_Y, stats, type, 'ally', this.looks[type] ?? type); // 👗 착용 스킨
     u.pop = base.pop;
     sfx(this, 'spawn');
     this.track('spawns');
@@ -587,7 +588,7 @@ export class BattleScene extends Phaser.Scene {
     const stats = ENEMIES[type];
     if (!stats) return;
     const e = this.enemyPool.acquire();
-    e.spawn(this.enemyBase.x - 50, LANE_Y, stats, type, 'enemy');
+    e.spawn(this.enemyBase.x - BASE_FRONT, LANE_Y, stats, type, 'enemy');
     e.reward = stats.reward;
     e.maxHp = Math.round(e.maxHp * HERO_ENEMY_HP); // ⚖️ 영웅이 생긴 만큼 적 체력 +15%
     e.hp = e.maxHp;
@@ -932,10 +933,10 @@ export class BattleScene extends Phaser.Scene {
         break;
       case 'push':
         hit(target);
-        target.moveBy(Math.min(PUSH_PX, Math.max(0, this.enemyBase.x - 50 - target.x)));
+        target.moveBy(Math.min(PUSH_PX, Math.max(0, this.enemyBase.x - BASE_FRONT - target.x)));
         break;
       case 'dash': {
-        const len = Math.max(0, Math.min(DASH_PX, this.enemyBase.x - 60 - u.x));
+        const len = Math.max(0, Math.min(DASH_PX, this.enemyBase.x - BASE_FRONT - u.x));
         for (const e of foes) if (e.x >= u.x - 10 && e.x <= u.x + len + u.stats.range) hit(e);
         u.moveBy(len);
         fxX = u.x;
@@ -1043,7 +1044,7 @@ export class BattleScene extends Phaser.Scene {
         const front = Math.min(...live.map((e) => e.x));
         for (const e of live) {
           if (e.x - front > SHOCKWAVE_RANGE) continue;
-          e.moveBy(Math.min(pw(SHOCKWAVE_PUSH), Math.max(0, this.enemyBase.x - 50 - e.x)));
+          e.moveBy(Math.min(pw(SHOCKWAVE_PUSH), Math.max(0, this.enemyBase.x - BASE_FRONT - e.x)));
           e.takeDamage(pw(SHOCKWAVE_DAMAGE));
         }
         this.burst(front, 0xffa94d, SHOCKWAVE_RANGE / 2);
@@ -1088,7 +1089,7 @@ export class BattleScene extends Phaser.Scene {
     this.hero = new Unit(this);
     const base = heroStats(this.stage.id, this.endless ? 1 : this.stage.enemyMult ?? 1);
     const hm = heroLvMult(meta.heroLevel('hero')); // 👑 영구 강화
-    this.hero.spawn(this.playerBase.x + 90, LANE_Y, { ...base, hp: Math.round(base.hp * hm), atk: Math.round(base.atk * hm) }, HERO_TYPE, 'ally', look);
+    this.hero.spawn(this.playerBase.x + BASE_FRONT + 40, LANE_Y, { ...base, hp: Math.round(base.hp * hm), atk: Math.round(base.atk * hm) }, HERO_TYPE, 'ally', look);
     this.rallyUntil = 0;
     this.hero.setBodyScale(heroBodyScale(tier));
     this.heroTarget = null;
@@ -1104,7 +1105,7 @@ export class BattleScene extends Phaser.Scene {
     // 처음 두 관문은 조작 안내
     if (!this.endless && this.stage.id <= 2) {
       const tip = this.add
-        .text(640, 150, ['👆 전장을 손가락으로 좌우로 밀면 👑영웅이 움직여요', '⭕ 노란 원 안의 아군이 강해져요 · 🔨 J 철퇴 던지기', '⚠️ 영웅이 쓰러지면 패배!'].join('\n'), {
+        .text(470, 150, ['👆 전장을 손가락으로 좌우로 밀면 👑영웅이 움직여요', '⭕ 노란 원 안의 아군이 강해져요 · 🔨 J 철퇴 던지기', '⚠️ 영웅이 쓰러지면 패배!'].join('\n'), {
           fontFamily: 'sans-serif',
           fontSize: '20px',
           fontStyle: 'bold',
@@ -1152,8 +1153,8 @@ export class BattleScene extends Phaser.Scene {
       return;
     }
     h.setStatus(null);
-    const min = this.playerBase.x + 40;
-    const max = this.enemyBase.x - 70;
+    const min = this.playerBase.x + BASE_FRONT - 10;
+    const max = this.enemyBase.x - BASE_FRONT - 20;
     const goal = this.heroDir !== 0 ? h.x + this.heroDir * 200 : this.heroTarget;
     let moved = false;
     if (goal !== null && Math.abs(Phaser.Math.Clamp(goal, min, max) - h.x) > 2) {
@@ -1232,7 +1233,7 @@ export class BattleScene extends Phaser.Scene {
     h.heal(Math.round(h.maxHp * HOLY_HERO_HEAL * pw));
     for (const e of this.enemies) {
       if (!e.active || BOSS.has(e.type) || !this.inHeroAura(e.x)) continue;
-      e.moveBy(Math.min(HOLY_PUSH, Math.max(0, this.enemyBase.x - 50 - e.x)));
+      e.moveBy(Math.min(HOLY_PUSH, Math.max(0, this.enemyBase.x - BASE_FRONT - e.x)));
     }
     this.banner('✨ 성스러운 빛!', 0xfff0a0);
     sfx(this, 'heal');
@@ -1312,7 +1313,7 @@ export class BattleScene extends Phaser.Scene {
     this.energy.add(30);
     for (const u of this.units) if (u.active) u.heal(Math.round(u.maxHp * 0.2));
     if (this.hero?.active) this.hero.heal(Math.round(this.hero.maxHp * 0.2));
-    for (const e of this.enemies) if (e.active && !BOSS.has(e.type)) e.moveBy(Math.min(40, Math.max(0, this.enemyBase.x - 50 - e.x)));
+    for (const e of this.enemies) if (e.active && !BOSS.has(e.type)) e.moveBy(Math.min(40, Math.max(0, this.enemyBase.x - BASE_FRONT - e.x)));
     const ring = this.add.circle(this.playerBase.x + 80, LANE_Y - 30, 30).setStrokeStyle(8, 0xffe14d).setDepth(85);
     this.tweens.add({ targets: ring, scale: 14, alpha: 0, duration: 650, onComplete: () => ring.destroy() });
     const flash = this.add.rectangle(640, 360, 1280, 720, 0xfff6c0, 0.35).setDepth(84);
