@@ -1144,6 +1144,14 @@ export class BattleScene extends Phaser.Scene {
     if (!h?.active) return;
     h.heal(h.maxHp * HERO_REGEN * dt);
     h.cooldown -= dt;
+    if (h.stunned) {
+      // 💫 기절: 이동·공격 불가(끌어 둔 목표는 기절이 풀리면 이어서)
+      h.setStatus(STUN_TINT);
+      h.idle();
+      this.aura.x = h.x;
+      return;
+    }
+    h.setStatus(null);
     const min = this.playerBase.x + 40;
     const max = this.enemyBase.x - 70;
     const goal = this.heroDir !== 0 ? h.x + this.heroDir * 200 : this.heroTarget;
@@ -1186,6 +1194,10 @@ export class BattleScene extends Phaser.Scene {
   /** 👑 영웅 스킬 사용 — 💧 마나 + 대기시간 */
   private castHeroSkill(i: number): void {
     if (this.over || this.picking || this.paused || this.reviving || !this.hero?.active) return;
+    if (this.hero.stunned) {
+      this.hud.heroDeny('💫 기절 중!');
+      return;
+    }
     const sk = HERO_SKILLS[i];
     if (!sk || (this.heroCd[i] ?? 0) > 0) return;
     if (!meta.ownsHeroSkill(sk.key)) {
@@ -1415,6 +1427,13 @@ export class BattleScene extends Phaser.Scene {
         const dmg = computeDamage(e.stats.atk * (slam ? 1.2 : 1.4), u.stats.def) * synergyMult(this.synergies, u.type, 'guard');
         if (this.clock >= this.guardUntil) u.takeDamage(Math.max(1, Math.round(dmg)));
         if (slam) u.stunUntil = now + 1500;
+      }
+      // 👑 영웅도 보스 공격을 맞음(땅 내려치기면 기절)
+      const h = this.hero;
+      if (h?.active && h.x >= x0 && h.x <= x1) {
+        const dmg = computeDamage(e.stats.atk * (slam ? 1.2 : 1.4), h.stats.def);
+        if (this.clock >= this.guardUntil) h.takeDamage(Math.max(1, Math.round(dmg)));
+        if (slam) h.stunUntil = now + 1500;
       }
       if (slam) {
         this.cameras.main.shake(300, 0.012);
