@@ -10,7 +10,7 @@ import { Base } from '../entities/Base';
 import { UNIT_SCALE } from '../entities/Fighter';
 import { FOOD_BASE, energyMax, energyRate, popBonus } from '../systems/baseUpgrades';
 import { summonCooldown } from '../systems/pacing';
-import { HERO_TYPE, HERO_TIERS, HERO_FALLBACK_LOOKS, heroTier, heroBodyScale, HERO_REGEN, HERO_SKILLS, AURA_ATK, AURA_GUARD, AURA_RADIUS, MANA_MAX, MANA_REGEN, MANA_START, MACE_MULT, MACE_RANGE, RALLY_SEC, RALLY_SPEED, HOLY_HEAL, HOLY_HERO_HEAL, HOLY_PUSH, HERO_ENEMY_HP, heroStats, heroLvMult, heroSkillPower, auraRadius, inAura, maceTargets, stepToward } from '../systems/hero';
+import { HERO_TYPE, HERO_TIERS, HERO_FALLBACK_LOOKS, heroTier, heroBodyScale, HERO_REGEN, HERO_SKILLS, AURA_ATK, AURA_GUARD, AURA_RADIUS, MANA_MAX, MANA_REGEN, MANA_START, MACE_MULT, MACE_RANGE, RALLY_SEC, RALLY_SPEED, HOLY_HEAL, HOLY_HERO_HEAL, HOLY_PUSH, HERO_ENEMY_HP, heroStats, heroLvMult, heroMoveRange, HERO_DRAG_MULT, heroSkillPower, auraRadius, inAura, maceTargets, stepToward } from '../systems/hero';
 import { HERO_PANEL_X, HERO_BTN_R, HERO_BTN_Y } from '../ui/Hud';
 import { Pool } from '../utils/pool';
 import { ResourceSystem } from '../systems/resources';
@@ -136,7 +136,7 @@ export class BattleScene extends Phaser.Scene {
   private hero!: Unit; // 👑 영웅(쓰러지면 패배)
   private heroTarget: number | null = null; // 탭한 이동 목표 x
   private heroDir = 0; // 키보드 A/D 이동(-1/0/1)
-  private heroFlag!: Phaser.GameObjects.Text; // 이동 목표 깃발
+  private heroDrag: { px: number; hx: number } | null = null; // 손가락 끌기 시작(손가락 x · 영웅 x)
   private aura!: Phaser.GameObjects.Container; // ⭕ 오라 원
   private mana!: ResourceSystem; // 💧 영웅 스킬 전용
   private heroCd: number[] = []; // 영웅 스킬별 남은 대기(초)
@@ -322,13 +322,22 @@ export class BattleScene extends Phaser.Scene {
       if ((k === 'a' || k === 'arrowleft') && this.heroDir < 0) this.heroDir = 0;
       if ((k === 'd' || k === 'arrowright') && this.heroDir > 0) this.heroDir = 0;
     });
-    // 👑 전장을 탭하면 영웅이 그 자리로 이동(하단 HUD·상단 바·영웅 스킬 버튼 제외)
+    // 👑 전장을 손가락으로 좌우로 끌면 영웅이 그만큼 움직임(하단 HUD·상단 바·영웅 스킬 버튼 제외)
     this.input.on('pointerdown', (p: Phaser.Input.Pointer) => {
+      this.heroDrag = null;
       if (this.over || this.picking || this.paused || this.reviving || !this.hero?.active) return;
       if (p.y < 60 || p.y > 405) return;
       if (p.x > HERO_PANEL_X - HERO_SKILLS.length * (HERO_BTN_R * 2 + 14) - 10 && p.y < HERO_BTN_Y + HERO_BTN_R + 10) return; // 영웅 스킬 버튼·마나 바
-      this.heroTarget = p.x;
-      this.heroFlag.setPosition(Phaser.Math.Clamp(p.x, this.playerBase.x + 40, this.enemyBase.x - 70), LANE_Y - 4).setVisible(true).setAlpha(1);
+      this.heroDrag = { px: p.x, hx: this.hero.x };
+    });
+    this.input.on('pointermove', (p: Phaser.Input.Pointer) => {
+      if (!this.heroDrag || !p.isDown || !this.hero?.active) return;
+      const dx = p.x - this.heroDrag.px;
+      if (Math.abs(dx) < 6) return; // 살짝 누른 건 무시
+      this.heroTarget = this.heroDrag.hx + dx * HERO_DRAG_MULT;
+    });
+    this.input.on('pointerup', () => {
+      this.heroDrag = null;
     });
     this.input.keyboard?.on('keydown', (ev: KeyboardEvent) => {
       const n = Number(ev.key);
@@ -1090,11 +1099,10 @@ export class BattleScene extends Phaser.Scene {
     const inner = this.add.ellipse(0, 0, AURA_RADIUS * 1.2, 26).setStrokeStyle(2, 0xfff0a0, 0.6);
     this.aura = this.add.container(this.hero.x, LANE_Y + 34, [fill, ring, inner]).setDepth(-3);
     this.tweens.add({ targets: [ring, inner], scaleX: 1.04, scaleY: 1.12, alpha: 0.5, duration: 900, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
-    this.heroFlag = this.add.text(0, 0, '🚩', { fontSize: '26px' }).setOrigin(0.2, 1).setDepth(60).setVisible(false);
     // 처음 두 관문은 조작 안내
     if (!this.endless && this.stage.id <= 2) {
       const tip = this.add
-        .text(640, 150, ['👆 전장을 누르면 👑영웅이 그 자리로 가요', '⭕ 노란 원 안의 아군이 강해져요 · 🔨 J 철퇴 던지기', '⚠️ 영웅이 쓰러지면 패배!'].join('\n'), {
+        .text(640, 150, ['👆 전장을 손가락으로 좌우로 밀면 👑영웅이 움직여요', '⭕ 노란 원 안의 아군이 강해져요 · 🔨 J 철퇴 던지기', '⚠️ 영웅이 쓰러지면 패배!'].join('\n'), {
           fontFamily: 'sans-serif',
           fontSize: '20px',
           fontStyle: 'bold',
@@ -1128,13 +1136,20 @@ export class BattleScene extends Phaser.Scene {
     const min = this.playerBase.x + 40;
     const max = this.enemyBase.x - 70;
     const goal = this.heroDir !== 0 ? h.x + this.heroDir * 200 : this.heroTarget;
+    let moved = false;
     if (goal !== null && Math.abs(Phaser.Math.Clamp(goal, min, max) - h.x) > 2) {
-      const nx = stepToward(h.x, goal, h.stats.speed, dt, min, max);
-      h.faceDir(nx < h.x ? -1 : 1);
-      h.moveBy(nx - h.x);
+      // 적을 지나갈 수 없음 — 앞(뒤) 가장 가까운 적 앞에서 멈추고 싸움, 적이 쓰러지면 다시 이동
+      const [lo, hi] = heroMoveRange(h.x, this.enemies.filter((e) => e.active).map((e) => e.x), min, max);
+      const nx = stepToward(h.x, goal, h.stats.speed, dt, lo, hi);
+      if (Math.abs(nx - h.x) > 0.3) {
+        h.faceDir(nx < h.x ? -1 : 1);
+        h.moveBy(nx - h.x);
+        moved = true;
+      }
     } else {
       this.heroTarget = null;
-      if (this.heroFlag.visible) this.tweens.add({ targets: this.heroFlag, alpha: 0, duration: 200, onComplete: () => this.heroFlag.setVisible(false) });
+    }
+    if (!moved) {
       h.faceDir(1);
       const target = this.nearest(h.x, this.enemies) as Enemy | null;
       if (target && inRange(h.x, target.x, h.stats.range + REACH + 10)) {

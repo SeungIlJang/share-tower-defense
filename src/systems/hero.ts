@@ -74,6 +74,22 @@ export function stepToward(x: number, target: number, speed: number, dt: number,
   return Math.abs(d) <= step ? t : x + Math.sign(d) * step;
 }
 
+/** 손가락으로 끈 거리 → 영웅 이동 거리 배수 */
+export const HERO_DRAG_MULT = 1.5;
+/** 적과 맞닿는 거리 — 영웅은 이보다 가까이 적을 지나갈 수 없음 */
+export const HERO_BLOCK = 42;
+
+/** 적에게 막힌 이동 범위 [lo, hi] — 앞쪽 가장 가까운 적 앞, 뒤쪽 가장 가까운 적 뒤까지만(지금 자리에서 밀리지는 않음) */
+export function heroMoveRange(heroX: number, enemyXs: number[], min: number, max: number, block = HERO_BLOCK): [number, number] {
+  let lo = min;
+  let hi = max;
+  for (const x of enemyXs) {
+    if (x >= heroX) hi = Math.min(hi, x - block);
+    else lo = Math.max(lo, x + block);
+  }
+  return [Math.min(lo, heroX), Math.max(hi, heroX)];
+}
+
 // 💧 마나(영웅 스킬 전용 — 유닛 소환 ⚡에너지와 별개)
 export const MANA_MAX = 100;
 export const MANA_REGEN = 6; // 초당

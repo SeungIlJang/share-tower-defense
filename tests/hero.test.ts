@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { AURA_RADIUS, HERO_SKILLS, HERO_TIERS, heroBodyScale, heroTier, nextHeroTier, auraRadius, heroLvMult, heroSkillPower, heroStats, heroUpCost, inAura, maceTargets, stepToward } from '../src/systems/hero';
+import { AURA_RADIUS, HERO_SKILLS, HERO_TIERS, heroMoveRange, heroBodyScale, heroTier, nextHeroTier, auraRadius, heroLvMult, heroSkillPower, heroStats, heroUpCost, inAura, maceTargets, stepToward } from '../src/systems/hero';
 import { isSkillSwing } from '../src/systems/unitSkills';
 
 describe('👑 영웅', () => {
@@ -83,5 +83,17 @@ describe('👑 영웅 진화', () => {
   it('그림 5장이 매니페스트에 있음(스킬 동작 포함)', async () => {
     const m = (await import('../public/sprites/manifest.json')).default as unknown as Record<string, { anims: Record<string, unknown> }>;
     for (const t of HERO_TIERS) expect(Object.keys(m[t.look].anims)).toContain('skill');
+  });
+});
+
+describe('👑 영웅은 적을 지나갈 수 없음', () => {
+  it('앞쪽 가장 가까운 적 앞 · 뒤쪽 가장 가까운 적 뒤까지만', () => {
+    expect(heroMoveRange(300, [500, 400], 100, 1000, 40)).toEqual([100, 360]);
+    expect(heroMoveRange(300, [200], 100, 1000, 40)).toEqual([240, 1000]);
+    expect(heroMoveRange(300, [], 100, 1000, 40)).toEqual([100, 1000]);
+  });
+
+  it('이미 붙어 있으면 그 자리에서 멈춤(뒤로 밀리지 않음)', () => {
+    expect(heroMoveRange(300, [320], 100, 1000, 40)).toEqual([100, 300]);
   });
 });
