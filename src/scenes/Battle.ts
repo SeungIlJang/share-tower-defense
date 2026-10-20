@@ -1405,8 +1405,7 @@ export class BattleScene extends Phaser.Scene {
     const slam = e.type !== 'dragon';
     const x0 = slam ? e.x - 120 : e.x - 260; // 영향 범위(왼쪽 = 우리 쪽)
     const x1 = slam ? e.x + 120 : e.x;
-    const warn = this.add.rectangle((x0 + x1) / 2, LANE_Y - 10, x1 - x0, 70, 0xff3030, 0.25).setStrokeStyle(3, 0xff5050).setDepth(54);
-    this.tweens.add({ targets: warn, alpha: 0.6, duration: 200, yoyo: true, repeat: 1 });
+    const warn = this.dangerZone(x0, x1, slam ? 0xff8a3a : 0xff3b3b, slam ? '💥' : '🔥', 800);
     this.time.delayedCall(800, () => {
       warn.destroy();
       if (!e.active || this.over) return;
@@ -1422,11 +1421,45 @@ export class BattleScene extends Phaser.Scene {
         this.burst(e.x, 0xb08a5a, 120);
         sfx(this, 'boom');
       } else {
-        const fire = this.add.rectangle((x0 + x1) / 2, LANE_Y - 14, x1 - x0, 46, 0xff7a2a, 0.75).setDepth(55);
-        this.tweens.add({ targets: fire, alpha: 0, scaleY: 1.6, duration: 450, onComplete: () => fire.destroy() });
+        // 🔥 불길 — 구역을 따라 불꽃이 차례로 솟음
+        const n = Math.max(4, Math.round((x1 - x0) / 34));
+        for (let i = 0; i < n; i++) {
+          const fx = x0 + ((i + 0.5) * (x1 - x0)) / n;
+          const f = this.add.text(fx, LANE_Y + 10, '🔥', { fontSize: `${30 + Math.random() * 14}px` }).setOrigin(0.5, 1).setDepth(56).setScale(0.2);
+          this.tweens.add({ targets: f, scale: 1, y: LANE_Y - 10 - Math.random() * 20, delay: i * 25, duration: 180, ease: 'Back.easeOut' });
+          this.tweens.add({ targets: f, alpha: 0, y: f.y - 50, delay: 260 + i * 25, duration: 320, onComplete: () => f.destroy() });
+        }
+        const glow = this.add.ellipse((x0 + x1) / 2, LANE_Y + 30, x1 - x0, 50, 0xff7a2a, 0.55).setDepth(-2);
+        this.tweens.add({ targets: glow, alpha: 0, duration: 600, onComplete: () => glow.destroy() });
         sfx(this, 'boom_big');
       }
     });
+  }
+
+  /** ⚠️ 보스 공격 예고 구역 — 바닥에 납작한 원 + 가운데서 차오르는 원(차면 공격) + 위에 아이콘 */
+  private dangerZone(x0: number, x1: number, color: number, icon: string, ms: number): { destroy: () => void } {
+    const w = x1 - x0;
+    const h = 52;
+    const glow = this.add.ellipse(0, 0, w + 24, h + 14, color, 0.12);
+    const base = this.add.ellipse(0, 0, w, h, color, 0.16);
+    const edge = this.add.ellipse(0, 0, w, h).setStrokeStyle(3, color, 0.95);
+    const inner = this.add.ellipse(0, 0, w * 0.55, h * 0.55).setStrokeStyle(2, 0xffffff, 0.35);
+    const fill = this.add.ellipse(0, 0, w, h, color, 0.38).setScale(0.05); // 차오르는 타이밍
+    const cx = (x0 + x1) / 2;
+    // 구역 양 끝 바닥에 경고 아이콘(큰 보스 몸에 가리지 않게)
+    const mark = this.add.text(x0 + 14, LANE_Y + 30, icon, { fontSize: '24px' }).setOrigin(0.5).setDepth(70);
+    const bang = this.add.text(x1 - 14, LANE_Y + 30, '⚠️', { fontSize: '22px' }).setOrigin(0.5).setDepth(70);
+    const c = this.add.container(cx, LANE_Y + 30, [glow, base, fill, edge, inner]).setDepth(-2); // 바닥(유닛 아래)
+    this.tweens.add({ targets: fill, scale: 1, duration: ms, ease: 'Quad.easeIn' });
+    this.tweens.add({ targets: [edge, glow], alpha: 0.35, duration: 160, yoyo: true, repeat: -1 });
+    this.tweens.add({ targets: [mark, bang], scale: 1.25, duration: 200, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
+    return {
+      destroy: () => {
+        c.destroy();
+        mark.destroy();
+        bang.destroy();
+      },
+    };
   }
 
   /** 👑 보스 처치 — 잠깐 슬로모션 + 화면 번쩍 + 문구 */
