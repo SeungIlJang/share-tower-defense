@@ -3,7 +3,7 @@ import { loadAudio } from '../systems/sound';
 import { meta } from '../systems/upgrades';
 import { registerSpriteAnims } from '../systems/skinTextures';
 import { MANIFEST_URL, iconKey, parseManifest, sprites, textureKey } from '../systems/sprites';
-import { HERO_LOOKS } from '../systems/hero';
+import { HERO_TIERS, heroTier } from '../systems/hero';
 
 /**
  * 프리로드: sprites/manifest.json → 등록된 스프라이트시트 로드 → 애니메이션 생성 → Menu.
@@ -41,7 +41,8 @@ export class PreloadScene extends Phaser.Scene {
     // 👗 전설 스킨 등 '유닛@스킨' 그림은 착용 중인 것만(나머지는 스킨 창에서 열 때 받음)
     const needed = types.filter((t) => {
       const [unit, skin] = t.split('@');
-      return !skin || meta.equippedSkin(unit) === skin || HERO_LOOKS.includes(t); // 👑 영웅 그림은 항상
+      if (t.startsWith('hero_')) return t === HERO_TIERS[heroTier(meta.heroLevel('hero'))].look; // 👑 지금 단계 영웅 그림만(나머지는 강화 화면에서)
+      return !skin || meta.equippedSkin(unit) === skin;
     });
     for (const type of needed) {
       const d = manifest[type];

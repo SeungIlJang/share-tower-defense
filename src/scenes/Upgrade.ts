@@ -10,7 +10,7 @@ import { UNIT_SKILLS, skillEvery, skillMult } from '../systems/unitSkills';
 import { skinType, skinsFor } from '../systems/skins';
 import { ensureSkin, loadLook } from '../systems/skinTextures';
 import { BASE_MAX_LV, BASE_UPGRADES } from '../systems/baseUpgrades';
-import { AURA_MAX_LV, AURA_RADIUS, HERO_MAX_LV, HERO_SKILLS, SKILL_MAX_LV, auraBonus, heroLvMult, heroSkillPower, heroUpCost } from '../systems/hero';
+import { AURA_MAX_LV, AURA_RADIUS, HERO_MAX_LV, HERO_SKILLS, HERO_TIERS, SKILL_MAX_LV, auraBonus, heroLvMult, heroSkillPower, heroTier, heroUpCost, nextHeroTier } from '../systems/hero';
 
 const UNITS = unitsData as Record<string, UnitStats>;
 
@@ -291,9 +291,12 @@ export class UpgradeScene extends Phaser.Scene {
     const count = 2 + HERO_SKILLS.length;
     const pct = (m: number): string => `+${Math.round((m - 1) * 100)}%`;
     const up = (key: string, kind: 'hero' | 'aura' | 'skill', max: number): void => {
+      const before = heroTier(meta.heroLevel('hero'));
       if (meta.upgradeHero(key, heroUpCost(kind, meta.heroLevel(key)), max)) {
         sfx(this, 'weapon');
         this.render();
+        const after = heroTier(meta.heroLevel('hero'));
+        if (after > before) this.evolveFx(HERO_TIERS[after].name); // ✨ 진화!
       }
     };
     const row = (i: number, key: string, kind: 'hero' | 'aura' | 'skill', max: number, title: string, desc: string): void => {
@@ -303,7 +306,9 @@ export class UpgradeScene extends Phaser.Scene {
       this.card(i, count, null, `${title}  Lv.${lv}${maxed ? ' (MAX)' : ''}`, desc, maxed ? 'MAX' : `강화 🪙${cost}`, !maxed && meta.gold >= cost, false, () => up(key, kind, max));
     };
     const hl = meta.heroLevel('hero');
-    row(0, 'hero', 'hero', HERO_MAX_LV, '👑 영웅', `❤️ 체력 · ⚔️ 공격력 ${pct(heroLvMult(hl))}  →  ${pct(heroLvMult(hl + 1))}`);
+    const nt = nextHeroTier(hl);
+    row(0, 'hero', 'hero', HERO_MAX_LV, `👑 ${HERO_TIERS[heroTier(hl)].name}`, `❤️·⚔️ ${pct(heroLvMult(hl))} → ${pct(heroLvMult(hl + 1))}${nt ? `  ·  Lv${nt.min} 진화` : ''}`);
+    this.heroEvolution(hl);
     const al = meta.heroLevel('aura');
     row(1, 'aura', 'aura', AURA_MAX_LV, '⭕ 오라 크기', `오라 반지름 ${AURA_RADIUS + auraBonus(al)}  →  ${AURA_RADIUS + auraBonus(al + 1)}`);
     HERO_SKILLS.forEach((sk, j) => {
@@ -320,6 +325,52 @@ export class UpgradeScene extends Phaser.Scene {
       const lv = meta.heroLevel(sk.key);
       row(i, sk.key, 'skill', SKILL_MAX_LV, `${sk.icon} ${sk.name}`, `${sk.desc} · 위력 ${pct(heroSkillPower(lv))} → ${pct(heroSkillPower(lv + 1))}`);
     });
+  }
+
+  /** 👑 진화 단계 줄 — 5단계 그림(지금 단계 강조, 아직 못 간 단계는 그림자) */
+  private heroEvolution(lv: number): void {
+    // 아직 안 받은 단계 그림은 받고 나서 다시 그림
+    const missing = HERO_TIERS.find((t) => spriteOf(t.look) && !this.textures.exists(textureKey(t.look)));
+    if (missing) {
+      loadLook(this, missing.look, () => {
+        if (this.tab === 'hero' && this.scene.isActive()) this.render();
+      });
+    }
+    const cur = heroTier(lv);
+    const y = 562;
+    this.layer.add(this.add.rectangle(640, y, 1180, 128, 0x141c30).setStrokeStyle(2, 0x33406a));
+    HERO_TIERS.forEach((t, i) => {
+      const x = 640 + (i - 2) * 230;
+      const d = spriteOf(t.look);
+      if (d && this.textures.exists(textureKey(t.look))) {
+        const img = this.add.image(x, y - 6, textureKey(t.look), d.anims.idle!.frames[0]);
+        img.setScale(Math.min(88 / d.frameHeight, 150 / d.frameWidth));
+        if (i > cur) img.setTint(0x0a0e18).setTintMode(Phaser.TintModes.FILL).setAlpha(0.8); // 아직 = 그림자
+        this.layer.add(img);
+        if (i === cur) this.tweens.add({ targets: img, y: y - 12, duration: 700, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
+      }
+      const label = i > cur ? `🔒 Lv${t.min} ${t.name}` : `Lv${t.min} ${t.name}`;
+      this.layer.add(
+        this.add
+          .text(x, y + 48, i === cur ? `▶ ${t.name} ◀` : label, { fontFamily: 'sans-serif', fontSize: i === cur ? '17px' : '14px', fontStyle: 'bold', color: i === cur ? '#ffd34d' : i < cur ? '#9fb3d0' : '#5a6684' })
+          .setOrigin(0.5)
+      );
+      if (i < HERO_TIERS.length - 1) this.layer.add(this.add.text(x + 115, y - 6, '›', { fontSize: '30px', color: '#4a5878' }).setOrigin(0.5));
+    });
+  }
+
+  /** ✨ 진화 연출 */
+  private evolveFx(name: string): void {
+    sfx(this, 'levelup');
+    const flash = this.add.rectangle(640, 360, 1280, 720, 0xfff6c0, 0.7).setDepth(300);
+    this.tweens.add({ targets: flash, alpha: 0, duration: 700, onComplete: () => flash.destroy() });
+    const t = this.add
+      .text(640, 300, `✨ 진화! ${name} ✨`, { fontFamily: 'sans-serif', fontSize: '52px', fontStyle: 'bold', color: '#ffd34d', stroke: '#5a3a00', strokeThickness: 8 })
+      .setOrigin(0.5)
+      .setDepth(301)
+      .setScale(0.3);
+    this.tweens.add({ targets: t, scale: 1, duration: 450, ease: 'Back.easeOut' });
+    this.tweens.add({ targets: t, alpha: 0, delay: 1600, duration: 500, onComplete: () => t.destroy() });
   }
 
   /** 🏰 기지 강화 — 인구 상한 · 소환 에너지(충전·상한) */

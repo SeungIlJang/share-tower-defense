@@ -77,6 +77,51 @@ def foreground(crop, thresh, strip_lines=False, holes=False, drop_thin=False):
     return fg
 
 
+def split_by_gaps(fg, expected):
+    """빈 세로줄(간격)로 프레임 나누기 — 말에서 떨어진 기사·떨어진 이펙트도 한 프레임으로.
+    조각이 예상보다 많으면 가장 좁은 간격부터 합쳐 expected 개로 맞춤(작은 먼지 조각은 가까운 프레임에 붙임). 정렬 기준은 가장 큰 덩어리(몸통)."""
+    lab, n = ndimage.label(fg)
+    if n == 0:
+        return []
+    areas = ndimage.sum(fg, lab, range(1, n + 1))
+    clean = np.isin(lab, [i + 1 for i in range(n) if areas[i] >= 60])  # 먼지 같은 작은 점 제거
+    cols = clean.any(0)
+    segs, start = [], None
+    for x, v in enumerate(np.append(cols, False)):
+        if v and start is None:
+            start = x
+        elif not v and start is not None:
+            segs.append([start, x])
+            start = None
+    mass = [int(clean[:, a:b].sum()) for a, b in segs]
+    big_min = max(mass) * 0.15 if mass else 0
+    big = [g for g, m in zip(segs, mass) if m >= big_min]  # 먼지·반짝이·옆 줄에서 넘어온 선은 프레임으로 세지 않음
+    small = [g for g, m in zip(segs, mass) if m < big_min]
+    segs = big or segs
+    merged = [list(g) for g in segs]
+    while len(merged) > expected:  # 가장 좁은 간격부터 합쳐서 개수 맞춤
+        k = min(range(len(merged) - 1), key=lambda i: merged[i + 1][0] - merged[i][1])
+        merged[k][1] = merged[k + 1][1]
+        del merged[k + 1]
+    for a, b in small:  # 작은 조각은 가장 가까운 프레임에 붙임
+        k = min(range(len(merged)), key=lambda i: max(merged[i][0] - b, a - merged[i][1], 0))
+        merged[k] = [min(merged[k][0], a), max(merged[k][1], b)]
+    if len(merged) != expected:
+        print(f'    ! 프레임 {len(merged)}개 (예상 {expected})')
+    out = []
+    for a, b in merged:
+        whole = np.zeros_like(clean)
+        whole[:, a:b] = clean[:, a:b]
+        sub, m = ndimage.label(whole)
+        sizes = ndimage.sum(whole, sub, range(1, m + 1))
+        main = sub == int(np.argmax(sizes)) + 1
+        ys, xs = np.nonzero(main)
+        top, bottom = ys.min(), ys.max()
+        head = xs[ys < top + (bottom - top) * 0.35]
+        out.append({'mask': whole, 'ax': float(np.median(head)), 'foot': int(bottom), 'top': int(top)})
+    return out
+
+
 def split_frames(fg, expected):
     """덩어리 분리: 큰 덩어리 = 캐릭터, 작은 덩어리(이펙트)는 가장 가까운 캐릭터에 귀속."""
     grown = ndimage.binary_dilation(fg, iterations=3)
@@ -165,7 +210,7 @@ def extract_sheet(cfg):
         pad = 6
         crop = rgb[max(0, y0 - pad):y1 + pad, x0:x1]
         fg = foreground(crop, cfg.get('thresh', 40), strip_lines=cfg.get('strip_lines', True), drop_thin=cfg.get('drop_thin', False))
-        frames = split_frames(fg, n)
+        frames = split_by_gaps(fg, n) if cfg.get('split') == 'gaps' else split_frames(fg, n)  # 'gaps' = 빈 세로줄로 나누기
         if keep is not None and len(frames) == n:
             frames = [frames[k] for k in keep]
         for f in frames:
@@ -185,9 +230,10 @@ def extract_sheet(cfg):
     fw, fh = int(math.ceil(left + right)) + 4, int(math.ceil(up + down)) + 4
     ax, foot = int(math.ceil(left)) + 2, int(math.ceil(up)) + 2
     cols = max(len(f) for f in rows.values())
-    sheet = Image.new('RGBA', (fw * cols, fh * len(STATES)), (0, 0, 0, 0))
+    states = STATES + (['skill'] if 'skill' in rows else [])  # 스킬 동작 줄은 있을 때만(기존 시트 모양 그대로)
+    sheet = Image.new('RGBA', (fw * cols, fh * len(states)), (0, 0, 0, 0))
     anims = {}
-    for r, state in enumerate(STATES):
+    for r, state in enumerate(states):
         frames = rows.get(state, [])
         for c, f in enumerate(frames):
             ys, xs = np.nonzero(f['mask'])

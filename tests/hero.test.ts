@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { AURA_RADIUS, HERO_SKILLS, auraRadius, heroLvMult, heroSkillPower, heroStats, heroUpCost, inAura, maceTargets, stepToward } from '../src/systems/hero';
+import { AURA_RADIUS, HERO_SKILLS, HERO_TIERS, heroBodyScale, heroTier, nextHeroTier, auraRadius, heroLvMult, heroSkillPower, heroStats, heroUpCost, inAura, maceTargets, stepToward } from '../src/systems/hero';
 import { isSkillSwing } from '../src/systems/unitSkills';
 
 describe('👑 영웅', () => {
@@ -61,5 +61,27 @@ describe('👑 영웅 강화 · 오라 카드 · 스킬', () => {
     expect(isSkillSwing(4, 1)).toBe(false);
     expect(isSkillSwing(4, 1, 1)).toBe(true);
     expect(isSkillSwing(2, 4, 3)).toBe(true); // 3-3 → 최소 2
+  });
+});
+
+describe('👑 영웅 진화', () => {
+  it('레벨 → 단계', () => {
+    expect(heroTier(0)).toBe(0);
+    expect(heroTier(4)).toBe(0);
+    expect(heroTier(5)).toBe(1);
+    expect(heroTier(14)).toBe(2);
+    expect(heroTier(15)).toBe(3);
+    expect(heroTier(20)).toBe(4);
+  });
+
+  it('다음 진화 · 몸집', () => {
+    expect(nextHeroTier(0)?.min).toBe(5);
+    expect(nextHeroTier(20)).toBeNull();
+    expect(heroBodyScale(4)).toBeGreaterThan(heroBodyScale(0));
+  });
+
+  it('그림 5장이 매니페스트에 있음(스킬 동작 포함)', async () => {
+    const m = (await import('../public/sprites/manifest.json')).default as unknown as Record<string, { anims: Record<string, unknown> }>;
+    for (const t of HERO_TIERS) expect(Object.keys(m[t.look].anims)).toContain('skill');
   });
 });

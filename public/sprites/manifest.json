@@ -1884,5 +1884,295 @@
       }
     },
     "icon": "icon_darkmage@legend.png"
+  },
+  "hero_1": {
+    "file": "hero_1.png",
+    "filter": "linear",
+    "frameWidth": 250,
+    "frameHeight": 189,
+    "scale": 0.499,
+    "footY": 176,
+    "anims": {
+      "idle": {
+        "frames": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "fps": 5
+      },
+      "walk": {
+        "frames": [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "fps": 10
+      },
+      "attack": {
+        "frames": [
+          12,
+          13,
+          14,
+          15,
+          16
+        ],
+        "fps": 12
+      },
+      "death": {
+        "frames": [
+          18,
+          19,
+          20,
+          21
+        ],
+        "fps": 8
+      },
+      "skill": {
+        "frames": [
+          24,
+          25,
+          26,
+          27
+        ],
+        "fps": 10
+      }
+    }
+  },
+  "hero_2": {
+    "file": "hero_2.png",
+    "filter": "linear",
+    "frameWidth": 266,
+    "frameHeight": 193,
+    "scale": 0.5,
+    "footY": 177,
+    "anims": {
+      "idle": {
+        "frames": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "fps": 5
+      },
+      "walk": {
+        "frames": [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "fps": 10
+      },
+      "attack": {
+        "frames": [
+          12,
+          13,
+          14,
+          15,
+          16
+        ],
+        "fps": 12
+      },
+      "death": {
+        "frames": [
+          18,
+          19,
+          20,
+          21
+        ],
+        "fps": 8
+      },
+      "skill": {
+        "frames": [
+          24,
+          25,
+          26,
+          27
+        ],
+        "fps": 10
+      }
+    }
+  },
+  "hero_3": {
+    "file": "hero_3.png",
+    "filter": "linear",
+    "frameWidth": 385,
+    "frameHeight": 197,
+    "scale": 0.501,
+    "footY": 182,
+    "anims": {
+      "idle": {
+        "frames": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "fps": 5
+      },
+      "walk": {
+        "frames": [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "fps": 10
+      },
+      "attack": {
+        "frames": [
+          12,
+          13,
+          14,
+          15,
+          16
+        ],
+        "fps": 12
+      },
+      "death": {
+        "frames": [
+          18,
+          19,
+          20,
+          21
+        ],
+        "fps": 8
+      },
+      "skill": {
+        "frames": [
+          24,
+          25,
+          26,
+          27
+        ],
+        "fps": 10
+      }
+    }
+  },
+  "hero_4": {
+    "file": "hero_4.png",
+    "filter": "linear",
+    "frameWidth": 337,
+    "frameHeight": 182,
+    "scale": 0.5,
+    "footY": 172,
+    "anims": {
+      "idle": {
+        "frames": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "fps": 5
+      },
+      "walk": {
+        "frames": [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "fps": 10
+      },
+      "attack": {
+        "frames": [
+          12,
+          13,
+          14,
+          15,
+          16
+        ],
+        "fps": 12
+      },
+      "death": {
+        "frames": [
+          18,
+          19,
+          20,
+          21
+        ],
+        "fps": 8
+      },
+      "skill": {
+        "frames": [
+          24,
+          25,
+          26,
+          27
+        ],
+        "fps": 10
+      }
+    }
+  },
+  "hero_5": {
+    "file": "hero_5.png",
+    "filter": "linear",
+    "frameWidth": 392,
+    "frameHeight": 187,
+    "scale": 0.499,
+    "footY": 175,
+    "anims": {
+      "idle": {
+        "frames": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "fps": 5
+      },
+      "walk": {
+        "frames": [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "fps": 10
+      },
+      "attack": {
+        "frames": [
+          12,
+          13,
+          14,
+          15,
+          16
+        ],
+        "fps": 12
+      },
+      "death": {
+        "frames": [
+          18,
+          19,
+          20,
+          21
+        ],
+        "fps": 8
+      },
+      "skill": {
+        "frames": [
+          24,
+          25,
+          26,
+          27
+        ],
+        "fps": 10
+      }
+    }
   }
 }

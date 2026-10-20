@@ -2,8 +2,40 @@
 import type { UnitStats } from '../types';
 
 export const HERO_TYPE = 'hero';
-/** 영웅 그림 — 지금은 성기사(기사 전설 스킨) 그림을 임시로 사용 */
-export const HERO_LOOKS = ['knight@legend', 'knight'];
+/** 👑 영웅 진화 5단계 — 영웅 레벨(강화 화면)에 따라 그림이 바뀜 */
+export interface HeroTier {
+  min: number; // 이 레벨부터
+  look: string; // 스프라이트 키(public/sprites/hero_N)
+  name: string;
+}
+export const HERO_TIERS: HeroTier[] = [
+  { min: 0, look: 'hero_1', name: '견습 기사' },
+  { min: 5, look: 'hero_2', name: '기사' },
+  { min: 10, look: 'hero_3', name: '성기사' },
+  { min: 15, look: 'hero_4', name: '성전사 군주' },
+  { min: 20, look: 'hero_5', name: '천상 기사' },
+];
+/** 그림이 없을 때 대신 쓸 그림 */
+export const HERO_FALLBACK_LOOKS = ['knight@legend', 'knight'];
+
+/** 영웅 레벨 → 진화 단계(0~4) */
+export function heroTier(lv: number): number {
+  let t = 0;
+  HERO_TIERS.forEach((h, i) => {
+    if (lv >= h.min) t = i;
+  });
+  return t;
+}
+
+/** 다음 진화(없으면 null) */
+export function nextHeroTier(lv: number): HeroTier | null {
+  return HERO_TIERS[heroTier(lv) + 1] ?? null;
+}
+
+/** 단계가 오를수록 몸집도 조금씩 커짐 */
+export function heroBodyScale(tier: number): number {
+  return 1.15 + 0.05 * tier;
+}
 
 /** 영웅 능력치 — 스테이지·적 배율에 맞춰 성장(늦은 스테이지에서도 버티게) */
 export function heroStats(stageId: number, enemyMult = 1): UnitStats {

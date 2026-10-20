@@ -10,7 +10,7 @@ import { Base } from '../entities/Base';
 import { UNIT_SCALE } from '../entities/Fighter';
 import { FOOD_BASE, energyMax, energyRate, popBonus } from '../systems/baseUpgrades';
 import { summonCooldown } from '../systems/pacing';
-import { HERO_TYPE, HERO_LOOKS, HERO_REGEN, HERO_SKILLS, AURA_ATK, AURA_GUARD, AURA_RADIUS, MANA_MAX, MANA_REGEN, MANA_START, MACE_MULT, MACE_RANGE, RALLY_SEC, RALLY_SPEED, HOLY_HEAL, HOLY_HERO_HEAL, HOLY_PUSH, HERO_ENEMY_HP, heroStats, heroLvMult, heroSkillPower, auraRadius, inAura, maceTargets, stepToward } from '../systems/hero';
+import { HERO_TYPE, HERO_TIERS, HERO_FALLBACK_LOOKS, heroTier, heroBodyScale, HERO_REGEN, HERO_SKILLS, AURA_ATK, AURA_GUARD, AURA_RADIUS, MANA_MAX, MANA_REGEN, MANA_START, MACE_MULT, MACE_RANGE, RALLY_SEC, RALLY_SPEED, HOLY_HEAL, HOLY_HERO_HEAL, HOLY_PUSH, HERO_ENEMY_HP, heroStats, heroLvMult, heroSkillPower, auraRadius, inAura, maceTargets, stepToward } from '../systems/hero';
 import { HERO_PANEL_X, HERO_BTN_R, HERO_BTN_Y } from '../ui/Hud';
 import { Pool } from '../utils/pool';
 import { ResourceSystem } from '../systems/resources';
@@ -1072,13 +1072,14 @@ export class BattleScene extends Phaser.Scene {
   /** 무기 이름 배너 */
   /** 👑 영웅 등장 + ⭕ 오라 원 + 이동 깃발 + 💧 마나 */
   private spawnHero(): void {
-    const look = HERO_LOOKS.find((l) => this.textures.exists(textureKey(l))) ?? HERO_TYPE;
+    const tier = heroTier(meta.heroLevel('hero')); // 👑 진화 단계
+    const look = [HERO_TIERS[tier].look, ...HERO_FALLBACK_LOOKS].find((l) => this.textures.exists(textureKey(l))) ?? HERO_TYPE;
     this.hero = new Unit(this);
     const base = heroStats(this.stage.id, this.endless ? 1 : this.stage.enemyMult ?? 1);
     const hm = heroLvMult(meta.heroLevel('hero')); // 👑 영구 강화
     this.hero.spawn(this.playerBase.x + 90, LANE_Y, { ...base, hp: Math.round(base.hp * hm), atk: Math.round(base.atk * hm) }, HERO_TYPE, 'ally', look);
     this.rallyUntil = 0;
-    this.hero.setBodyScale(1.3);
+    this.hero.setBodyScale(heroBodyScale(tier));
     this.heroTarget = null;
     this.heroDir = 0;
     this.heroCd = HERO_SKILLS.map(() => 0);
@@ -1171,6 +1172,7 @@ export class BattleScene extends Phaser.Scene {
     }
     this.heroCd[i] = sk.cooldown;
     const pw = heroSkillPower(meta.heroLevel(sk.key)); // 👑 스킬 강화
+    this.hero.skillMotion(); // 진화 그림의 스킬 동작
     if (sk.key === 'mace') this.throwMace(pw);
     else if (sk.key === 'rally') this.rally(pw);
     else if (sk.key === 'holy') this.holyLight(pw);
@@ -1181,7 +1183,6 @@ export class BattleScene extends Phaser.Scene {
     this.rallyUntil = this.clock + RALLY_SEC * pw;
     this.banner('📯 돌격!', 0xffb02e);
     sfx(this, 'weapon');
-    this.hero.lunge();
     const ring = this.add.ellipse(this.hero.x, LANE_Y + 34, this.auraR() * 2, 46).setStrokeStyle(8, 0xffb02e).setDepth(85);
     this.tweens.add({ targets: ring, scaleX: 1.5, scaleY: 2.2, alpha: 0, duration: 600, onComplete: () => ring.destroy() });
   }
@@ -1208,7 +1209,6 @@ export class BattleScene extends Phaser.Scene {
     const targets = maceTargets(h.x, this.enemies);
     const dmg = Math.round(h.stats.atk * MACE_MULT * pw * powerMult(this.skills.power ?? 0));
     const endX = targets.length ? targets[targets.length - 1].x : h.x + MACE_RANGE;
-    h.lunge();
     sfx(this, 'slash');
     const m = this.add.text(h.x + 20, LANE_Y - 60, '🔨', { fontSize: '34px' }).setOrigin(0.5).setDepth(80);
     this.tweens.add({ targets: m, angle: 720, duration: 320 });

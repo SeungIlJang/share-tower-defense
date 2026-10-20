@@ -113,3 +113,11 @@ python tools/extract_sprites.py tools/sprites.config.json --preview preview.png
   원본 시트는 용량이 커서 **저장소에 넣지 않고** `D:\AI\workspace\game\images\image\legendary\`에 둔다
   (설정 경로 `../../images/image/legendary/...`). 다시 변환하려면 그 폴더가 있어야 한다.
 - 전설 그림은 앱 시작 시 착용 중인 것만 받고, 나머지는 스킨 창을 열 때 받는다.
+
+## 👑 영웅 진화 그림
+
+- 키 `hero_1`~`hero_5`(견습 기사 → 기사 → 성기사 → 성전사 군주 → 천상 기사), 영웅 레벨 0·5·10·15·20에서 바뀜(`src/systems/hero.ts` `HERO_TIERS`).
+- 원본(각 2MB대)은 전설 스킨처럼 **저장소에 넣지 않고** `D:\AI\workspace\game\images\image\Hero_*.png`에 둔다.
+- 줄 사이 이펙트가 붙어 자동 검출이 안 되므로 `"bands"`로 줄 위치를 직접 지정, `"split": "gaps"`로 빈 세로줄 기준 프레임 분할
+  (말에서 떨어진 기사·떨어진 이펙트도 한 프레임으로, 먼지 조각은 가까운 프레임에 붙임), 가로선 제거는 끔(`"strip_lines": false`).
+- 5번째 줄 `skill`(스킬 동작)도 시트에 포함 — 다른 유닛 시트 모양은 그대로.

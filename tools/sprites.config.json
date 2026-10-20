@@ -185,5 +185,70 @@
     "resolution": 2,
     "palette": true,
     "height": 40
+  },
+  "hero_1": {
+    "_comment": "👑 영웅 진화 — 견습 기사 Lv0~4",
+    "sheet": "../../images/image/Hero_Mounted_Squire_Knight.png",
+    "x": [0, 1448],
+    "bands": [[35, 193], [228, 393], [425, 606], [628, 823], [841, 1029]],
+    "split": "gaps",
+    "strip_lines": false,
+    "rows": [["idle", 0, 4], ["walk", 1, 6], ["attack", 2, 5], ["skill", 3, 4], ["death", 4, 4]],
+    "resolution": 2,
+    "palette": true,
+    "height": 70,
+    "fps": {"idle": 5, "walk": 10, "attack": 12, "skill": 10, "death": 8}
+  },
+  "hero_2": {
+    "_comment": "👑 영웅 진화 — 기사 Lv5~9",
+    "sheet": "../../images/image/Hero_Mounted_Knight.png",
+    "x": [0, 1448],
+    "bands": [[30, 196], [228, 397], [425, 611], [623, 828], [841, 1034]],
+    "split": "gaps",
+    "strip_lines": false,
+    "rows": [["idle", 0, 4], ["walk", 1, 6], ["attack", 2, 5], ["skill", 3, 4], ["death", 4, 4]],
+    "resolution": 2,
+    "palette": true,
+    "height": 70,
+    "fps": {"idle": 5, "walk": 10, "attack": 12, "skill": 10, "death": 8}
+  },
+  "hero_3": {
+    "_comment": "👑 영웅 진화 — 성기사 Lv10~14",
+    "sheet": "../../images/image/Hero_Mounted_Paladin_Commander.png",
+    "x": [0, 1448],
+    "bands": [[25, 198], [220, 395], [413, 610], [610, 825], [839, 1027]],
+    "split": "gaps",
+    "strip_lines": false,
+    "rows": [["idle", 0, 4], ["walk", 1, 6], ["attack", 2, 5], ["skill", 3, 4], ["death", 4, 4]],
+    "resolution": 2,
+    "palette": true,
+    "height": 70,
+    "fps": {"idle": 5, "walk": 10, "attack": 12, "skill": 10, "death": 8}
+  },
+  "hero_4": {
+    "_comment": "👑 영웅 진화 — 성전사 군주 Lv15~19",
+    "sheet": "../../images/image/Hero_Mounted_Crusader_Lord.png",
+    "x": [0, 1448],
+    "bands": [[22, 204], [218, 406], [418, 630], [630, 848], [858, 1058]],
+    "split": "gaps",
+    "strip_lines": false,
+    "rows": [["idle", 0, 4], ["walk", 1, 6], ["attack", 2, 5], ["skill", 3, 4], ["death", 4, 4]],
+    "resolution": 2,
+    "palette": true,
+    "height": 70,
+    "fps": {"idle": 5, "walk": 10, "attack": 12, "skill": 10, "death": 8}
+  },
+  "hero_5": {
+    "_comment": "👑 영웅 진화 — 천상 기사 Lv20",
+    "sheet": "../../images/image/Hero_Celestial_Paladin_Pegasus.png",
+    "x": [0, 1448],
+    "bands": [[9, 204], [211, 412], [415, 636], [636, 870], [870, 1054]],
+    "split": "gaps",
+    "strip_lines": false,
+    "rows": [["idle", 0, 4], ["walk", 1, 6], ["attack", 2, 5], ["skill", 3, 4], ["death", 4, 4]],
+    "resolution": 2,
+    "palette": true,
+    "height": 70,
+    "fps": {"idle": 5, "walk": 10, "attack": 12, "skill": 10, "death": 8}
   }
 }
