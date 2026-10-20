@@ -56,6 +56,8 @@ export class MetaProgress {
   levels: Record<string, number> = {};
   weaponLevels: Record<string, number> = {}; // 특수 무기 영구 강화 레벨
   baseLevels: Record<string, number> = {}; // 🏰 기지 강화(인구·소환) 레벨
+  heroLevels: Record<string, number> = {}; // 👑 영웅 강화(hero·aura·스킬별 위력)
+  heroOwned: string[] = ['mace']; // 👑 해금한 영웅 스킬
   stars: Record<string, number> = {}; // 스테이지별 최고 별(1~3)
   bestTimes: Record<string, number> = {}; // ⏱️ 스테이지별 최단 클리어 시간(초)
   ownedUnits: string[] = [STARTER_UNIT]; // 구매한 유닛
@@ -299,6 +301,32 @@ export class MetaProgress {
     return true;
   }
 
+  heroLevel(key: string): number {
+    return this.heroLevels[key] ?? 0;
+  }
+
+  ownsHeroSkill(key: string): boolean {
+    return this.heroOwned.includes(key);
+  }
+
+  /** 👑 영웅 스킬 해금 */
+  buyHeroSkill(key: string, price: number): boolean {
+    if (this.ownsHeroSkill(key) || this.gold < price) return false;
+    this.gold -= price;
+    this.heroOwned.push(key);
+    this.save();
+    return true;
+  }
+
+  /** 👑 영웅 강화 한 단계(최대 레벨이면 실패) */
+  upgradeHero(key: string, cost: number, max: number): boolean {
+    if (this.heroLevel(key) >= max || this.gold < cost) return false;
+    this.gold -= cost;
+    this.heroLevels[key] = this.heroLevel(key) + 1;
+    this.save();
+    return true;
+  }
+
   baseLevel(key: BaseKey): number {
     return this.baseLevels[key] ?? 0;
   }
@@ -341,6 +369,8 @@ export class MetaProgress {
         levels?: Record<string, number>;
         weaponLevels?: Record<string, number>;
         baseLevels?: Record<string, number>;
+        heroLevels?: Record<string, number>;
+        heroOwned?: string[];
         stars?: Record<string, number>;
         bestTimes?: Record<string, number>;
         ownedUnits?: string[];
@@ -360,6 +390,8 @@ export class MetaProgress {
       this.levels = obj.levels ?? {};
       this.weaponLevels = obj.weaponLevels ?? {};
       this.baseLevels = obj.baseLevels ?? {};
+      this.heroLevels = obj.heroLevels ?? {};
+      this.heroOwned = obj.heroOwned ?? ['mace'];
       this.stars = obj.stars ?? {};
       this.bestTimes = obj.bestTimes ?? {};
       this.ownedUnits = obj.ownedUnits ?? migrateOwned(STARTER_UNIT, this.levels);
@@ -387,6 +419,8 @@ export class MetaProgress {
         levels: this.levels,
         weaponLevels: this.weaponLevels,
         baseLevels: this.baseLevels,
+        heroLevels: this.heroLevels,
+        heroOwned: this.heroOwned,
         stars: this.stars,
         bestTimes: this.bestTimes,
         ownedUnits: this.ownedUnits,

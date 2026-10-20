@@ -41,6 +41,12 @@ export const SKILLS: SkillDef[] = [
   // 전설
   { key: 'charge', icon: '🔥', name: '무기 충전', grade: 'legend', desc: lines('특수 무기 게이지가', '더 빨리 차요'), value: (lv) => `충전 속도 +${pct(chargeMult(lv) - 1)}`, max: 3, awaken: { name: '무기 달인', desc: '발사 후 게이지 30% 남김' } },
   { key: 'freeSummon', icon: '🎁', name: '무료 소환', grade: 'legend', desc: lines('다음 3번 소환은', '⚡에너지 없이 공짜!'), max: Infinity, instant: true },
+  // ⭕ 오라(👑 영웅 주변)
+  { key: 'auraSize', icon: '⭕', name: '오라 확장', grade: 'common', desc: lines('영웅 주변 노란 원이', '더 넓어져요'), value: (lv) => `오라 반지름 +${25 * lv}`, max: 4, awaken: { name: '거대 오라', desc: '오라 반지름 +100 더' } },
+  { key: 'auraGuard', icon: '🛡️', name: '수호 오라', grade: 'common', desc: lines('노란 원 안 아군이', '덜 아프게 맞아요'), value: (lv) => `오라 안 받는 피해 -${6 * lv}%`, max: 5, awaken: { name: '치유의 땅', desc: '오라 안 아군 초당 2% 회복' } },
+  { key: 'prayer', icon: '🙏', name: '기도', grade: 'common', desc: lines('영웅 스킬에 쓰는', '💧마나가 빨리 차요'), value: (lv) => `마나 회복 +${20 * lv}%`, max: 5 },
+  { key: 'auraBerserk', icon: '😡', name: '광폭 오라', grade: 'rare', desc: lines('원 안 유닛이 체력 30%', '아래면 크게 강해져요'), value: (lv) => `위기 때 공격력 +${40 * lv}%`, max: 2, awaken: { name: '최후의 발악', desc: '위기 때 공격 속도도 2배' } },
+  { key: 'auraSkill', icon: '🌟', name: '기술 오라', grade: 'rare', desc: lines('원 안 유닛의 고유 스킬이', '더 자주 터져요'), value: (lv) => `스킬 주기 -${lv}타`, max: 3, awaken: { name: '오라 공명', desc: '오라 안 스킬 피해 +50%' } },
 ];
 
 export const SKILL_BY_KEY: Record<string, SkillDef> = Object.fromEntries(SKILLS.map((s) => [s.key, s]));

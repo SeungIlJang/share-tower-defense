@@ -115,11 +115,12 @@ export class Hud {
     weaponOwned: boolean[], // 무기별 보유 여부
     unitOwned: Record<string, boolean>, // 유닛별 보유 여부
     looks: Record<string, string> = {}, // 👗 스킨 적용 얼굴(유닛@스킨)
-    onHeroSkill: (index: number) => void = () => {} // 👑 영웅 스킬
+    onHeroSkill: (index: number) => void = () => {}, // 👑 영웅 스킬
+    heroOwned: boolean[] = [true] // 👑 해금한 영웅 스킬
   ) {
     this.scene = scene;
     const d = 100;
-    this.buildHeroPanel(onHeroSkill, d);
+    this.buildHeroPanel(onHeroSkill, heroOwned, d);
     scene.add.rectangle(640, 22, 1280, 44, 0x0d1424, 0.8).setDepth(d);
     this.synergyText = scene.add
       .text(12, 52, '', { fontFamily: 'sans-serif', fontSize: '14px', fontStyle: 'bold', color: '#aef5ff', backgroundColor: '#0d1424cc', padding: { x: 8, y: 4 } })
@@ -274,7 +275,7 @@ export class Hud {
   }
 
   /** 👑 영웅 스킬 버튼 + 💧 마나 바 — 전장 오른쪽 위(하단 HUD와 겹치지 않게) */
-  private buildHeroPanel(onHeroSkill: (index: number) => void, d: number): void {
+  private buildHeroPanel(onHeroSkill: (index: number) => void, owned: boolean[], d: number): void {
     const s = this.scene;
     const x = HERO_PANEL_X;
     // 👑 영웅 체력(쓰러지면 패배) — 마나 바 왼쪽
@@ -294,6 +295,7 @@ export class Hud {
         .text(bx - HERO_BTN_R + 2, cy - HERO_BTN_R + 2, sk.hotkey, { fontFamily: 'sans-serif', fontSize: '13px', fontStyle: 'bold', color: '#3a2a10', backgroundColor: '#ffd34d', padding: { x: 4, y: 0 } })
         .setDepth(d + 3);
       const shade = s.add.graphics().setDepth(d + 1);
+      if (!owned[i]) s.add.text(bx, cy - 4, '🔒', { fontSize: '26px' }).setOrigin(0.5).setDepth(d + 4).setAlpha(0.85); // 강화에서 해금
       bg.setInteractive({ useHandCursor: true });
       bg.on('pointerdown', () => onHeroSkill(i));
       this.heroBtns.push({ bg, shade, cx: bx, cy });

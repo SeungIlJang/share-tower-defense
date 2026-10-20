@@ -59,7 +59,7 @@ export function skillMult(lv: number): number {
 }
 
 /** 이번 공격이 스킬인가 — swings = 지금 공격을 포함한 누적 공격 수 */
-export function isSkillSwing(swings: number, lv: number): boolean {
-  const n = skillEvery(lv);
+export function isSkillSwing(swings: number, lv: number, fewer = 0): boolean {
+  const n = Math.max(2, skillEvery(lv) - fewer); // ✨ 기술 오라: 오라 안에선 더 자주
   return Number.isFinite(n) && swings > 0 && swings % n === 0;
 }

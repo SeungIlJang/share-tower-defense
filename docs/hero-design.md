@@ -107,3 +107,27 @@
 | E. 마무리 | 튜토리얼 안내, 밸런스(적 체력), 휴대폰 테스트 | — |
 
 - A+B(철퇴 1종)까지가 "팔라독 느낌"을 확인할 수 있는 최소 단위 → 먼저 배포해서 휴대폰으로 느낌 확인 후 C~E.
+
+---
+
+## 7. 진행 현황 (2026-10-20)
+- ✅ A 영웅 기본 · B 영웅 스킬 3종(🔨 철퇴 J · 📯 돌격 함성 K · ✨ 성스러운 빛 L)
+- ✅ C 레벨업 오라 카드 5종(⭕ 오라 확장 · 🛡️ 수호 오라 · 🙏 기도 · 😡 광폭 오라 · 🌟 기술 오라, 각성 4종)
+- ✅ D 강화 화면 👑 영웅 탭(영웅 레벨 · 오라 크기 · 스킬 해금 800/1,500 · 스킬 위력)
+- ✅ E 적 체력 +15%(영웅 보정) · 1~2관문 조작 안내
+- ⏳ 영웅 전용 그림 — 아래 프롬프트로 생성 후 `images/image/`에 넣어 주면 `tools/sprites.config.json`에 `hero` 항목으로 등록
+
+## 8. 영웅 그림 생성 프롬프트 (한 번에 복사)
+
+```
+Pixel art sprite sheet of a heroic mounted paladin commander for a 2D side-scrolling tower defense game, facing RIGHT. A brave cute chibi knight in shining silver-and-gold plate armor with a blue cape and a small golden crown-shaped helmet crest, riding a white armored warhorse with a royal blue caparison. Holding a large golden mace raised in one hand and a round shield with a lion emblem. Warm golden holy aura glow under the horse's hooves.
+
+Layout: 5 rows on a plain dark navy background (#1a2133), each row clearly separated with generous empty space between frames, same character size and same ground line in every frame:
+Row 1 Idle: 4 frames (horse breathing, cape waving)
+Row 2 Walk: 6 frames (horse trotting forward)
+Row 3 Attack: 5 frames (mace swing overhead and strike down)
+Row 4 Skill: 4 frames (mace raised high, golden light burst — throwing/shouting pose)
+Row 5 Death: 4 frames (knight falls, horse rears)
+
+Style: crisp 32-bit pixel art, bold dark outlines, bright saturated colors, chibi proportions (big head), consistent with cute fantasy RPG pixel heroes. No text, no labels, no UI, no shadows on the background, no overlapping between frames. 1448x1086 PNG.
+```

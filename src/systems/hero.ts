@@ -51,13 +51,61 @@ export interface HeroSkill {
   key: string;
   icon: string;
   name: string;
+  desc: string;
   mana: number;
   cooldown: number; // 초
   hotkey: string;
+  price: number; // 강화 화면 해금 가격(0 = 기본)
 }
 
-/** 영웅 스킬(지금은 1종 — 이후 📯 돌격 함성 · ✨ 성스러운 빛 추가 예정) */
-export const HERO_SKILLS: HeroSkill[] = [{ key: 'mace', icon: '🔨', name: '철퇴 던지기', mana: 10, cooldown: 1, hotkey: 'J' }];
+/** 영웅 스킬 3종 — 철퇴는 기본, 나머지는 강화 화면 👑 탭에서 해금 */
+export const HERO_SKILLS: HeroSkill[] = [
+  { key: 'mace', icon: '🔨', name: '철퇴 던지기', desc: '앞쪽 적 2명 관통', mana: 10, cooldown: 1, hotkey: 'J', price: 0 },
+  { key: 'rally', icon: '📯', name: '돌격 함성', desc: '5초간 오라 안 공격 속도 +40%', mana: 35, cooldown: 8, hotkey: 'K', price: 800 },
+  { key: 'holy', icon: '✨', name: '성스러운 빛', desc: '오라 안 아군 체력 35% 회복 + 적 밀쳐내기', mana: 50, cooldown: 15, hotkey: 'L', price: 1500 },
+];
+
+/** 📯 돌격 함성 · ✨ 성스러운 빛 수치 */
+export const RALLY_SEC = 5;
+export const RALLY_SPEED = 1.4; // 공격 속도 배수
+export const HOLY_HEAL = 0.35; // 오라 안 아군 최대 체력 비율
+export const HOLY_HERO_HEAL = 0.15; // 영웅 자신
+export const HOLY_PUSH = 70;
+
+// 👑 영구 강화(강화 화면 영웅 탭)
+export const HERO_MAX_LV = 20;
+export const AURA_MAX_LV = 5;
+export const SKILL_MAX_LV = 5;
+
+/** 영웅 레벨 → 체력·공격력 배수 */
+export function heroLvMult(lv: number): number {
+  return 1 + 0.12 * lv;
+}
+
+/** 오라 크기 강화 → 반지름 추가 */
+export function auraBonus(lv: number): number {
+  return 15 * lv;
+}
+
+/** 영웅 스킬 강화 → 위력(피해·지속·회복) 배수 */
+export function heroSkillPower(lv: number): number {
+  return 1 + 0.15 * lv;
+}
+
+/** 영웅 강화 비용 */
+export function heroUpCost(kind: 'hero' | 'aura' | 'skill', lv: number): number {
+  if (kind === 'hero') return 200 + 150 * lv;
+  if (kind === 'aura') return 300 + 200 * lv;
+  return 250 + 200 * lv;
+}
+
+/** ⚖️ 영웅이 생긴 만큼 적 체력 상향 */
+export const HERO_ENEMY_HP = 1.15;
+
+/** 오라 반지름 = 기본 + 영구 강화 + 레벨업 '오라 확장'(+ 각성 거대 오라) */
+export function auraRadius(permLv: number, cardLv: number, awakened: boolean): number {
+  return AURA_RADIUS + auraBonus(permLv) + 25 * cardLv + (awakened ? 100 : 0);
+}
 
 /** 🔨 철퇴 던지기 — 사거리 · 관통 수 · 피해 배율(영웅 공격력 기준) */
 export const MACE_RANGE = 320;

@@ -10,10 +10,11 @@ import { UNIT_SKILLS, skillEvery, skillMult } from '../systems/unitSkills';
 import { skinType, skinsFor } from '../systems/skins';
 import { ensureSkin, loadLook } from '../systems/skinTextures';
 import { BASE_MAX_LV, BASE_UPGRADES } from '../systems/baseUpgrades';
+import { AURA_MAX_LV, AURA_RADIUS, HERO_MAX_LV, HERO_SKILLS, SKILL_MAX_LV, auraBonus, heroLvMult, heroSkillPower, heroUpCost } from '../systems/hero';
 
 const UNITS = unitsData as Record<string, UnitStats>;
 
-type Tab = 'units' | 'weapons' | 'base';
+type Tab = 'units' | 'weapons' | 'base' | 'hero';
 
 /** 지속시간이 핵심인 무기(위력 대신 지속시간 표시) */
 const DURATION_WEAPONS = new Set(['freeze', 'guard', 'berserk']);
@@ -43,9 +44,10 @@ export class UpgradeScene extends Phaser.Scene {
 
     // 탭
     const tabs: [Tab, string, number][] = [
-      ['units', '🛡️ 유닛 강화', 430],
-      ['weapons', '🔥 특수 무기 강화', 640],
-      ['base', '🏰 기지 강화', 850],
+      ['units', '🛡️ 유닛', 370],
+      ['weapons', '🔥 특수 무기', 545],
+      ['hero', '👑 영웅', 720],
+      ['base', '🏰 기지', 880],
     ];
     for (const [key, label, x] of tabs) {
       const t = this.add
@@ -84,6 +86,7 @@ export class UpgradeScene extends Phaser.Scene {
     }
     if (this.tab === 'units') this.renderUnits();
     else if (this.tab === 'weapons') this.renderWeapons();
+    else if (this.tab === 'hero') this.renderHero();
     else this.renderBase();
   }
 
@@ -281,6 +284,42 @@ export class UpgradeScene extends Phaser.Scene {
     if (!sk) return '';
     if (lv <= 0) return `✨${sk.name} (강화 시 해금)`;
     return `✨${sk.name} · ${skillEvery(lv)}타마다 ×${skillMult(lv).toFixed(1)}`;
+  }
+
+  /** 👑 영웅 강화 — 영웅 레벨 · 오라 크기 · 영웅 스킬 해금/위력 */
+  private renderHero(): void {
+    const count = 2 + HERO_SKILLS.length;
+    const pct = (m: number): string => `+${Math.round((m - 1) * 100)}%`;
+    const up = (key: string, kind: 'hero' | 'aura' | 'skill', max: number): void => {
+      if (meta.upgradeHero(key, heroUpCost(kind, meta.heroLevel(key)), max)) {
+        sfx(this, 'weapon');
+        this.render();
+      }
+    };
+    const row = (i: number, key: string, kind: 'hero' | 'aura' | 'skill', max: number, title: string, desc: string): void => {
+      const lv = meta.heroLevel(key);
+      const cost = heroUpCost(kind, lv);
+      const maxed = lv >= max;
+      this.card(i, count, null, `${title}  Lv.${lv}${maxed ? ' (MAX)' : ''}`, desc, maxed ? 'MAX' : `강화 🪙${cost}`, !maxed && meta.gold >= cost, false, () => up(key, kind, max));
+    };
+    const hl = meta.heroLevel('hero');
+    row(0, 'hero', 'hero', HERO_MAX_LV, '👑 영웅', `❤️ 체력 · ⚔️ 공격력 ${pct(heroLvMult(hl))}  →  ${pct(heroLvMult(hl + 1))}`);
+    const al = meta.heroLevel('aura');
+    row(1, 'aura', 'aura', AURA_MAX_LV, '⭕ 오라 크기', `오라 반지름 ${AURA_RADIUS + auraBonus(al)}  →  ${AURA_RADIUS + auraBonus(al + 1)}`);
+    HERO_SKILLS.forEach((sk, j) => {
+      const i = 2 + j;
+      if (!meta.ownsHeroSkill(sk.key)) {
+        this.card(i, count, null, `${sk.icon} ${sk.name}  (${sk.hotkey})`, `${sk.desc} · 💧${sk.mana}`, `🛒 해금\n🪙${sk.price}`, meta.gold >= sk.price, true, () => {
+          if (meta.buyHeroSkill(sk.key, sk.price)) {
+            sfx(this, 'levelup');
+            this.render();
+          }
+        });
+        return;
+      }
+      const lv = meta.heroLevel(sk.key);
+      row(i, sk.key, 'skill', SKILL_MAX_LV, `${sk.icon} ${sk.name}`, `${sk.desc} · 위력 ${pct(heroSkillPower(lv))} → ${pct(heroSkillPower(lv + 1))}`);
+    });
   }
 
   /** 🏰 기지 강화 — 인구 상한 · 소환 에너지(충전·상한) */

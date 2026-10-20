@@ -10,7 +10,7 @@ import { Base } from '../entities/Base';
 import { UNIT_SCALE } from '../entities/Fighter';
 import { FOOD_BASE, energyMax, energyRate, popBonus } from '../systems/baseUpgrades';
 import { summonCooldown } from '../systems/pacing';
-import { HERO_TYPE, HERO_LOOKS, HERO_REGEN, HERO_SKILLS, AURA_ATK, AURA_GUARD, AURA_RADIUS, MANA_MAX, MANA_REGEN, MANA_START, MACE_MULT, MACE_RANGE, heroStats, inAura, maceTargets, stepToward } from '../systems/hero';
+import { HERO_TYPE, HERO_LOOKS, HERO_REGEN, HERO_SKILLS, AURA_ATK, AURA_GUARD, AURA_RADIUS, MANA_MAX, MANA_REGEN, MANA_START, MACE_MULT, MACE_RANGE, RALLY_SEC, RALLY_SPEED, HOLY_HEAL, HOLY_HERO_HEAL, HOLY_PUSH, HERO_ENEMY_HP, heroStats, heroLvMult, heroSkillPower, auraRadius, inAura, maceTargets, stepToward } from '../systems/hero';
 import { HERO_PANEL_X, HERO_BTN_R, HERO_BTN_Y } from '../ui/Hud';
 import { Pool } from '../utils/pool';
 import { ResourceSystem } from '../systems/resources';
@@ -140,6 +140,7 @@ export class BattleScene extends Phaser.Scene {
   private aura!: Phaser.GameObjects.Container; // ⭕ 오라 원
   private mana!: ResourceSystem; // 💧 영웅 스킬 전용
   private heroCd: number[] = []; // 영웅 스킬별 남은 대기(초)
+  private rallyUntil = 0; // 📯 돌격 함성 끝나는 시각(clock)
   private xpNext = xpToNext(1);
   private skills: Record<string, number> = {};
   private picking = false;
@@ -305,7 +306,8 @@ export class BattleScene extends Phaser.Scene {
       this.weapons.map((w) => !!w),
       this.unitOwned,
       this.looks,
-      (i) => this.castHeroSkill(i)
+      (i) => this.castHeroSkill(i),
+      HERO_SKILLS.map((s) => meta.ownsHeroSkill(s.key))
     );
     // 키보드 1~9 = 특수 무기
     this.input.keyboard?.on('keydown', (ev: KeyboardEvent) => {
@@ -577,6 +579,8 @@ export class BattleScene extends Phaser.Scene {
     const e = this.enemyPool.acquire();
     e.spawn(this.enemyBase.x - 50, LANE_Y, stats, type, 'enemy');
     e.reward = stats.reward;
+    e.maxHp = Math.round(e.maxHp * HERO_ENEMY_HP); // ⚖️ 영웅이 생긴 만큼 적 체력 +15%
+    e.hp = e.maxHp;
     const mult = this.endless ? endlessMult(endlessWaveAt(this.clock)) : this.stage.enemyMult ?? 1;
     if (mult !== 1) {
       e.stats = { ...e.stats, atk: Math.round(e.stats.atk * (1 + (mult - 1) * 0.6)) };
@@ -647,7 +651,7 @@ export class BattleScene extends Phaser.Scene {
 
     this.energy.update(dt * rechargeMult(this.skills.recharge ?? 0)); // 🔋 에너지 충전
     for (const k in this.summonCd) this.summonCd[k] = Math.max(0, this.summonCd[k] - dt);
-    this.mana.update(dt);
+    this.mana.update(dt * (1 + 0.2 * (this.skills.prayer ?? 0))); // 🙏 기도
     this.heroCd = this.heroCd.map((c) => Math.max(0, c - dt));
     this.updateHero(dt);
     for (const ev of this.waves.update(dt)) this.spawnEnemy(ev.type);
@@ -743,7 +747,7 @@ export class BattleScene extends Phaser.Scene {
     this.hud.updateHero(
       this.mana.amount,
       this.mana.max,
-      HERO_SKILLS.map((s, i) => ({ cd: (this.heroCd[i] ?? 0) / s.cooldown, enough: this.mana.amount >= s.mana && this.hero?.active })),
+      HERO_SKILLS.map((s, i) => ({ cd: (this.heroCd[i] ?? 0) / s.cooldown, enough: this.mana.amount >= s.mana && this.hero?.active && meta.ownsHeroSkill(s.key) })),
       this.hero?.active ? this.hero.hp / this.hero.maxHp : 0
     );
     this.hud.update({
@@ -811,8 +815,10 @@ export class BattleScene extends Phaser.Scene {
     if (att.side === 'ally') {
       const lv = meta.level(att.type);
       att.swings++;
-      if (lv > 0 && UNIT_SKILLS[att.type] && isSkillSwing(att.swings, lv)) {
-        this.castSkill(att, def, lv, (berserk ? BERSERK_ATK : 1) * powerMult(this.skills.power ?? 0) * (this.inHeroAura(att.x) ? AURA_ATK : 1));
+      const inA = this.inHeroAura(att.x);
+      if (lv > 0 && UNIT_SKILLS[att.type] && isSkillSwing(att.swings, lv, inA ? this.skills.auraSkill ?? 0 : 0)) {
+        const resonance = inA && awakened(this.skills, 'auraSkill') ? 1.5 : 1; // 🌟 오라 공명
+        this.castSkill(att, def, lv, (berserk ? BERSERK_ATK : 1) * powerMult(this.skills.power ?? 0) * (inA ? AURA_ATK : 1) * resonance);
         let scd = attackCooldown(att.stats.atkSpeed) * hasteMult(this.skills.haste ?? 0);
         if (berserk) scd *= BERSERK_COOLDOWN;
         att.cooldown = scd;
@@ -822,13 +828,15 @@ export class BattleScene extends Phaser.Scene {
     const ally = att.side === 'ally';
     const crit = ally && Math.random() < critChance(this.skills.crit ?? 0); // 💥 치명타(🎯 스킬로 증가)
     const critMul = awakened(this.skills, 'power') ? CRIT_MULT_AWAKE : CRIT_MULT; // 💪 일격필살
-    const auraAtk = ally && this.inHeroAura(att.x) ? AURA_ATK : 1; // ⭕ 오라
+    const attInAura = ally && this.inHeroAura(att.x);
+    const lowHp = attInAura && att.hp / att.maxHp < 0.3 && (this.skills.auraBerserk ?? 0) > 0; // 😡 광폭 오라
+    const auraAtk = attInAura ? AURA_ATK * (lowHp ? 1 + 0.4 * (this.skills.auraBerserk ?? 0) : 1) : 1; // ⭕ 오라
     const synAtk = ally ? synergyMult(this.synergies, att.type, 'atk') * powerMult(this.skills.power ?? 0) * auraAtk : 1; // 🤝 조합 · 💪 공격력
     let dmg = computeDamage(att.stats.atk * (berserk ? BERSERK_ATK : 1) * (crit ? critMul : 1) * synAtk, def.stats.def);
     if (def.side === 'ally') {
       dmg = Math.max(1, Math.round(dmg * synergyMult(this.synergies, def.type, 'guard')));
       if (awakened(this.skills, 'vigor')) dmg = Math.max(1, Math.round(dmg * 0.85)); // ❤️ 강철 피부
-      if (this.inHeroAura(def.x)) dmg = Math.max(1, Math.round(dmg * AURA_GUARD)); // ⭕ 오라
+      if (this.inHeroAura(def.x)) dmg = Math.max(1, Math.round(dmg * AURA_GUARD * (1 - 0.06 * (this.skills.auraGuard ?? 0)))); // ⭕ 오라 · 🛡️ 수호 오라
     }
     // 🎯 연쇄 폭발(각성): 치명타 때 주변 적도 절반 피해
     const chainDmg = Math.round(dmg * 0.5);
@@ -858,6 +866,8 @@ export class BattleScene extends Phaser.Scene {
     if (att.side === 'ally') cd *= hasteMult(this.skills.haste ?? 0); // 신속 오라
     if (berserk) cd *= BERSERK_COOLDOWN;
     if (att.side === 'ally') cd *= synergyMult(this.synergies, att.type, 'speed');
+    if (attInAura && this.clock < this.rallyUntil) cd /= RALLY_SPEED; // 📯 돌격 함성
+    if (lowHp && awakened(this.skills, 'auraBerserk')) cd *= 0.5; // 😡 최후의 발악
     if (ally && awakened(this.skills, 'haste') && Math.random() < 0.2) cd = 0.12; // ⚔️ 연속 공격
     att.cooldown = cd;
   }
@@ -1064,7 +1074,10 @@ export class BattleScene extends Phaser.Scene {
   private spawnHero(): void {
     const look = HERO_LOOKS.find((l) => this.textures.exists(textureKey(l))) ?? HERO_TYPE;
     this.hero = new Unit(this);
-    this.hero.spawn(this.playerBase.x + 90, LANE_Y, heroStats(this.stage.id, this.endless ? 1 : this.stage.enemyMult ?? 1), HERO_TYPE, 'ally', look);
+    const base = heroStats(this.stage.id, this.endless ? 1 : this.stage.enemyMult ?? 1);
+    const hm = heroLvMult(meta.heroLevel('hero')); // 👑 영구 강화
+    this.hero.spawn(this.playerBase.x + 90, LANE_Y, { ...base, hp: Math.round(base.hp * hm), atk: Math.round(base.atk * hm) }, HERO_TYPE, 'ally', look);
+    this.rallyUntil = 0;
     this.hero.setBodyScale(1.3);
     this.heroTarget = null;
     this.heroDir = 0;
@@ -1096,8 +1109,13 @@ export class BattleScene extends Phaser.Scene {
     }
   }
 
+  /** ⭕ 지금 오라 반지름(영구 강화 + 레벨업 '오라 확장' + 각성) */
+  private auraR(): number {
+    return auraRadius(meta.heroLevel('aura'), this.skills.auraSize ?? 0, awakened(this.skills, 'auraSize'));
+  }
+
   private inHeroAura(x: number): boolean {
-    return !!this.hero?.active && inAura(x, this.hero.x, AURA_RADIUS);
+    return !!this.hero?.active && inAura(x, this.hero.x, this.auraR());
   }
 
   /** 👑 영웅 — 탭/키로 이동, 서 있을 땐 가까운 적·적 기지 공격, 조금씩 체력 회복 */
@@ -1131,6 +1149,11 @@ export class BattleScene extends Phaser.Scene {
       }
     }
     this.aura.x = h.x;
+    this.aura.scaleX = this.auraR() / AURA_RADIUS; // 오라가 넓어지면 원도 커짐
+    const rally = this.clock < this.rallyUntil;
+    this.aura.setAlpha(rally ? 1 : 0.85);
+    // 🛡️ 치유의 땅(수호 오라 각성): 오라 안 아군 초당 2% 회복
+    if (awakened(this.skills, 'auraGuard')) for (const u of this.units) if (u.active && this.inHeroAura(u.x)) u.heal(u.maxHp * 0.02 * dt);
   }
 
   /** 👑 영웅 스킬 사용 — 💧 마나 + 대기시간 */
@@ -1138,19 +1161,52 @@ export class BattleScene extends Phaser.Scene {
     if (this.over || this.picking || this.paused || this.reviving || !this.hero?.active) return;
     const sk = HERO_SKILLS[i];
     if (!sk || (this.heroCd[i] ?? 0) > 0) return;
+    if (!meta.ownsHeroSkill(sk.key)) {
+      this.hud.heroDeny('🔒 강화 화면에서 해금!');
+      return;
+    }
     if (!this.mana.spend(sk.mana)) {
       this.hud.heroDeny('💧 마나 부족!');
       return;
     }
     this.heroCd[i] = sk.cooldown;
-    if (sk.key === 'mace') this.throwMace();
+    const pw = heroSkillPower(meta.heroLevel(sk.key)); // 👑 스킬 강화
+    if (sk.key === 'mace') this.throwMace(pw);
+    else if (sk.key === 'rally') this.rally(pw);
+    else if (sk.key === 'holy') this.holyLight(pw);
+  }
+
+  /** 📯 돌격 함성 — 오라 안 유닛 공격 속도 증가(지속 = 5초 × 위력) */
+  private rally(pw: number): void {
+    this.rallyUntil = this.clock + RALLY_SEC * pw;
+    this.banner('📯 돌격!', 0xffb02e);
+    sfx(this, 'weapon');
+    this.hero.lunge();
+    const ring = this.add.ellipse(this.hero.x, LANE_Y + 34, this.auraR() * 2, 46).setStrokeStyle(8, 0xffb02e).setDepth(85);
+    this.tweens.add({ targets: ring, scaleX: 1.5, scaleY: 2.2, alpha: 0, duration: 600, onComplete: () => ring.destroy() });
+  }
+
+  /** ✨ 성스러운 빛 — 오라 안 아군 회복 + 오라 안 적 밀쳐내기 */
+  private holyLight(pw: number): void {
+    const h = this.hero;
+    for (const u of this.units) if (u.active && this.inHeroAura(u.x)) u.heal(Math.round(u.maxHp * HOLY_HEAL * pw));
+    h.heal(Math.round(h.maxHp * HOLY_HERO_HEAL * pw));
+    for (const e of this.enemies) {
+      if (!e.active || BOSS.has(e.type) || !this.inHeroAura(e.x)) continue;
+      e.moveBy(Math.min(HOLY_PUSH, Math.max(0, this.enemyBase.x - 50 - e.x)));
+    }
+    this.banner('✨ 성스러운 빛!', 0xfff0a0);
+    sfx(this, 'heal');
+    const r = this.auraR();
+    const pillar = this.add.rectangle(h.x, LANE_Y - 140, r * 2, 300, 0xfff6c0, 0.45).setDepth(84);
+    this.tweens.add({ targets: pillar, alpha: 0, scaleX: 1.2, duration: 700, onComplete: () => pillar.destroy() });
   }
 
   /** 🔨 철퇴 던지기 — 앞으로 빙글빙글 날아가 가까운 적 2명 관통 */
-  private throwMace(): void {
+  private throwMace(pw = 1): void {
     const h = this.hero;
     const targets = maceTargets(h.x, this.enemies);
-    const dmg = Math.round(h.stats.atk * MACE_MULT * powerMult(this.skills.power ?? 0));
+    const dmg = Math.round(h.stats.atk * MACE_MULT * pw * powerMult(this.skills.power ?? 0));
     const endX = targets.length ? targets[targets.length - 1].x : h.x + MACE_RANGE;
     h.lunge();
     sfx(this, 'slash');
