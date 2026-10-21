@@ -77,6 +77,28 @@ def foreground(crop, thresh, strip_lines=False, holes=False, drop_thin=False):
     return fg
 
 
+def split_by_erosion(clean, expected):
+    """붙은 프레임 나누기 — 살짝 깎아(침식) 창끝·이펙트가 닿은 곳을 끊고, 큰 덩어리(캐릭터)마다 원래 픽셀을 가장 가까운 덩어리에 돌려줌.
+    창이 다음 프레임 망토에 닿아도 창은 제 캐릭터에 붙음. 실패하면 None."""
+    for it in range(1, 7):
+        er = ndimage.binary_erosion(clean, iterations=it)
+        lab, n = ndimage.label(er)
+        if n < expected:
+            continue
+        sizes = ndimage.sum(er, lab, range(1, n + 1))
+        order = np.argsort(sizes)[::-1]
+        if len(order) < expected or sizes[order[expected - 1]] < sizes[order[0]] * 0.25:
+            continue  # 큰 덩어리가 예상 수만큼 안 나옴
+        keep = [int(i) + 1 for i in order[:expected]]
+        seeds = np.isin(lab, keep)
+        _, (iy, ix) = ndimage.distance_transform_edt(~seeds, return_indices=True)
+        owner = lab[iy, ix]  # 각 픽셀 → 가장 가까운 큰 덩어리
+        owner[~clean] = 0
+        xs_of = {k: np.nonzero((lab == k))[1].mean() for k in keep}
+        return [owner == k for k in sorted(keep, key=lambda k: xs_of[k])]
+    return None
+
+
 def split_by_gaps(fg, expected):
     """빈 세로줄(간격)로 프레임 나누기 — 말에서 떨어진 기사·떨어진 이펙트도 한 프레임으로.
     조각이 예상보다 많으면 가장 좁은 간격부터 합쳐 expected 개로 맞춤(작은 먼지 조각은 가까운 프레임에 붙임). 정렬 기준은 가장 큰 덩어리(몸통)."""
@@ -94,7 +116,14 @@ def split_by_gaps(fg, expected):
             segs.append([start, x])
             start = None
     mass = [int(clean[:, a:b].sum()) for a, b in segs]
-    big_min = max(mass) * 0.15 if mass else 0
+    # 덩어리가 '몸통 크기'인지: 조각 안 가장 큰 연결 덩어리가 전체 중 가장 큰 몸통의 35% 이상(날아가는 구슬·화살은 작아서 제외)
+    def body(a: int, b: int) -> int:
+        sub, m = ndimage.label(clean[:, a:b])
+        return int(ndimage.sum(clean[:, a:b], sub, range(1, m + 1)).max()) if m else 0
+    bodies = [body(a, b) for a, b in segs]
+    big_body = max(bodies) if bodies else 0
+    mass = [m if bd >= big_body * 0.35 else 0 for m, bd in zip(mass, bodies)]
+    big_min = max(mass) * 0.15 if mass and max(mass) else 0
     big = [g for g, m in zip(segs, mass) if m >= big_min]  # 먼지·반짝이·옆 줄에서 넘어온 선은 프레임으로 세지 않음
     small = [g for g, m in zip(segs, mass) if m < big_min]
     segs = big or segs
@@ -106,6 +135,32 @@ def split_by_gaps(fg, expected):
     for a, b in small:  # 작은 조각은 가장 가까운 프레임에 붙임
         k = min(range(len(merged)), key=lambda i: max(merged[i][0] - b, a - merged[i][1], 0))
         merged[k] = [min(merged[k][0], a), max(merged[k][1], b)]
+    if 0 < len(merged) < expected:  # 창·이펙트로 이웃 프레임과 붙음 → 먼저 침식 분할
+        masks = split_by_erosion(clean, expected)
+        if masks is not None:
+            out = []
+            for whole in masks:
+                sub, m = ndimage.label(whole)
+                sizes = ndimage.sum(whole, sub, range(1, m + 1))
+                main = sub == int(np.argmax(sizes)) + 1
+                ys, xs = np.nonzero(main)
+                top, bottom = ys.min(), ys.max()
+                head = xs[ys < top + (bottom - top) * 0.35]
+                out.append({'mask': whole, 'ax': float(np.median(head)), 'foot': int(bottom), 'top': int(top)})
+            return out
+    # 그래도 안 되면: 가장 넓은 조각을 '한 프레임 폭' 근처의 가장 가는 세로줄에서 자름
+    colsum = clean.sum(0)
+    cuts = set()  # 잘라서 생긴 경계(그 경계에 붙은 작은 조각 = 이웃 프레임의 창끝 → 버림)
+    while 0 < len(merged) < expected:
+        w0 = sum(b - a for a, b in merged) / expected  # 한 프레임 평균 폭
+        k = max(range(len(merged)), key=lambda i: merged[i][1] - merged[i][0])
+        a, b = merged[k]
+        lo, hi = int(a + w0 * 0.6), int(min(b - w0 * 0.4, a + w0 * 1.4))
+        if hi <= lo:
+            break
+        x = lo + int(np.argmin(colsum[lo:hi]))
+        merged[k:k + 1] = [[a, x], [x, b]]
+        cuts.update({x})
     if len(merged) != expected:
         print(f'    ! 프레임 {len(merged)}개 (예상 {expected})')
     out = []
@@ -114,6 +169,16 @@ def split_by_gaps(fg, expected):
         whole[:, a:b] = clean[:, a:b]
         sub, m = ndimage.label(whole)
         sizes = ndimage.sum(whole, sub, range(1, m + 1))
+        if (a in cuts or b in cuts) and m > 1:  # 잘린 경계에 붙은 작은 조각(이웃의 창끝 등) 버림
+            biggest = sizes.max()
+            for i in range(m):
+                comp = sub == i + 1
+                xs_c = np.nonzero(comp.any(0))[0]
+                touches = (a in cuts and xs_c.min() <= a) or (b in cuts and xs_c.max() >= b - 1)
+                if touches and sizes[i] < biggest * 0.15:
+                    whole[comp] = False
+            sub, m = ndimage.label(whole)
+            sizes = ndimage.sum(whole, sub, range(1, m + 1))
         main = sub == int(np.argmax(sizes)) + 1
         ys, xs = np.nonzero(main)
         top, bottom = ys.min(), ys.max()

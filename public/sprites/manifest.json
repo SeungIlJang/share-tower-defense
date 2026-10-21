@@ -2174,5 +2174,2837 @@
         "fps": 10
       }
     }
+  },
+  "archer_t2": {
+    "file": "archer_t2.png",
+    "filter": "linear",
+    "frameWidth": 223,
+    "frameHeight": 137,
+    "scale": 0.499,
+    "footY": 136,
+    "anims": {
+      "idle": {
+        "frames": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "fps": 5
+      },
+      "walk": {
+        "frames": [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "fps": 9
+      },
+      "attack": {
+        "frames": [
+          12,
+          13,
+          14,
+          15,
+          16
+        ],
+        "fps": 11
+      },
+      "death": {
+        "frames": [
+          18,
+          19,
+          20,
+          21
+        ],
+        "fps": 8
+      },
+      "skill": {
+        "frames": [
+          24,
+          25,
+          26,
+          27
+        ],
+        "fps": 10
+      }
+    },
+    "icon": "icon_archer_t2.png"
+  },
+  "archer_t3": {
+    "file": "archer_t3.png",
+    "filter": "linear",
+    "frameWidth": 248,
+    "frameHeight": 143,
+    "scale": 0.5,
+    "footY": 142,
+    "anims": {
+      "idle": {
+        "frames": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "fps": 5
+      },
+      "walk": {
+        "frames": [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "fps": 9
+      },
+      "attack": {
+        "frames": [
+          12,
+          13,
+          14,
+          15,
+          16
+        ],
+        "fps": 11
+      },
+      "death": {
+        "frames": [
+          18,
+          19,
+          20,
+          21
+        ],
+        "fps": 8
+      },
+      "skill": {
+        "frames": [
+          24,
+          25,
+          26,
+          27
+        ],
+        "fps": 10
+      }
+    },
+    "icon": "icon_archer_t3.png"
+  },
+  "archer@legend_t2": {
+    "file": "archer@legend_t2.png",
+    "filter": "linear",
+    "frameWidth": 308,
+    "frameHeight": 168,
+    "scale": 0.5,
+    "footY": 166,
+    "anims": {
+      "idle": {
+        "frames": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "fps": 5
+      },
+      "walk": {
+        "frames": [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "fps": 9
+      },
+      "attack": {
+        "frames": [
+          12,
+          13,
+          14,
+          15,
+          16
+        ],
+        "fps": 11
+      },
+      "death": {
+        "frames": [
+          18,
+          19,
+          20,
+          21
+        ],
+        "fps": 8
+      },
+      "skill": {
+        "frames": [
+          24,
+          25,
+          26,
+          27
+        ],
+        "fps": 10
+      }
+    },
+    "icon": "icon_archer@legend_t2.png"
+  },
+  "archer@legend_t3": {
+    "file": "archer@legend_t3.png",
+    "filter": "linear",
+    "frameWidth": 290,
+    "frameHeight": 141,
+    "scale": 0.502,
+    "footY": 140,
+    "anims": {
+      "idle": {
+        "frames": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "fps": 5
+      },
+      "walk": {
+        "frames": [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "fps": 9
+      },
+      "attack": {
+        "frames": [
+          12,
+          13,
+          14,
+          15,
+          16
+        ],
+        "fps": 11
+      },
+      "death": {
+        "frames": [
+          18,
+          19,
+          20,
+          21
+        ],
+        "fps": 8
+      },
+      "skill": {
+        "frames": [
+          24,
+          25,
+          26,
+          27
+        ],
+        "fps": 10
+      }
+    },
+    "icon": "icon_archer@legend_t3.png"
+  },
+  "cannon_t2": {
+    "file": "cannon_t2.png",
+    "filter": "linear",
+    "frameWidth": 335,
+    "frameHeight": 141,
+    "scale": 0.501,
+    "footY": 139,
+    "anims": {
+      "idle": {
+        "frames": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "fps": 5
+      },
+      "walk": {
+        "frames": [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "fps": 9
+      },
+      "attack": {
+        "frames": [
+          12,
+          13,
+          14,
+          15,
+          16
+        ],
+        "fps": 11
+      },
+      "death": {
+        "frames": [
+          18,
+          19,
+          20,
+          21
+        ],
+        "fps": 8
+      },
+      "skill": {
+        "frames": [
+          24,
+          25,
+          26,
+          27
+        ],
+        "fps": 10
+      }
+    },
+    "icon": "icon_cannon_t2.png"
+  },
+  "cannon_t3": {
+    "file": "cannon_t3.png",
+    "filter": "linear",
+    "frameWidth": 397,
+    "frameHeight": 138,
+    "scale": 0.5,
+    "footY": 137,
+    "anims": {
+      "idle": {
+        "frames": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "fps": 5
+      },
+      "walk": {
+        "frames": [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "fps": 9
+      },
+      "attack": {
+        "frames": [
+          12,
+          13,
+          14,
+          15,
+          16
+        ],
+        "fps": 11
+      },
+      "death": {
+        "frames": [
+          18,
+          19,
+          20,
+          21
+        ],
+        "fps": 8
+      },
+      "skill": {
+        "frames": [
+          24,
+          25,
+          26,
+          27
+        ],
+        "fps": 10
+      }
+    },
+    "icon": "icon_cannon_t3.png"
+  },
+  "cannon@legend_t2": {
+    "file": "cannon@legend_t2.png",
+    "filter": "linear",
+    "frameWidth": 319,
+    "frameHeight": 137,
+    "scale": 0.502,
+    "footY": 135,
+    "anims": {
+      "idle": {
+        "frames": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "fps": 5
+      },
+      "walk": {
+        "frames": [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "fps": 9
+      },
+      "attack": {
+        "frames": [
+          12,
+          13,
+          14,
+          15,
+          16
+        ],
+        "fps": 11
+      },
+      "death": {
+        "frames": [
+          18,
+          19,
+          20,
+          21
+        ],
+        "fps": 8
+      },
+      "skill": {
+        "frames": [
+          24,
+          25,
+          26,
+          27
+        ],
+        "fps": 10
+      }
+    },
+    "icon": "icon_cannon@legend_t2.png"
+  },
+  "cannon@legend_t3": {
+    "file": "cannon@legend_t3.png",
+    "filter": "linear",
+    "frameWidth": 283,
+    "frameHeight": 133,
+    "scale": 0.501,
+    "footY": 131,
+    "anims": {
+      "idle": {
+        "frames": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "fps": 5
+      },
+      "walk": {
+        "frames": [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "fps": 9
+      },
+      "attack": {
+        "frames": [
+          12,
+          13,
+          14,
+          15,
+          16
+        ],
+        "fps": 11
+      },
+      "death": {
+        "frames": [
+          18,
+          19,
+          20,
+          21
+        ],
+        "fps": 8
+      },
+      "skill": {
+        "frames": [
+          24,
+          25,
+          26,
+          27
+        ],
+        "fps": 10
+      }
+    },
+    "icon": "icon_cannon@legend_t3.png"
+  },
+  "cavalry_t2": {
+    "file": "cavalry_t2.png",
+    "filter": "linear",
+    "frameWidth": 327,
+    "frameHeight": 162,
+    "scale": 0.499,
+    "footY": 160,
+    "anims": {
+      "idle": {
+        "frames": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "fps": 5
+      },
+      "walk": {
+        "frames": [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "fps": 9
+      },
+      "attack": {
+        "frames": [
+          12,
+          13,
+          14,
+          15,
+          16
+        ],
+        "fps": 11
+      },
+      "death": {
+        "frames": [
+          18,
+          19,
+          20,
+          21
+        ],
+        "fps": 8
+      },
+      "skill": {
+        "frames": [
+          24,
+          25,
+          26,
+          27
+        ],
+        "fps": 10
+      }
+    },
+    "icon": "icon_cavalry_t2.png"
+  },
+  "cavalry_t3": {
+    "file": "cavalry_t3.png",
+    "filter": "linear",
+    "frameWidth": 305,
+    "frameHeight": 169,
+    "scale": 0.499,
+    "footY": 168,
+    "anims": {
+      "idle": {
+        "frames": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "fps": 5
+      },
+      "walk": {
+        "frames": [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "fps": 9
+      },
+      "attack": {
+        "frames": [
+          12,
+          13,
+          14,
+          15,
+          16
+        ],
+        "fps": 11
+      },
+      "death": {
+        "frames": [
+          18,
+          19,
+          20,
+          21
+        ],
+        "fps": 8
+      },
+      "skill": {
+        "frames": [
+          24,
+          25,
+          26,
+          27
+        ],
+        "fps": 10
+      }
+    },
+    "icon": "icon_cavalry_t3.png"
+  },
+  "cavalry@legend_t2": {
+    "file": "cavalry@legend_t2.png",
+    "filter": "linear",
+    "frameWidth": 280,
+    "frameHeight": 160,
+    "scale": 0.501,
+    "footY": 156,
+    "anims": {
+      "idle": {
+        "frames": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "fps": 5
+      },
+      "walk": {
+        "frames": [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "fps": 9
+      },
+      "attack": {
+        "frames": [
+          12,
+          13,
+          14,
+          15,
+          16
+        ],
+        "fps": 11
+      },
+      "death": {
+        "frames": [
+          18,
+          19,
+          20,
+          21
+        ],
+        "fps": 8
+      },
+      "skill": {
+        "frames": [
+          24,
+          25,
+          26,
+          27
+        ],
+        "fps": 10
+      }
+    },
+    "icon": "icon_cavalry@legend_t2.png"
+  },
+  "cavalry@legend_t3": {
+    "file": "cavalry@legend_t3.png",
+    "filter": "linear",
+    "frameWidth": 310,
+    "frameHeight": 162,
+    "scale": 0.499,
+    "footY": 160,
+    "anims": {
+      "idle": {
+        "frames": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "fps": 5
+      },
+      "walk": {
+        "frames": [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "fps": 9
+      },
+      "attack": {
+        "frames": [
+          12,
+          13,
+          14,
+          15,
+          16
+        ],
+        "fps": 11
+      },
+      "death": {
+        "frames": [
+          18,
+          19,
+          20,
+          21
+        ],
+        "fps": 8
+      },
+      "skill": {
+        "frames": [
+          24,
+          25,
+          26,
+          27
+        ],
+        "fps": 10
+      }
+    },
+    "icon": "icon_cavalry@legend_t3.png"
+  },
+  "cleric_t2": {
+    "file": "cleric_t2.png",
+    "filter": "linear",
+    "frameWidth": 207,
+    "frameHeight": 155,
+    "scale": 0.502,
+    "footY": 154,
+    "anims": {
+      "idle": {
+        "frames": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "fps": 5
+      },
+      "walk": {
+        "frames": [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "fps": 9
+      },
+      "attack": {
+        "frames": [
+          12,
+          13,
+          14,
+          15,
+          16
+        ],
+        "fps": 11
+      },
+      "death": {
+        "frames": [
+          18,
+          19,
+          20,
+          21
+        ],
+        "fps": 8
+      },
+      "skill": {
+        "frames": [
+          24,
+          25,
+          26,
+          27
+        ],
+        "fps": 10
+      }
+    },
+    "icon": "icon_cleric_t2.png"
+  },
+  "cleric_t3": {
+    "file": "cleric_t3.png",
+    "filter": "linear",
+    "frameWidth": 250,
+    "frameHeight": 164,
+    "scale": 0.5,
+    "footY": 158,
+    "anims": {
+      "idle": {
+        "frames": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "fps": 5
+      },
+      "walk": {
+        "frames": [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "fps": 9
+      },
+      "attack": {
+        "frames": [
+          12,
+          13,
+          14,
+          15,
+          16
+        ],
+        "fps": 11
+      },
+      "death": {
+        "frames": [
+          18,
+          19,
+          20,
+          21
+        ],
+        "fps": 8
+      },
+      "skill": {
+        "frames": [
+          24,
+          25,
+          26,
+          27
+        ],
+        "fps": 10
+      }
+    },
+    "icon": "icon_cleric_t3.png"
+  },
+  "cleric@legend_t2": {
+    "file": "cleric@legend_t2.png",
+    "filter": "linear",
+    "frameWidth": 209,
+    "frameHeight": 157,
+    "scale": 0.501,
+    "footY": 150,
+    "anims": {
+      "idle": {
+        "frames": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "fps": 5
+      },
+      "walk": {
+        "frames": [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "fps": 9
+      },
+      "attack": {
+        "frames": [
+          12,
+          13,
+          14,
+          15,
+          16
+        ],
+        "fps": 11
+      },
+      "death": {
+        "frames": [
+          18,
+          19,
+          20,
+          21
+        ],
+        "fps": 8
+      },
+      "skill": {
+        "frames": [
+          24,
+          25,
+          26,
+          27
+        ],
+        "fps": 10
+      }
+    },
+    "icon": "icon_cleric@legend_t2.png"
+  },
+  "cleric@legend_t3": {
+    "file": "cleric@legend_t3.png",
+    "filter": "linear",
+    "frameWidth": 200,
+    "frameHeight": 156,
+    "scale": 0.501,
+    "footY": 150,
+    "anims": {
+      "idle": {
+        "frames": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "fps": 5
+      },
+      "walk": {
+        "frames": [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "fps": 9
+      },
+      "attack": {
+        "frames": [
+          12,
+          13,
+          14,
+          15,
+          16
+        ],
+        "fps": 11
+      },
+      "death": {
+        "frames": [
+          18,
+          19,
+          20,
+          21
+        ],
+        "fps": 8
+      },
+      "skill": {
+        "frames": [
+          24,
+          25,
+          26,
+          27
+        ],
+        "fps": 10
+      }
+    },
+    "icon": "icon_cleric@legend_t3.png"
+  },
+  "darkmage_t2": {
+    "file": "darkmage_t2.png",
+    "filter": "linear",
+    "frameWidth": 259,
+    "frameHeight": 140,
+    "scale": 0.5,
+    "footY": 139,
+    "anims": {
+      "idle": {
+        "frames": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "fps": 5
+      },
+      "walk": {
+        "frames": [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "fps": 9
+      },
+      "attack": {
+        "frames": [
+          12,
+          13,
+          14,
+          15,
+          16
+        ],
+        "fps": 11
+      },
+      "death": {
+        "frames": [
+          18,
+          19,
+          20,
+          21
+        ],
+        "fps": 8
+      },
+      "skill": {
+        "frames": [
+          24,
+          25,
+          26,
+          27
+        ],
+        "fps": 10
+      }
+    },
+    "icon": "icon_darkmage_t2.png"
+  },
+  "darkmage_t3": {
+    "file": "darkmage_t3.png",
+    "filter": "linear",
+    "frameWidth": 272,
+    "frameHeight": 140,
+    "scale": 0.501,
+    "footY": 139,
+    "anims": {
+      "idle": {
+        "frames": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "fps": 5
+      },
+      "walk": {
+        "frames": [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "fps": 9
+      },
+      "attack": {
+        "frames": [
+          12,
+          13,
+          14,
+          15,
+          16
+        ],
+        "fps": 11
+      },
+      "death": {
+        "frames": [
+          18,
+          19,
+          20,
+          21
+        ],
+        "fps": 8
+      },
+      "skill": {
+        "frames": [
+          24,
+          25,
+          26,
+          27
+        ],
+        "fps": 10
+      }
+    },
+    "icon": "icon_darkmage_t3.png"
+  },
+  "darkmage@legend_t2": {
+    "file": "darkmage@legend_t2.png",
+    "filter": "linear",
+    "frameWidth": 287,
+    "frameHeight": 139,
+    "scale": 0.499,
+    "footY": 138,
+    "anims": {
+      "idle": {
+        "frames": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "fps": 5
+      },
+      "walk": {
+        "frames": [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "fps": 9
+      },
+      "attack": {
+        "frames": [
+          12,
+          13,
+          14,
+          15,
+          16
+        ],
+        "fps": 11
+      },
+      "death": {
+        "frames": [
+          18,
+          19,
+          20,
+          21
+        ],
+        "fps": 8
+      },
+      "skill": {
+        "frames": [
+          24,
+          25,
+          26,
+          27
+        ],
+        "fps": 10
+      }
+    },
+    "icon": "icon_darkmage@legend_t2.png"
+  },
+  "darkmage@legend_t3": {
+    "file": "darkmage@legend_t3.png",
+    "filter": "linear",
+    "frameWidth": 261,
+    "frameHeight": 146,
+    "scale": 0.499,
+    "footY": 145,
+    "anims": {
+      "idle": {
+        "frames": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "fps": 5
+      },
+      "walk": {
+        "frames": [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "fps": 9
+      },
+      "attack": {
+        "frames": [
+          12,
+          13,
+          14,
+          15,
+          16
+        ],
+        "fps": 11
+      },
+      "death": {
+        "frames": [
+          18,
+          19,
+          20,
+          21
+        ],
+        "fps": 8
+      },
+      "skill": {
+        "frames": [
+          24,
+          25,
+          26,
+          27
+        ],
+        "fps": 10
+      }
+    },
+    "icon": "icon_darkmage@legend_t3.png"
+  },
+  "earthmage_t2": {
+    "file": "earthmage_t2.png",
+    "filter": "linear",
+    "frameWidth": 233,
+    "frameHeight": 133,
+    "scale": 0.5,
+    "footY": 132,
+    "anims": {
+      "idle": {
+        "frames": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "fps": 5
+      },
+      "walk": {
+        "frames": [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "fps": 9
+      },
+      "attack": {
+        "frames": [
+          12,
+          13,
+          14,
+          15,
+          16
+        ],
+        "fps": 11
+      },
+      "death": {
+        "frames": [
+          18,
+          19,
+          20,
+          21
+        ],
+        "fps": 8
+      },
+      "skill": {
+        "frames": [
+          24,
+          25,
+          26,
+          27
+        ],
+        "fps": 10
+      }
+    },
+    "icon": "icon_earthmage_t2.png"
+  },
+  "earthmage_t3": {
+    "file": "earthmage_t3.png",
+    "filter": "linear",
+    "frameWidth": 251,
+    "frameHeight": 139,
+    "scale": 0.501,
+    "footY": 138,
+    "anims": {
+      "idle": {
+        "frames": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "fps": 5
+      },
+      "walk": {
+        "frames": [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "fps": 9
+      },
+      "attack": {
+        "frames": [
+          12,
+          13,
+          14,
+          15,
+          16
+        ],
+        "fps": 11
+      },
+      "death": {
+        "frames": [
+          18,
+          19,
+          20,
+          21
+        ],
+        "fps": 8
+      },
+      "skill": {
+        "frames": [
+          24,
+          25,
+          26,
+          27
+        ],
+        "fps": 10
+      }
+    },
+    "icon": "icon_earthmage_t3.png"
+  },
+  "earthmage@legend_t2": {
+    "file": "earthmage@legend_t2.png",
+    "filter": "linear",
+    "frameWidth": 234,
+    "frameHeight": 125,
+    "scale": 0.501,
+    "footY": 124,
+    "anims": {
+      "idle": {
+        "frames": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "fps": 5
+      },
+      "walk": {
+        "frames": [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "fps": 9
+      },
+      "attack": {
+        "frames": [
+          12,
+          13,
+          14,
+          15,
+          16
+        ],
+        "fps": 11
+      },
+      "death": {
+        "frames": [
+          18,
+          19,
+          20,
+          21
+        ],
+        "fps": 8
+      },
+      "skill": {
+        "frames": [
+          24,
+          25,
+          26,
+          27
+        ],
+        "fps": 10
+      }
+    },
+    "icon": "icon_earthmage@legend_t2.png"
+  },
+  "earthmage@legend_t3": {
+    "file": "earthmage@legend_t3.png",
+    "filter": "linear",
+    "frameWidth": 222,
+    "frameHeight": 122,
+    "scale": 0.5,
+    "footY": 121,
+    "anims": {
+      "idle": {
+        "frames": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "fps": 5
+      },
+      "walk": {
+        "frames": [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "fps": 9
+      },
+      "attack": {
+        "frames": [
+          12,
+          13,
+          14,
+          15,
+          16
+        ],
+        "fps": 11
+      },
+      "death": {
+        "frames": [
+          18,
+          19,
+          20,
+          21
+        ],
+        "fps": 8
+      },
+      "skill": {
+        "frames": [
+          24,
+          25,
+          26,
+          27
+        ],
+        "fps": 10
+      }
+    },
+    "icon": "icon_earthmage@legend_t3.png"
+  },
+  "knight_t2": {
+    "file": "knight_t2.png",
+    "filter": "linear",
+    "frameWidth": 262,
+    "frameHeight": 174,
+    "scale": 0.499,
+    "footY": 172,
+    "anims": {
+      "idle": {
+        "frames": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "fps": 5
+      },
+      "walk": {
+        "frames": [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "fps": 9
+      },
+      "attack": {
+        "frames": [
+          12,
+          13,
+          14,
+          15,
+          16
+        ],
+        "fps": 11
+      },
+      "death": {
+        "frames": [
+          18,
+          19,
+          20,
+          21
+        ],
+        "fps": 8
+      },
+      "skill": {
+        "frames": [
+          24,
+          25,
+          26,
+          27
+        ],
+        "fps": 10
+      }
+    },
+    "icon": "icon_knight_t2.png"
+  },
+  "knight_t3": {
+    "file": "knight_t3.png",
+    "filter": "linear",
+    "frameWidth": 281,
+    "frameHeight": 170,
+    "scale": 0.5,
+    "footY": 168,
+    "anims": {
+      "idle": {
+        "frames": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "fps": 5
+      },
+      "walk": {
+        "frames": [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "fps": 9
+      },
+      "attack": {
+        "frames": [
+          12,
+          13,
+          14,
+          15,
+          16
+        ],
+        "fps": 11
+      },
+      "death": {
+        "frames": [
+          18,
+          19,
+          20,
+          21
+        ],
+        "fps": 8
+      },
+      "skill": {
+        "frames": [
+          24,
+          25,
+          26,
+          27
+        ],
+        "fps": 10
+      }
+    },
+    "icon": "icon_knight_t3.png"
+  },
+  "knight@legend_t2": {
+    "file": "knight@legend_t2.png",
+    "filter": "linear",
+    "frameWidth": 247,
+    "frameHeight": 176,
+    "scale": 0.5,
+    "footY": 174,
+    "anims": {
+      "idle": {
+        "frames": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "fps": 5
+      },
+      "walk": {
+        "frames": [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "fps": 9
+      },
+      "attack": {
+        "frames": [
+          12,
+          13,
+          14,
+          15,
+          16
+        ],
+        "fps": 11
+      },
+      "death": {
+        "frames": [
+          18,
+          19,
+          20,
+          21
+        ],
+        "fps": 8
+      },
+      "skill": {
+        "frames": [
+          24,
+          25,
+          26,
+          27
+        ],
+        "fps": 10
+      }
+    },
+    "icon": "icon_knight@legend_t2.png"
+  },
+  "knight@legend_t3": {
+    "file": "knight@legend_t3.png",
+    "filter": "linear",
+    "frameWidth": 219,
+    "frameHeight": 174,
+    "scale": 0.501,
+    "footY": 172,
+    "anims": {
+      "idle": {
+        "frames": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "fps": 5
+      },
+      "walk": {
+        "frames": [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "fps": 9
+      },
+      "attack": {
+        "frames": [
+          12,
+          13,
+          14,
+          15,
+          16
+        ],
+        "fps": 11
+      },
+      "death": {
+        "frames": [
+          18,
+          19,
+          20,
+          21
+        ],
+        "fps": 8
+      },
+      "skill": {
+        "frames": [
+          24,
+          25,
+          26,
+          27
+        ],
+        "fps": 10
+      }
+    },
+    "icon": "icon_knight@legend_t3.png"
+  },
+  "mage_t2": {
+    "file": "mage_t2.png",
+    "filter": "linear",
+    "frameWidth": 271,
+    "frameHeight": 145,
+    "scale": 0.499,
+    "footY": 144,
+    "anims": {
+      "idle": {
+        "frames": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "fps": 5
+      },
+      "walk": {
+        "frames": [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "fps": 9
+      },
+      "attack": {
+        "frames": [
+          12,
+          13,
+          14,
+          15,
+          16
+        ],
+        "fps": 11
+      },
+      "death": {
+        "frames": [
+          18,
+          19,
+          20,
+          21
+        ],
+        "fps": 8
+      },
+      "skill": {
+        "frames": [
+          24,
+          25,
+          26,
+          27
+        ],
+        "fps": 10
+      }
+    },
+    "icon": "icon_mage_t2.png"
+  },
+  "mage_t3": {
+    "file": "mage_t3.png",
+    "filter": "linear",
+    "frameWidth": 264,
+    "frameHeight": 153,
+    "scale": 0.501,
+    "footY": 152,
+    "anims": {
+      "idle": {
+        "frames": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "fps": 5
+      },
+      "walk": {
+        "frames": [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "fps": 9
+      },
+      "attack": {
+        "frames": [
+          12,
+          13,
+          14,
+          15,
+          16
+        ],
+        "fps": 11
+      },
+      "death": {
+        "frames": [
+          18,
+          19,
+          20,
+          21
+        ],
+        "fps": 8
+      },
+      "skill": {
+        "frames": [
+          24,
+          25,
+          26,
+          27
+        ],
+        "fps": 10
+      }
+    },
+    "icon": "icon_mage_t3.png"
+  },
+  "mage@legend_t2": {
+    "file": "mage@legend_t2.png",
+    "filter": "linear",
+    "frameWidth": 336,
+    "frameHeight": 149,
+    "scale": 0.501,
+    "footY": 148,
+    "anims": {
+      "idle": {
+        "frames": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "fps": 5
+      },
+      "walk": {
+        "frames": [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "fps": 9
+      },
+      "attack": {
+        "frames": [
+          12,
+          13,
+          14,
+          15,
+          16
+        ],
+        "fps": 11
+      },
+      "death": {
+        "frames": [
+          18,
+          19,
+          20,
+          21
+        ],
+        "fps": 8
+      },
+      "skill": {
+        "frames": [
+          24,
+          25,
+          26,
+          27
+        ],
+        "fps": 10
+      }
+    },
+    "icon": "icon_mage@legend_t2.png"
+  },
+  "mage@legend_t3": {
+    "file": "mage@legend_t3.png",
+    "filter": "linear",
+    "frameWidth": 289,
+    "frameHeight": 159,
+    "scale": 0.499,
+    "footY": 158,
+    "anims": {
+      "idle": {
+        "frames": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "fps": 5
+      },
+      "walk": {
+        "frames": [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "fps": 9
+      },
+      "attack": {
+        "frames": [
+          12,
+          13,
+          14,
+          15,
+          16
+        ],
+        "fps": 11
+      },
+      "death": {
+        "frames": [
+          18,
+          19,
+          20,
+          21
+        ],
+        "fps": 8
+      },
+      "skill": {
+        "frames": [
+          24,
+          25,
+          26,
+          27
+        ],
+        "fps": 10
+      }
+    },
+    "icon": "icon_mage@legend_t3.png"
+  },
+  "rogue_t2": {
+    "file": "rogue_t2.png",
+    "filter": "linear",
+    "frameWidth": 250,
+    "frameHeight": 117,
+    "scale": 0.498,
+    "footY": 116,
+    "anims": {
+      "idle": {
+        "frames": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "fps": 5
+      },
+      "walk": {
+        "frames": [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "fps": 9
+      },
+      "attack": {
+        "frames": [
+          12,
+          13,
+          14,
+          15,
+          16
+        ],
+        "fps": 11
+      },
+      "death": {
+        "frames": [
+          18,
+          19,
+          20,
+          21
+        ],
+        "fps": 8
+      },
+      "skill": {
+        "frames": [
+          24,
+          25,
+          26,
+          27
+        ],
+        "fps": 10
+      }
+    },
+    "icon": "icon_rogue_t2.png"
+  },
+  "rogue_t3": {
+    "file": "rogue_t3.png",
+    "filter": "linear",
+    "frameWidth": 251,
+    "frameHeight": 117,
+    "scale": 0.5,
+    "footY": 116,
+    "anims": {
+      "idle": {
+        "frames": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "fps": 5
+      },
+      "walk": {
+        "frames": [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "fps": 9
+      },
+      "attack": {
+        "frames": [
+          12,
+          13,
+          14,
+          15,
+          16
+        ],
+        "fps": 11
+      },
+      "death": {
+        "frames": [
+          18,
+          19,
+          20,
+          21
+        ],
+        "fps": 8
+      },
+      "skill": {
+        "frames": [
+          24,
+          25,
+          26,
+          27
+        ],
+        "fps": 10
+      }
+    },
+    "icon": "icon_rogue_t3.png"
+  },
+  "rogue@legend_t2": {
+    "file": "rogue@legend_t2.png",
+    "filter": "linear",
+    "frameWidth": 244,
+    "frameHeight": 125,
+    "scale": 0.498,
+    "footY": 124,
+    "anims": {
+      "idle": {
+        "frames": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "fps": 5
+      },
+      "walk": {
+        "frames": [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "fps": 9
+      },
+      "attack": {
+        "frames": [
+          12,
+          13,
+          14,
+          15,
+          16
+        ],
+        "fps": 11
+      },
+      "death": {
+        "frames": [
+          18,
+          19,
+          20,
+          21
+        ],
+        "fps": 8
+      },
+      "skill": {
+        "frames": [
+          24,
+          25,
+          26,
+          27
+        ],
+        "fps": 10
+      }
+    },
+    "icon": "icon_rogue@legend_t2.png"
+  },
+  "rogue@legend_t3": {
+    "file": "rogue@legend_t3.png",
+    "filter": "linear",
+    "frameWidth": 266,
+    "frameHeight": 122,
+    "scale": 0.502,
+    "footY": 121,
+    "anims": {
+      "idle": {
+        "frames": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "fps": 5
+      },
+      "walk": {
+        "frames": [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "fps": 9
+      },
+      "attack": {
+        "frames": [
+          12,
+          13,
+          14,
+          15,
+          16
+        ],
+        "fps": 11
+      },
+      "death": {
+        "frames": [
+          18,
+          19,
+          20,
+          21
+        ],
+        "fps": 8
+      },
+      "skill": {
+        "frames": [
+          24,
+          25,
+          26,
+          27
+        ],
+        "fps": 10
+      }
+    },
+    "icon": "icon_rogue@legend_t3.png"
+  },
+  "shield_t2": {
+    "file": "shield_t2.png",
+    "filter": "linear",
+    "frameWidth": 251,
+    "frameHeight": 152,
+    "scale": 0.5,
+    "footY": 150,
+    "anims": {
+      "idle": {
+        "frames": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "fps": 5
+      },
+      "walk": {
+        "frames": [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "fps": 9
+      },
+      "attack": {
+        "frames": [
+          12,
+          13,
+          14,
+          15,
+          16
+        ],
+        "fps": 11
+      },
+      "death": {
+        "frames": [
+          18,
+          19,
+          20,
+          21
+        ],
+        "fps": 8
+      },
+      "skill": {
+        "frames": [
+          24,
+          25,
+          26,
+          27
+        ],
+        "fps": 10
+      }
+    },
+    "icon": "icon_shield_t2.png"
+  },
+  "shield_t3": {
+    "file": "shield_t3.png",
+    "filter": "linear",
+    "frameWidth": 265,
+    "frameHeight": 146,
+    "scale": 0.501,
+    "footY": 134,
+    "anims": {
+      "idle": {
+        "frames": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "fps": 5
+      },
+      "walk": {
+        "frames": [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "fps": 9
+      },
+      "attack": {
+        "frames": [
+          12,
+          13,
+          14,
+          15,
+          16
+        ],
+        "fps": 11
+      },
+      "death": {
+        "frames": [
+          18,
+          19,
+          20,
+          21
+        ],
+        "fps": 8
+      },
+      "skill": {
+        "frames": [
+          24,
+          25,
+          26,
+          27
+        ],
+        "fps": 10
+      }
+    },
+    "icon": "icon_shield_t3.png"
+  },
+  "shield@legend_t2": {
+    "file": "shield@legend_t2.png",
+    "filter": "linear",
+    "frameWidth": 216,
+    "frameHeight": 134,
+    "scale": 0.502,
+    "footY": 133,
+    "anims": {
+      "idle": {
+        "frames": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "fps": 5
+      },
+      "walk": {
+        "frames": [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "fps": 9
+      },
+      "attack": {
+        "frames": [
+          12,
+          13,
+          14,
+          15,
+          16
+        ],
+        "fps": 11
+      },
+      "death": {
+        "frames": [
+          18,
+          19,
+          20,
+          21
+        ],
+        "fps": 8
+      },
+      "skill": {
+        "frames": [
+          24,
+          25,
+          26,
+          27
+        ],
+        "fps": 10
+      }
+    },
+    "icon": "icon_shield@legend_t2.png"
+  },
+  "shield@legend_t3": {
+    "file": "shield@legend_t3.png",
+    "filter": "linear",
+    "frameWidth": 226,
+    "frameHeight": 136,
+    "scale": 0.499,
+    "footY": 135,
+    "anims": {
+      "idle": {
+        "frames": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "fps": 5
+      },
+      "walk": {
+        "frames": [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "fps": 9
+      },
+      "attack": {
+        "frames": [
+          12,
+          13,
+          14,
+          15,
+          16
+        ],
+        "fps": 11
+      },
+      "death": {
+        "frames": [
+          18,
+          19,
+          20,
+          21
+        ],
+        "fps": 8
+      },
+      "skill": {
+        "frames": [
+          24,
+          25,
+          26,
+          27
+        ],
+        "fps": 10
+      }
+    },
+    "icon": "icon_shield@legend_t3.png"
+  },
+  "soldier_t2": {
+    "file": "soldier_t2.png",
+    "filter": "linear",
+    "frameWidth": 298,
+    "frameHeight": 170,
+    "scale": 0.499,
+    "footY": 168,
+    "anims": {
+      "idle": {
+        "frames": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "fps": 5
+      },
+      "walk": {
+        "frames": [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "fps": 9
+      },
+      "attack": {
+        "frames": [
+          12,
+          13,
+          14,
+          15,
+          16
+        ],
+        "fps": 11
+      },
+      "death": {
+        "frames": [
+          18,
+          19,
+          20,
+          21
+        ],
+        "fps": 8
+      },
+      "skill": {
+        "frames": [
+          24,
+          25,
+          26,
+          27
+        ],
+        "fps": 10
+      }
+    },
+    "icon": "icon_soldier_t2.png"
+  },
+  "soldier_t3": {
+    "file": "soldier_t3.png",
+    "filter": "linear",
+    "frameWidth": 293,
+    "frameHeight": 171,
+    "scale": 0.5,
+    "footY": 170,
+    "anims": {
+      "idle": {
+        "frames": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "fps": 5
+      },
+      "walk": {
+        "frames": [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "fps": 9
+      },
+      "attack": {
+        "frames": [
+          12,
+          13,
+          14,
+          15,
+          16
+        ],
+        "fps": 11
+      },
+      "death": {
+        "frames": [
+          18,
+          19,
+          20,
+          21
+        ],
+        "fps": 8
+      },
+      "skill": {
+        "frames": [
+          24,
+          25,
+          26,
+          27
+        ],
+        "fps": 10
+      }
+    },
+    "icon": "icon_soldier_t3.png"
+  },
+  "soldier@legend_t2": {
+    "file": "soldier@legend_t2.png",
+    "filter": "linear",
+    "frameWidth": 305,
+    "frameHeight": 173,
+    "scale": 0.499,
+    "footY": 172,
+    "anims": {
+      "idle": {
+        "frames": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "fps": 5
+      },
+      "walk": {
+        "frames": [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "fps": 9
+      },
+      "attack": {
+        "frames": [
+          12,
+          13,
+          14,
+          15,
+          16
+        ],
+        "fps": 11
+      },
+      "death": {
+        "frames": [
+          18,
+          19,
+          20,
+          21
+        ],
+        "fps": 8
+      },
+      "skill": {
+        "frames": [
+          24,
+          25,
+          26,
+          27
+        ],
+        "fps": 10
+      }
+    },
+    "icon": "icon_soldier@legend_t2.png"
+  },
+  "soldier@legend_t3": {
+    "file": "soldier@legend_t3.png",
+    "filter": "linear",
+    "frameWidth": 312,
+    "frameHeight": 174,
+    "scale": 0.5,
+    "footY": 173,
+    "anims": {
+      "idle": {
+        "frames": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "fps": 5
+      },
+      "walk": {
+        "frames": [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "fps": 9
+      },
+      "attack": {
+        "frames": [
+          12,
+          13,
+          14,
+          15,
+          16
+        ],
+        "fps": 11
+      },
+      "death": {
+        "frames": [
+          18,
+          19,
+          20,
+          21
+        ],
+        "fps": 8
+      },
+      "skill": {
+        "frames": [
+          24,
+          25,
+          26,
+          27
+        ],
+        "fps": 10
+      }
+    },
+    "icon": "icon_soldier@legend_t3.png"
+  },
+  "spear_t2": {
+    "file": "spear_t2.png",
+    "filter": "linear",
+    "frameWidth": 211,
+    "frameHeight": 135,
+    "scale": 0.498,
+    "footY": 134,
+    "anims": {
+      "idle": {
+        "frames": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "fps": 5
+      },
+      "walk": {
+        "frames": [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "fps": 9
+      },
+      "attack": {
+        "frames": [
+          12,
+          13,
+          14,
+          15,
+          16
+        ],
+        "fps": 11
+      },
+      "death": {
+        "frames": [
+          18,
+          19,
+          20,
+          21
+        ],
+        "fps": 8
+      },
+      "skill": {
+        "frames": [
+          24,
+          25,
+          26,
+          27
+        ],
+        "fps": 10
+      }
+    },
+    "icon": "icon_spear_t2.png"
+  },
+  "spear_t3": {
+    "file": "spear_t3.png",
+    "filter": "linear",
+    "frameWidth": 241,
+    "frameHeight": 139,
+    "scale": 0.499,
+    "footY": 138,
+    "anims": {
+      "idle": {
+        "frames": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "fps": 5
+      },
+      "walk": {
+        "frames": [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "fps": 9
+      },
+      "attack": {
+        "frames": [
+          12,
+          13,
+          14,
+          15,
+          16
+        ],
+        "fps": 11
+      },
+      "death": {
+        "frames": [
+          18,
+          19,
+          20,
+          21
+        ],
+        "fps": 8
+      },
+      "skill": {
+        "frames": [
+          24,
+          25,
+          26,
+          27
+        ],
+        "fps": 10
+      }
+    },
+    "icon": "icon_spear_t3.png"
+  },
+  "spear@legend_t2": {
+    "file": "spear@legend_t2.png",
+    "filter": "linear",
+    "frameWidth": 228,
+    "frameHeight": 134,
+    "scale": 0.501,
+    "footY": 133,
+    "anims": {
+      "idle": {
+        "frames": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "fps": 5
+      },
+      "walk": {
+        "frames": [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "fps": 9
+      },
+      "attack": {
+        "frames": [
+          12,
+          13,
+          14,
+          15,
+          16
+        ],
+        "fps": 11
+      },
+      "death": {
+        "frames": [
+          18,
+          19,
+          20,
+          21
+        ],
+        "fps": 8
+      },
+      "skill": {
+        "frames": [
+          24,
+          25,
+          26,
+          27
+        ],
+        "fps": 10
+      }
+    },
+    "icon": "icon_spear@legend_t2.png"
+  },
+  "spear@legend_t3": {
+    "file": "spear@legend_t3.png",
+    "filter": "linear",
+    "frameWidth": 225,
+    "frameHeight": 138,
+    "scale": 0.501,
+    "footY": 137,
+    "anims": {
+      "idle": {
+        "frames": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "fps": 5
+      },
+      "walk": {
+        "frames": [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "fps": 9
+      },
+      "attack": {
+        "frames": [
+          12,
+          13,
+          14,
+          15,
+          16
+        ],
+        "fps": 11
+      },
+      "death": {
+        "frames": [
+          18,
+          19,
+          20,
+          21
+        ],
+        "fps": 8
+      },
+      "skill": {
+        "frames": [
+          24,
+          25,
+          26,
+          27
+        ],
+        "fps": 10
+      }
+    },
+    "icon": "icon_spear@legend_t3.png"
   }
 }
