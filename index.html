@@ -6,7 +6,9 @@
   <title>모두의 타워디펜스</title>
   <style>
     html,body{margin:0;height:100%;background:#0d1018;overflow:hidden}
-    #game{width:100vw;height:100vh}
+    #game{position:fixed;left:0;right:0;bottom:0;top:var(--top-inset,0px)}
+    /* 📱 설치 앱(상태바가 게임 위를 덮는 안드로이드 15+ 화면): 게임을 상태바 아래에서 시작 */
+    html.statusbar{--top-inset:max(env(safe-area-inset-top),28px)}
     /* 세로로 들었을 때 가로 전환 안내(웹 전용) */
     #rotate{position:fixed;inset:0;z-index:9999;display:none;
       flex-direction:column;align-items:center;justify-content:center;
@@ -20,6 +22,22 @@
   </style>
 </head>
 <body>
+  <script>
+    // 설치 앱인데 전체화면(몰입 모드) 빌드가 아니면 상태바만큼 아래로 — 새 빌드는 UA에 LDImmersive를 붙임(capacitor.config.ts)
+    (function () {
+      function check() {
+        var cap = window.Capacitor;
+        var native = !!(cap && cap.isNativePlatform && cap.isNativePlatform());
+        if (!native || navigator.userAgent.indexOf('LDImmersive') >= 0) return false;
+        if (!document.documentElement.classList.contains('statusbar')) {
+          document.documentElement.classList.add('statusbar');
+          window.dispatchEvent(new Event('resize')); // 게임 크기 다시 맞춤
+        }
+        return true;
+      }
+      if (!check()) window.addEventListener('load', check); // 앱 브리지가 늦게 붙는 경우 한 번 더
+    })();
+  </script>
   <div id="game"></div>
   <div id="rotate">
     <div class="ico">📱↻</div>
