@@ -121,3 +121,21 @@ python tools/extract_sprites.py tools/sprites.config.json --preview preview.png
 - 줄 사이 이펙트가 붙어 자동 검출이 안 되므로 `"bands"`로 줄 위치를 직접 지정, `"split": "gaps"`로 빈 세로줄 기준 프레임 분할
   (말에서 떨어진 기사·떨어진 이펙트도 한 프레임으로, 먼지 조각은 가까운 프레임에 붙임), 가로선 제거는 끔(`"strip_lines": false`).
 - 5번째 줄 `skill`(스킬 동작)도 시트에 포함 — 다른 유닛 시트 모양은 그대로.
+
+## ⭐ 유닛 진화 그림(스킨별 · 강화 레벨별)
+
+- 단계: ★1 Lv0~4(지금 그림) · ★2 Lv5~9 · ★3 Lv10+ (`src/systems/evolution.ts` `UNIT_TIERS`)
+- 키: 기본 `<유닛>_t2`, `<유닛>_t3` / 전설 `<유닛>@legend_t2`, `<유닛>@legend_t3`. 🔵 레어는 그림 없이 그 단계 기본 그림의 색만 바꿈.
+- 그림이 없는 단계는 아래 단계 그림으로 자동 대체(전투에서는 머리 위 ★★/★★★ 표시는 항상 나옴).
+- 프롬프트 48개: [`docs/unit-evolution-prompts.md`](unit-evolution-prompts.md), 원본 위치 `images/image/evolution/Unit_<유닛>_<base|legend>_t<2|3>.png`(저장소 제외).
+- 설정 예(영웅 그림과 같은 5줄 배치):
+```json
+"mage_t2": {
+  "sheet": "../../images/image/evolution/Unit_mage_base_t2.png",
+  "x": [0, 1448], "bands": [[..], [..], [..], [..], [..]], "split": "gaps", "strip_lines": false,
+  "rows": [["idle", 0, 4], ["walk", 1, 6], ["attack", 2, 5], ["skill", 3, 4], ["death", 4, 4]],
+  "resolution": 2, "palette": true, "height": 60,
+  "icon": { "image": "../../images/image/evolution/Unit_mage_base_t2.png", "box": [..] }
+}
+```
+- `height`는 같은 유닛의 지금(★1) 그림 높이에 맞추기.

@@ -4,6 +4,8 @@ import { meta } from '../systems/upgrades';
 import { registerSpriteAnims } from '../systems/skinTextures';
 import { MANIFEST_URL, iconKey, parseManifest, sprites, textureKey } from '../systems/sprites';
 import { HERO_TIERS, heroTier } from '../systems/hero';
+import { unitOfKey, unitPreloadKeys } from '../systems/evolution';
+import unitsData from '../data/units.json';
 
 /**
  * 프리로드: sprites/manifest.json → 등록된 스프라이트시트 로드 → 애니메이션 생성 → Menu.
@@ -39,7 +41,11 @@ export class PreloadScene extends Phaser.Scene {
       return;
     }
     // 👗 전설 스킨 등 '유닛@스킨' 그림은 착용 중인 것만(나머지는 스킨 창에서 열 때 받음)
+    // ⭐ 유닛 그림은 유닛마다 기본(★1) + 지금 진화 단계(+ 전설 착용 시 전설 단계)만
+    const unitNames = Object.keys(unitsData);
+    const unitKeys = unitPreloadKeys(unitNames, (k) => !!manifest[k], (u) => meta.level(u), (u) => meta.equippedSkin(u));
     const needed = types.filter((t) => {
+      if (unitNames.includes(unitOfKey(t))) return unitKeys.has(t);
       const [unit, skin] = t.split('@');
       if (t.startsWith('hero_')) return t === HERO_TIERS[heroTier(meta.heroLevel('hero'))].look; // 👑 지금 단계 영웅 그림만(나머지는 강화 화면에서)
       return !skin || meta.equippedSkin(unit) === skin;

@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { ANIM_STATES, LOOPING, animKey, iconKey, spriteOf, sprites, textureKey } from './sprites';
 import { SKINS, recolorPixels, skinType } from './skins';
+import { evolvedKey } from './evolution';
 
 /**
  * 👗 스킨 텍스처 — 원본 스프라이트시트·얼굴 아이콘을 캔버스에 그려 대표 색만 바꾼 사본 생성(게임 안에서, 한 번만).
@@ -56,18 +57,24 @@ export function loadLook(scene: Phaser.Scene, look: string, done: () => void): v
   scene.load.start();
 }
 
-/** 스킨 텍스처·애니메이션 준비 → 쓸 이름(유닛@스킨). 원본 그림이 없으면 원래 이름 */
-export function ensureSkin(scene: Phaser.Scene, type: string, skin: string | null | undefined): string {
-  // 🟡 전설: 그림 시트(매니페스트 '유닛@legend')가 Preload에서 이미 로드됨
-  if (skin === 'legend') return scene.textures.exists(textureKey(skinType(type, skin))) ? skinType(type, skin) : type;
+/**
+ * 스킨 텍스처·애니메이션 준비 → 쓸 그림 이름. ⭐ 유닛 강화 레벨(lv)에 맞는 진화 단계 그림을 고름
+ * (그 단계 그림이 없거나 아직 안 받았으면 아래 단계). 🔵 레어는 그 단계 기본 그림의 색만 바꿈.
+ */
+export function ensureSkin(scene: Phaser.Scene, type: string, skin: string | null | undefined, lv = 0): string {
+  const loaded = (k: string): boolean => !!spriteOf(k) && scene.textures.exists(textureKey(k));
+  const plain = evolvedKey(type, lv, false, loaded) ?? type; // 지금 단계 기본 그림
+  // 🟡 전설: 전설 진화 그림(없으면 아래 단계 → 전설 그림이 하나도 없으면 기본)
+  if (skin === 'legend') return evolvedKey(type, lv, true, loaded) ?? plain;
   const sk = skin ? SKINS[type] : undefined;
-  const base = textureKey(type);
-  if (!sk || sk.id !== skin || !scene.textures.exists(base)) return type;
-  const st = skinType(type, skin);
+  if (!sk || sk.id !== skin || !loaded(plain)) return plain;
+  const src = plain; // 색을 바꿀 원본(진화 단계 기본 그림)
+  const base = textureKey(src);
+  const st = skinType(src, skin);
   const key = textureKey(st);
   if (scene.textures.exists(key)) return st;
 
-  const d = spriteOf(type)!;
+  const d = spriteOf(src)!;
   const srcTex = scene.textures.get(base);
   const canvas = recoloredCanvas(srcTex.getSourceImage() as HTMLImageElement, sk.swaps);
   const tex = scene.textures.addCanvas(key, canvas)!;
@@ -88,8 +95,9 @@ export function ensureSkin(scene: Phaser.Scene, type: string, skin: string | nul
     });
   }
   // 얼굴 아이콘도
-  if (scene.textures.exists(iconKey(type)) && !scene.textures.exists(iconKey(st))) {
-    const ic = scene.textures.get(iconKey(type)).getSourceImage() as HTMLImageElement;
+  const iconSrc = scene.textures.exists(iconKey(src)) ? iconKey(src) : iconKey(type);
+  if (scene.textures.exists(iconSrc) && !scene.textures.exists(iconKey(st))) {
+    const ic = scene.textures.get(iconSrc).getSourceImage() as HTMLImageElement;
     scene.textures.addCanvas(iconKey(st), recoloredCanvas(ic, sk.swaps));
   }
   return st;

@@ -10,6 +10,7 @@ import { UNIT_SKILLS, skillEvery, skillMult } from '../systems/unitSkills';
 import { skinType, skinsFor } from '../systems/skins';
 import { ensureSkin, loadLook } from '../systems/skinTextures';
 import { BASE_MAX_LV, BASE_UPGRADES } from '../systems/baseUpgrades';
+import { UNIT_TIERS, evolvedKey, nextUnitTier, starText, unitTier } from '../systems/evolution';
 import { AURA_MAX_LV, AURA_RADIUS, HERO_MAX_LV, HERO_SKILLS, HERO_TIERS, SKILL_MAX_LV, auraBonus, heroLvMult, heroSkillPower, heroTier, heroUpCost, nextHeroTier } from '../systems/hero';
 
 const UNITS = unitsData as Record<string, UnitStats>;
@@ -33,8 +34,15 @@ export class UpgradeScene extends Phaser.Scene {
     super('Upgrade');
   }
 
+  private fromBattle = false; // ⚔️ 전투 중 상점(전투는 일시정지 상태)
+
+  init(data?: { fromBattle?: boolean }): void {
+    this.fromBattle = !!data?.fromBattle;
+  }
+
   create(): void {
-    bgm(this, 'bgm_menu');
+    if (this.fromBattle) this.add.rectangle(640, 360, 1280, 720, 0x0d1018); // 멈춘 전투 화면을 가림
+    else bgm(this, 'bgm_menu');
     this.add
       .text(640, 46, '🔧 강화', { fontFamily: 'sans-serif', fontSize: '38px', color: '#ffd34d' })
       .setOrigin(0.5);
@@ -65,16 +73,21 @@ export class UpgradeScene extends Phaser.Scene {
     this.render();
 
     const back = this.add
-      .text(640, 668, '← 스테이지 선택', {
+      .text(640, 668, this.fromBattle ? '⚔️ 전투로 돌아가기' : '← 스테이지 선택', {
         fontFamily: 'sans-serif',
         fontSize: '22px',
         color: '#fff',
-        backgroundColor: '#3a7bff',
+        backgroundColor: this.fromBattle ? '#2eae5a' : '#3a7bff',
         padding: { x: 22, y: 10 },
       })
       .setOrigin(0.5)
       .setInteractive({ useHandCursor: true });
-    back.on('pointerdown', () => this.scene.start('StageSelect'));
+    back.on('pointerdown', () => {
+      if (this.fromBattle) {
+        this.scene.stop();
+        this.scene.resume('Battle'); // 멈춘 자리에서 이어서
+      } else this.scene.start('StageSelect');
+    });
   }
 
   private render(): void {
@@ -148,14 +161,15 @@ export class UpgradeScene extends Phaser.Scene {
       const owned = meta.ownsUnit(key);
       const price = unitPrice(i);
       const lv = meta.level(key);
-      const look = owned ? ensureSkin(this, key, meta.equippedSkin(key)) : key; // 👗 착용 스킨 얼굴
+      const look = owned ? ensureSkin(this, key, meta.equippedSkin(key), lv) : key; // 👗 착용 스킨 · ⭐ 진화 단계 얼굴
+      this.needEvolutionArt(key, lv);
       const icon = this.textures.exists(iconKey(look)) ? this.add.image(0, 0, iconKey(look)) : null;
       this.card(
         i,
         keys.length,
         icon,
-        `${u.name}  Lv.${lv}`,
-        `❤️ ${scaleStat(u.hp, lv)}  ⚔️ ${scaleStat(u.atk, lv)}  →  Lv.${lv + 1}: ❤️ ${scaleStat(u.hp, lv + 1)} ⚔️ ${scaleStat(u.atk, lv + 1)}`,
+        `${u.name} ${starText(lv)} Lv.${lv}`,
+        `❤️ ${scaleStat(u.hp, lv)}  ⚔️ ${scaleStat(u.atk, lv)}  →  Lv.${lv + 1}: ❤️ ${scaleStat(u.hp, lv + 1)} ⚔️ ${scaleStat(u.atk, lv + 1)}${nextUnitTier(lv) ? `  ·  ⭐Lv${nextUnitTier(lv)!.min} 진화` : ''}`,
         owned ? `강화 🪙${meta.nextCost(key)}` : `🛒 구매\n🪙${price}`,
         owned ? meta.canUpgrade(key) : meta.gold >= price,
         !owned,
@@ -167,9 +181,12 @@ export class UpgradeScene extends Phaser.Scene {
             }
             return;
           }
+          const before = unitTier(meta.level(key));
           if (meta.upgrade(key)) {
             sfx(this, 'weapon');
             this.render();
+            const after = unitTier(meta.level(key));
+            if (after > before) this.evolveFx(`${u.name} ${'★'.repeat(UNIT_TIERS[after].stars)} ${UNIT_TIERS[after].name}`); // ⭐ 진화!
           }
         },
         this.skillLabel(key, lv),
@@ -231,7 +248,7 @@ export class UpgradeScene extends Phaser.Scene {
       g.lineStyle(equipped ? 5 : 3, o.color, 1).strokeRoundedRect(x - w / 2, y - 130, w, 250, 18);
       layer.add(g);
       // 미리보기 — 첫 프레임
-      const look = o.id === '?' ? null : o.id ? ensureSkin(this, key, o.id) : key;
+      const look = o.id === '?' ? null : ensureSkin(this, key, o.id, meta.level(key)); // ⭐ 지금 진화 단계로 미리보기
       const def = look ? spriteOf(look) ?? spriteOf(key) : null;
       if (look && def && this.textures.exists(textureKey(look))) {
         const img = this.add.image(x, y - 40, textureKey(look), def.anims.idle!.frames[0]);
@@ -357,6 +374,14 @@ export class UpgradeScene extends Phaser.Scene {
       );
       if (i < HERO_TIERS.length - 1) this.layer.add(this.add.text(x + 115, y - 6, '›', { fontSize: '30px', color: '#4a5878' }).setOrigin(0.5));
     });
+  }
+
+  /** ⭐ 진화 단계 그림을 아직 안 받았으면 받고 다시 그림 */
+  private needEvolutionArt(unit: string, lv: number): void {
+    const inManifest = (k: string): boolean => !!spriteOf(k);
+    const want = [evolvedKey(unit, lv, false, inManifest), meta.equippedSkin(unit) === 'legend' ? evolvedKey(unit, lv, true, inManifest) : null];
+    const missing = want.find((k): k is string => !!k && !this.textures.exists(textureKey(k)));
+    if (missing) loadLook(this, missing, () => this.scene.isActive() && this.render());
   }
 
   /** ✨ 진화 연출 */

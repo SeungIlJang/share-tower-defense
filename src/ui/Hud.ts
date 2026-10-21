@@ -95,6 +95,8 @@ export class Hud {
   private slots: Slot[] = [];
   private strip!: Phaser.GameObjects.Container; // 유닛 카드 줄(가로 스크롤)
   private dragged = false;
+  private objs: Phaser.GameObjects.GameObject[] = []; // 이 HUD가 만든 오브젝트
+  private offs: (() => void)[] = []; // 입력·업데이트 리스너 해제
   private weaponBtns: WeaponButton[] = [];
   private heroBtns: { bg: Phaser.GameObjects.Arc; shade: Phaser.GameObjects.Graphics; cx: number; cy: number }[] = [];
   private manaFill!: Phaser.GameObjects.Rectangle;
@@ -119,6 +121,7 @@ export class Hud {
     heroOwned: boolean[] = [true] // 👑 해금한 영웅 스킬
   ) {
     this.scene = scene;
+    const before = new Set(scene.children.list); // destroy()용 — 이 HUD가 만든 것만 기억
     const d = 100;
     this.buildHeroPanel(onHeroSkill, heroOwned, d);
     scene.add.rectangle(640, 22, 1280, 44, 0x0d1424, 0.8).setDepth(d);
@@ -126,13 +129,13 @@ export class Hud {
       .text(12, 52, '', { fontFamily: 'sans-serif', fontSize: '14px', fontStyle: 'bold', color: '#aef5ff', backgroundColor: '#0d1424cc', padding: { x: 8, y: 4 } })
       .setDepth(d + 1)
       .setVisible(false);
-    this.lvText = scene.add.text(18, 22, 'LV 1', { fontFamily: 'sans-serif', fontSize: '22px', fontStyle: 'bold', color: '#ffd34d' }).setOrigin(0, 0.5).setDepth(d + 1);
+    this.lvText = scene.add.text(64, 22, 'LV 1', { fontFamily: 'sans-serif', fontSize: '22px', fontStyle: 'bold', color: '#ffd34d' }).setOrigin(0, 0.5).setDepth(d + 1);
     scene.add.rectangle(this.vsX + this.vsW / 2, 22, this.vsW + 4, 20, 0x000000, 0.5).setDepth(d);
     this.vsBlue = scene.add.rectangle(this.vsX, 22, this.vsW / 2, 16, 0x3aa0ff).setOrigin(0, 0.5).setDepth(d + 1);
     this.vsRed = scene.add.rectangle(this.vsX + this.vsW, 22, this.vsW / 2, 16, 0xff4a4a).setOrigin(1, 0.5).setDepth(d + 1);
     scene.add.text(this.vsX + this.vsW / 2, 22, 'VS', { fontFamily: 'sans-serif', fontSize: '15px', fontStyle: 'bold', color: '#fff', stroke: '#000000', strokeThickness: 3 }).setOrigin(0.5).setDepth(d + 2);
     this.vsMark = scene.add.triangle(this.vsX + this.vsW / 2, 36, 0, 8, 10, 8, 5, 0, 0xffffff).setDepth(d + 2);
-    this.goldText = scene.add.text(1262, 22, '🪙 0', { fontFamily: 'sans-serif', fontSize: '22px', fontStyle: 'bold', color: '#ffd34d' }).setOrigin(1, 0.5).setDepth(d + 1);
+    this.goldText = scene.add.text(808, 22, '🪙 0', { fontFamily: 'sans-serif', fontSize: '22px', fontStyle: 'bold', color: '#ffd34d' }).setOrigin(0, 0.5).setDepth(d + 1);
 
     // 하단 HUD 판(전장과 구분)
     scene.add.rectangle(640, 565, 1280, 310, 0x0b0f1a, 0.92).setDepth(d - 1);
@@ -245,6 +248,16 @@ export class Hud {
       this.weaponBtns.push({ index: i, cx, cy: wy, color: w.color, bg, gauge, ring, icon, wasReady: false });
     });
     this.scroller(wStrip, wy, W_CARD_H, WEAPONS.length * (W_CARD_W + CARD_GAP) - CARD_GAP, d);
+    this.objs = scene.children.list.filter((o) => !before.has(o));
+  }
+
+  /** HUD 통째로 지우기(전투 중 상점에서 산 것을 바로 반영할 때 다시 만듦) */
+  destroy(): void {
+    for (const off of this.offs) off();
+    this.offs = [];
+    this.scene.tweens.killTweensOf(this.objs);
+    for (const o of this.objs) o.destroy();
+    this.objs = [];
   }
 
   /** ↔ 가로 스크롤 줄(끌기·마우스 휠) — 화면보다 넓을 때만 움직이고 ▶ 표시 */
@@ -254,27 +267,41 @@ export class Hud {
     let downX: number | null = null;
     let startX = 0;
     const inStrip = (p: Phaser.Input.Pointer): boolean => Math.abs(p.y - cy) <= h / 2;
-    scene.input.on('pointerdown', (p: Phaser.Input.Pointer) => {
+    const down = (p: Phaser.Input.Pointer): void => {
       this.dragged = false;
       downX = inStrip(p) ? p.x : null;
       startX = strip.x;
-    });
-    scene.input.on('pointermove', (p: Phaser.Input.Pointer) => {
+    };
+    const move = (p: Phaser.Input.Pointer): void => {
       if (downX === null || !p.isDown) return;
       const dx = p.x - downX;
       if (Math.abs(dx) > 10) this.dragged = true;
       if (this.dragged) strip.x = Phaser.Math.Clamp(startX + dx, minX, 0);
-    });
-    scene.input.on('pointerup', () => {
+    };
+    const up = (): void => {
       downX = null;
-    });
-    scene.input.on('wheel', (p: Phaser.Input.Pointer, _o: unknown, dx: number, dy: number) => {
+    };
+    const wheel = (p: Phaser.Input.Pointer, _o: unknown, dx: number, dy: number): void => {
       if (inStrip(p)) strip.x = Phaser.Math.Clamp(strip.x - (dx || dy), minX, 0);
+    };
+    scene.input.on('pointerdown', down);
+    scene.input.on('pointermove', move);
+    scene.input.on('pointerup', up);
+    scene.input.on('wheel', wheel);
+    this.offs.push(() => {
+      scene.input.off('pointerdown', down);
+      scene.input.off('pointermove', move);
+      scene.input.off('pointerup', up);
+      scene.input.off('wheel', wheel);
     });
     if (minX < 0) {
       const hint = scene.add.text(1272, cy, '▶', { fontSize: '22px', color: '#ffffff' }).setOrigin(1, 0.5).setDepth(depth + 5).setAlpha(0.7);
       scene.tweens.add({ targets: hint, x: 1262, duration: 500, yoyo: true, repeat: -1 });
-      scene.events.on(Phaser.Scenes.Events.UPDATE, () => hint.setVisible(strip.x > minX + 4));
+      const show = (): void => {
+        hint.setVisible(strip.x > minX + 4);
+      };
+      scene.events.on(Phaser.Scenes.Events.UPDATE, show);
+      this.offs.push(() => scene.events.off(Phaser.Scenes.Events.UPDATE, show));
     }
   }
 

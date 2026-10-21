@@ -22,6 +22,16 @@ export class ResourceSystem {
     }
   }
 
+  /** 충전 속도·상한 바꾸기(전투 중 상점에서 기지 강화) */
+  setRate(ratePerSec: number): void {
+    this.rate = ratePerSec;
+  }
+
+  setCap(cap: number): void {
+    this.cap = cap;
+    this.gold = Math.min(this.gold, cap);
+  }
+
   /** 상한 올리기 — 🔋 마력 폭주 각성 */
   raiseCap(n: number): void {
     this.cap += n;

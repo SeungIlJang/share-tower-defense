@@ -19,6 +19,7 @@ export class Fighter {
   private flash: Phaser.GameObjects.Rectangle;
   private hpBg: Phaser.GameObjects.Rectangle;
   private hpBar: Phaser.GameObjects.Rectangle;
+  private stars: Phaser.GameObjects.Text; // ⭐ 진화 단계
   private sprite: Phaser.GameObjects.Sprite | null = null;
   private spriteDef: SpriteDef | null = null;
   private anim: AnimState = 'idle';
@@ -46,7 +47,11 @@ export class Fighter {
     this.flash = scene.add.rectangle(0, 0, 36, 46, 0xffffff, 0).setAlpha(0);
     this.hpBg = scene.add.rectangle(0, -40, 30, 5, 0x1a1f2a);
     this.hpBar = scene.add.rectangle(-15, -40, 30, 5, 0x5cff9e).setOrigin(0, 0.5);
-    this.root = scene.add.container(0, 0, [this.char, this.flash, this.hpBg, this.hpBar]).setVisible(false);
+    this.stars = scene.add
+      .text(0, -60, '', { fontFamily: 'sans-serif', fontSize: '11px', fontStyle: 'bold', color: '#ffd34d', stroke: '#3a2a00', strokeThickness: 3 })
+      .setOrigin(0.5)
+      .setVisible(false);
+    this.root = scene.add.container(0, 0, [this.char, this.flash, this.hpBg, this.hpBar, this.stars]).setVisible(false);
   }
 
   /** 텍스처·애니 이름(스킨 적용 시 '유닛@스킨') */
@@ -101,6 +106,7 @@ export class Fighter {
     }
     this.hpBg.setY(barY);
     this.hpBar.setY(barY);
+    this.stars.setY(barY - 9).setVisible(false);
 
     this.root.setPosition(x, y).setVisible(true);
     this.updateHp();
@@ -203,6 +209,11 @@ export class Fighter {
       return;
     }
     this.lunge();
+  }
+
+  /** ⭐ 진화 단계 표시(★★ 이상만, HP 바 위) */
+  setStars(n: number): void {
+    this.stars.setText('★'.repeat(n)).setVisible(n >= 2);
   }
 
   /** 몸 크기 배율(👑 영웅 등) */

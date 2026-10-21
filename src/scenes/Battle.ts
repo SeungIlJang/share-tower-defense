@@ -11,6 +11,7 @@ import { UNIT_SCALE } from '../entities/Fighter';
 import { FOOD_BASE, energyMax, energyRate, popBonus } from '../systems/baseUpgrades';
 import { summonCooldown } from '../systems/pacing';
 import { anyDevFlag, devFlags } from '../systems/dev';
+import { UNIT_TIERS, unitTier } from '../systems/evolution';
 import { HERO_TYPE, HERO_TIERS, HERO_FALLBACK_LOOKS, heroTier, heroBodyScale, HERO_REGEN, HERO_SKILLS, AURA_ATK, AURA_GUARD, AURA_RADIUS, MANA_MAX, MANA_REGEN, MANA_START, MACE_MULT, MACE_RANGE, RALLY_SEC, RALLY_SPEED, HOLY_HEAL, HOLY_HERO_HEAL, HOLY_PUSH, HERO_ENEMY_HP, heroStats, heroLvMult, heroMoveRange, HERO_DRAG_MULT, heroSkillPower, auraRadius, inAura, maceTargets, stepToward } from '../systems/hero';
 import { HERO_PANEL_X, HERO_BTN_R, HERO_BTN_Y } from '../ui/Hud';
 import { Pool } from '../utils/pool';
@@ -126,6 +127,7 @@ export class BattleScene extends Phaser.Scene {
   private projectiles: Projectile[] = [];
   private over = false;
   private paused = false; // ⏸️ 일시정지
+  private pauseLayer: Phaser.GameObjects.Container | null = null;
   private reviving = false; // 부활 제안 중(업데이트 정지)
   private revivedOnce = false; // 한 판에 광고 부활 1회
   // 레벨업 스킬(한 판 로그라이트)
@@ -226,6 +228,7 @@ export class BattleScene extends Phaser.Scene {
   create(): void {
     this.over = false;
     this.paused = false;
+    this.pauseLayer = null;
     this.reviving = false;
     this.revivedOnce = false;
     this.units = [];
@@ -300,19 +303,8 @@ export class BattleScene extends Phaser.Scene {
     );
 
     // 👗 착용 스킨 텍스처 미리 준비(HUD 얼굴에도 적용)
-    this.looks = Object.fromEntries(Object.keys(UNITS).map((k) => [k, ensureSkin(this, k, meta.equippedSkin(k))]));
-    this.hud = new Hud(
-      this,
-      UNITS,
-      (type) => this.trySpawnUnit(type),
-      (type) => this.doBattleUpgrade(type),
-      (i) => this.fireWeapon(i),
-      this.weapons.map((w) => !!w),
-      this.unitOwned,
-      this.looks,
-      (i) => this.castHeroSkill(i),
-      HERO_SKILLS.map((s) => meta.ownsHeroSkill(s.key))
-    );
+    this.looks = Object.fromEntries(Object.keys(UNITS).map((k) => [k, ensureSkin(this, k, meta.equippedSkin(k), meta.level(k))]));
+    this.hud = this.makeHud();
     // 키보드 1~9 = 특수 무기
     this.input.keyboard?.on('keydown', (ev: KeyboardEvent) => {
       const k = ev.key.toLowerCase();
@@ -366,25 +358,21 @@ export class BattleScene extends Phaser.Scene {
       .setDepth(92)
       .setVisible(false);
 
-    // ⏸️ 일시정지 버튼(우상단)
-    const pauseBtn = this.add
-      .text(1250, 16, '⏸', { fontFamily: 'sans-serif', fontSize: '28px', color: '#cfe0ff', backgroundColor: '#1d2740', padding: { x: 10, y: 4 } })
-      .setOrigin(1, 0)
-      .setDepth(95)
-      .setInteractive({ useHandCursor: true });
-    pauseBtn.on('pointerdown', () => this.openPause());
-
-    // ⏩ 배속 버튼(일시정지 왼쪽)
-    this.speedBtn = this.add
-      .text(1186, 16, '', { fontFamily: 'sans-serif', fontSize: '22px', fontStyle: 'bold', color: '#ffe680', backgroundColor: '#1d2740', padding: { x: 10, y: 7 } })
-      .setOrigin(1, 0)
-      .setDepth(95)
-      .setInteractive({ useHandCursor: true });
+    // ⏩ 배속 · 🛒 상점 · ⏸️ 일시정지 — 상단 오른쪽(휴대폰 가장자리에 가리지 않게 안쪽)
+    const topBtn = (x: number, label: string, color: string): Phaser.GameObjects.Text =>
+      this.add
+        .text(x, 22, label, { fontFamily: 'sans-serif', fontSize: '19px', fontStyle: 'bold', color, backgroundColor: '#1d2740', padding: { x: 10, y: 6 } })
+        .setOrigin(0.5)
+        .setDepth(105) // 상단 바(100) 위
+        .setInteractive({ useHandCursor: true });
+    this.speedBtn = topBtn(965, '', '#ffe680');
     this.speedBtn.on('pointerdown', () => {
       BattleScene.speed = BattleScene.speed === 1 ? 2 : 1;
       sfx(this, 'click');
       this.applySpeed();
     });
+    topBtn(1068, '🛒 상점', '#ffd34d').on('pointerdown', () => this.openShop());
+    topBtn(1170, '⏸ 정지', '#cfe0ff').on('pointerdown', () => this.openPause());
     this.slowmo = 1;
     this.applySpeed();
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => (this.anims.globalTimeScale = 1));
@@ -400,46 +388,128 @@ export class BattleScene extends Phaser.Scene {
     this.speedBtn.setText(BattleScene.speed === 2 ? '⏩ ×2' : '▶ ×1');
   }
 
-  /** ⏸️ 일시정지 오버레이 — 계속 / 음소거 / 나가기 */
+  /** HUD 만들기(전투 중 상점에서 산 것이 생기면 다시 만듦) */
+  private makeHud(): Hud {
+    return new Hud(
+      this,
+      UNITS,
+      (type) => this.trySpawnUnit(type),
+      (type) => this.doBattleUpgrade(type),
+      (i) => this.fireWeapon(i),
+      this.weapons.map((w) => !!w),
+      this.unitOwned,
+      this.looks,
+      (i) => this.castHeroSkill(i),
+      HERO_SKILLS.map((s) => meta.ownsHeroSkill(s.key))
+    );
+  }
+
+  /** ⏸️ 일시정지 — 계속 · 상점 · 다시 시작 · 소리 · 그만하기 */
   private openPause(): void {
-    if (this.over || this.reviving || this.paused) return;
+    if (this.over || this.reviving || this.paused || this.picking) return;
     this.paused = true;
     const layer = this.add.container(0, 0).setDepth(200);
+    this.pauseLayer = layer;
     const dim = this.add.rectangle(640, 360, 1280, 720, 0x000000, 0.65).setInteractive();
-    const panel = this.add.rectangle(640, 360, 420, 320, 0x182238).setStrokeStyle(3, 0x3a7bff);
-    const title = this.add.text(640, 250, '⏸️ 일시정지', { fontFamily: 'sans-serif', fontSize: '34px', color: '#fff' }).setOrigin(0.5);
+    const panel = this.add.rectangle(640, 360, 480, 520, 0x182238).setStrokeStyle(3, 0x3a7bff);
+    const title = this.add.text(640, 145, '⏸️ 일시정지', { fontFamily: 'sans-serif', fontSize: '36px', fontStyle: 'bold', color: '#fff' }).setOrigin(0.5);
     layer.add([dim, panel, title]);
-
-    const resume = this.add
-      .text(640, 330, '▶ 계속', { fontFamily: 'sans-serif', fontSize: '26px', color: '#fff', backgroundColor: '#2eae5a', padding: { x: 24, y: 10 } })
-      .setOrigin(0.5)
-      .setInteractive({ useHandCursor: true });
-    resume.on('pointerdown', () => {
-      this.paused = false;
+    const close = (): void => {
       layer.destroy();
+      this.pauseLayer = null;
+    };
+    const item = (y: number, label: string, bg: string, fn: () => void, size = 26): Phaser.GameObjects.Text => {
+      const t = this.add
+        .text(640, y, label, { fontFamily: 'sans-serif', fontSize: `${size}px`, fontStyle: 'bold', color: '#fff', backgroundColor: bg, padding: { x: 20, y: 10 }, fixedWidth: 320, align: 'center' })
+        .setOrigin(0.5)
+        .setInteractive({ useHandCursor: true });
+      t.on('pointerdown', () => {
+        sfx(this, 'click');
+        fn();
+      });
+      layer.add(t);
+      return t;
+    };
+    item(225, '▶ 계속하기', '#2eae5a', () => {
+      close();
+      this.paused = false;
     });
-
-    const muted = this.sound.mute;
-    const mute = this.add
-      .text(640, 395, muted ? '🔇 소리 꺼짐' : '🔊 소리 켜짐', { fontFamily: 'sans-serif', fontSize: '22px', color: '#ffd34d', backgroundColor: '#20304e', padding: { x: 20, y: 8 } })
-      .setOrigin(0.5)
-      .setInteractive({ useHandCursor: true });
-    mute.on('pointerdown', () => {
+    item(300, '🛒 상점(강화)', '#d8962a', () => {
+      close();
+      this.paused = false;
+      this.openShop();
+    });
+    item(375, '🔄 다시 시작', '#3a7bff', () => {
+      close();
+      this.paused = false;
+      this.commitRun();
+      this.scene.restart({ stageId: this.endless ? 0 : this.stage.id, mode: this.endless ? 'endless' : undefined });
+    });
+    const mute = item(450, this.sound.mute ? '🔇 소리 꺼짐' : '🔊 소리 켜짐', '#20304e', () => {
       setMute(this, !this.sound.mute);
       mute.setText(this.sound.mute ? '🔇 소리 꺼짐' : '🔊 소리 켜짐');
-    });
-
-    const quit = this.add
-      .text(640, 455, '🏳️ 나가기', { fontFamily: 'sans-serif', fontSize: '20px', color: '#8892b0' })
-      .setOrigin(0.5)
-      .setInteractive({ useHandCursor: true });
-    quit.on('pointerdown', () => {
+    }, 22);
+    let armed = false;
+    const quit = item(530, '🏳️ 그만하기', '#5a3040', () => {
+      if (!armed) {
+        armed = true; // 실수 방지 — 한 번 더
+        quit.setText('정말 그만할까요? (한 번 더)').setBackgroundColor('#c0303a');
+        return;
+      }
+      close();
       this.paused = false;
-      layer.destroy();
       this.commitRun();
       this.scene.start('StageSelect');
+    }, 22);
+  }
+
+  /** 🛒 전투 중 상점 — 전투를 멈추고 강화 화면을 위에 띄움, 돌아오면 산 것을 바로 반영 */
+  private openShop(): void {
+    if (this.over || this.reviving || this.picking) return;
+    if (this.pauseLayer) {
+      this.pauseLayer.destroy();
+      this.pauseLayer = null;
+    }
+    const snap = this.shopSnapshot();
+    this.paused = true;
+    this.events.once(Phaser.Scenes.Events.RESUME, () => this.afterShop(snap));
+    this.scene.pause();
+    this.scene.launch('Upgrade', { fromBattle: true });
+  }
+
+  private shopSnapshot(): string {
+    return JSON.stringify([meta.ownedUnits, meta.ownedWeapons, meta.heroOwned, meta.skinEquipped]);
+  }
+
+  /** 상점에서 돌아옴 — 새 유닛·무기·영웅 스킬 버튼, 영웅 레벨, 기지 강화를 바로 적용 */
+  private afterShop(snap: string): void {
+    this.paused = false;
+    // 🏰 기지 강화(소환 에너지 충전·상한) · 인구는 매번 계산
+    this.energy.setRate(energyRate(meta.baseLevel('energy')));
+    this.energy.setCap(energyMax(meta.baseLevel('energy')) + (awakened(this.skills, 'recharge') ? 50 : 0));
+    // 🔥 새로 산 특수 무기
+    WEAPONS.forEach((w, i) => {
+      if (!this.weapons[i] && meta.ownsWeapon(w.key)) this.weapons[i] = new WeaponCharge(w.chargeSec * weaponChargeMult(meta.weaponLevel(w.key)));
     });
-    layer.add([resume, mute, quit]);
+    // 👑 영웅 레벨(체력 비율 유지)
+    const h = this.hero;
+    if (h?.active) {
+      const base = heroStats(this.stage.id, this.endless ? 1 : this.stage.enemyMult ?? 1);
+      const hm = heroLvMult(meta.heroLevel('hero'));
+      const ratio = h.hp / h.maxHp;
+      h.stats = { ...h.stats, atk: Math.round(base.atk * hm) };
+      h.maxHp = Math.round(base.hp * hm);
+      h.hp = h.maxHp * ratio;
+      h.heal(0);
+    }
+    // 🛡️ 새 유닛 · 🔥 무기 · 👑 스킬 · 👗 스킨 → HUD 다시
+    if (this.shopSnapshot() !== snap) {
+      this.looks = Object.fromEntries(Object.keys(UNITS).map((k) => [k, ensureSkin(this, k, meta.equippedSkin(k), meta.level(k))]));
+      this.hud.destroy();
+      this.hud = this.makeHud();
+      this.updateSynergies();
+    }
+    bgm(this, 'bgm_battle');
   }
 
   /** 최대 인구 = 기본 40 + 🏰 기지 강화 + 보급 스킬 */
@@ -487,6 +557,7 @@ export class BattleScene extends Phaser.Scene {
     const stats = { ...m, hp: Math.round(m.hp * bm * pm * vm), atk: Math.round(m.atk * bm * pm) };
     const u = this.unitPool.acquire();
     u.spawn(this.playerBase.x + BASE_FRONT, LANE_Y, stats, type, 'ally', this.looks[type] ?? type); // 👗 착용 스킨
+    u.setStars(UNIT_TIERS[unitTier(meta.level(type))].stars); // ⭐ 진화 단계(★★부터 머리 위 표시)
     u.pop = base.pop;
     sfx(this, 'spawn');
     this.track('spawns');
