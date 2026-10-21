@@ -10,6 +10,7 @@ import { UNIT_SKILLS, skillEvery, skillMult } from '../systems/unitSkills';
 import { skinType, skinsFor } from '../systems/skins';
 import { ensureSkin, loadLook } from '../systems/skinTextures';
 import { BASE_MAX_LV, BASE_UPGRADES } from '../systems/baseUpgrades';
+import { ALLY_CASTLE_TIERS, CASTLE_MAX_LV, CASTLE_RATE_MAX_LV, allyCastleGun, allyCastleTier, castleHpMult, castleLook } from '../systems/castle';
 import { UNIT_TIERS, evolvedKey, nextUnitTier, starText, unitTier } from '../systems/evolution';
 import { AURA_MAX_LV, AURA_RADIUS, HERO_MAX_LV, HERO_SKILLS, HERO_TIERS, SKILL_MAX_LV, auraBonus, heroLvMult, heroSkillPower, heroTier, heroUpCost, nextHeroTier } from '../systems/hero';
 
@@ -400,12 +401,45 @@ export class UpgradeScene extends Phaser.Scene {
 
   /** 🏰 기지 강화 — 인구 상한 · 소환 에너지(충전·상한) */
   private renderBase(): void {
-    BASE_UPGRADES.forEach((b, i) => {
+    const count = BASE_UPGRADES.length + 2;
+    // 🏰 성 레벨 · 🎯 성 공격 속도
+    const cl = meta.castleLevel('castle');
+    const rl = meta.castleLevel('castleRate');
+    const g0 = allyCastleGun(cl, rl);
+    const g1 = allyCastleGun(cl + 1, rl);
+    const tier = allyCastleTier(cl);
+    const next = ALLY_CASTLE_TIERS[tier + 1];
+    const rows: { key: 'castle' | 'castleRate'; title: string; desc: string }[] = [
+      {
+        key: 'castle',
+        title: `🏰 ${ALLY_CASTLE_TIERS[tier].name}  Lv.${cl}${cl >= CASTLE_MAX_LV ? ' (MAX)' : ''}`,
+        desc: `체력 ×${castleHpMult(cl).toFixed(1)} · 공격 ${g0.dmg} · 사거리 ${g0.range}  →  ×${castleHpMult(cl + 1).toFixed(1)} · ${g1.dmg} · ${g1.range}${next ? `  ·  Lv${next.min} 진화` : ''}`,
+      },
+      {
+        key: 'castleRate',
+        title: `🎯 성 공격 속도  Lv.${rl}${rl >= CASTLE_RATE_MAX_LV ? ' (MAX)' : ''}`,
+        desc: `${g0.interval}초마다 발사  →  ${allyCastleGun(cl, rl + 1).interval}초`,
+      },
+    ];
+    rows.forEach((r, i) => {
+      const cost = meta.castleNextCost(r.key);
+      this.card(i, count, null, r.title, r.desc, cost === null ? 'MAX' : `강화 🪙${cost}`, cost !== null && meta.gold >= cost, false, () => {
+        const before = allyCastleTier(meta.castleLevel('castle'));
+        if (meta.upgradeCastle(r.key)) {
+          sfx(this, 'weapon');
+          this.render();
+          const after = allyCastleTier(meta.castleLevel('castle'));
+          if (after > before) this.evolveFx(ALLY_CASTLE_TIERS[after].name); // ✨ 성 진화!
+        }
+      });
+    });
+    BASE_UPGRADES.forEach((b, j) => {
+      const i = j + 2;
       const lv = meta.baseLevel(b.key);
       const cost = meta.baseNextCost(b.key);
       this.card(
         i,
-        BASE_UPGRADES.length,
+        count,
         null,
         `${b.icon} ${b.name}  Lv.${lv}${lv >= BASE_MAX_LV ? ' (MAX)' : ''}`,
         cost === null ? b.effect(lv) : `${b.effect(lv)}  →  ${b.effect(lv + 1)}`,
@@ -420,11 +454,34 @@ export class UpgradeScene extends Phaser.Scene {
         }
       );
     });
-    this.layer.add(
-      this.add
-        .text(640, GRID_TOP + 150, `전투 중 레벨업 '보급'과 함께 쌓여요 · 최대 Lv.${BASE_MAX_LV}`, { fontFamily: 'sans-serif', fontSize: '16px', color: '#9fb3d0' })
-        .setOrigin(0.5)
-    );
+    this.castleEvolution(cl);
+  }
+
+  /** 🏰 성 진화 단계 줄(그림이 있으면 그림, 없으면 이름만) */
+  private castleEvolution(lv: number): void {
+    const cur = allyCastleTier(lv);
+    const y = 560;
+    this.layer.add(this.add.rectangle(640, y, 1180, 120, 0x141c30).setStrokeStyle(2, 0x33406a));
+    ALLY_CASTLE_TIERS.forEach((t, i) => {
+      const x = 640 + (i - 2) * 230;
+      const key = castleLook('ally', i);
+      const d = spriteOf(key) ?? (i === 0 ? spriteOf('base_ally') : undefined);
+      const tex = spriteOf(key) ? textureKey(key) : textureKey('base_ally');
+      if (d && this.textures.exists(tex) && (i === 0 || spriteOf(key))) {
+        const img = this.add.image(x, y - 10, tex, d.anims.idle!.frames[0]);
+        img.setScale(Math.min(80 / d.frameHeight, 140 / d.frameWidth));
+        if (i > cur) img.setTint(0x0a0e18).setTintMode(Phaser.TintModes.FILL).setAlpha(0.8);
+        this.layer.add(img);
+      } else {
+        this.layer.add(this.add.text(x, y - 10, i > cur ? '🔒' : '🏰', { fontSize: '40px', padding: { top: 12, bottom: 4 } }).setOrigin(0.5).setAlpha(i > cur ? 0.5 : 1));
+      }
+      this.layer.add(
+        this.add
+          .text(x, y + 44, i === cur ? `▶ ${t.name} ◀` : `${i > cur ? '🔒 ' : ''}Lv${t.min} ${t.name}`, { fontFamily: 'sans-serif', fontSize: i === cur ? '17px' : '14px', fontStyle: 'bold', color: i === cur ? '#ffd34d' : i < cur ? '#9fb3d0' : '#5a6684' })
+          .setOrigin(0.5)
+      );
+      if (i < ALLY_CASTLE_TIERS.length - 1) this.layer.add(this.add.text(x + 115, y - 10, '›', { fontSize: '30px', color: '#4a5878' }).setOrigin(0.5));
+    });
   }
 
   private renderWeapons(): void {

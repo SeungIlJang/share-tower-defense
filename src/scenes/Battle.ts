@@ -13,6 +13,7 @@ import { summonCooldown } from '../systems/pacing';
 import { anyDevFlag, devFlags } from '../systems/dev';
 import { UNIT_TIERS, unitTier } from '../systems/evolution';
 import { enemyLevel, hexColor, pickVariant, variantTable } from '../systems/enemyVariants';
+import { ALLY_CASTLE_TIERS, ENEMY_CASTLE_TIERS, allyCastleGun, allyCastleTier, castleHpMult, castleLook, castleTarget, enemyCastleGun, enemyCastleTier, type CastleShot } from '../systems/castle';
 import { HERO_TYPE, HERO_TIERS, HERO_FALLBACK_LOOKS, heroTier, heroBodyScale, HERO_REGEN, HERO_SKILLS, AURA_ATK, AURA_GUARD, AURA_RADIUS, MANA_MAX, MANA_REGEN, MANA_START, MACE_MULT, MACE_RANGE, RALLY_SEC, RALLY_SPEED, HOLY_HEAL, HOLY_HERO_HEAL, HOLY_PUSH, HERO_ENEMY_HP, heroStats, heroLvMult, heroMoveRange, HERO_DRAG_MULT, heroSkillPower, auraRadius, inAura, maceTargets, stepToward } from '../systems/hero';
 import { HERO_PANEL_X, HERO_BTN_R, HERO_BTN_Y } from '../ui/Hud';
 import { Pool } from '../utils/pool';
@@ -148,6 +149,9 @@ export class BattleScene extends Phaser.Scene {
   private mana!: ResourceSystem; // 💧 영웅 스킬 전용
   private heroCd: number[] = []; // 영웅 스킬별 남은 대기(초)
   private rallyUntil = 0; // 📯 돌격 함성 끝나는 시각(clock)
+  private allyGunT = 0; // 🏰 우리 성 다음 발사까지(초)
+  private enemyGunT = 0;
+  private enemyTier = 0; // 🏰 적 성 단계(0~4)
   private xpNext = xpToNext(1);
   private skills: Record<string, number> = {};
   private picking = false;
@@ -260,9 +264,14 @@ export class BattleScene extends Phaser.Scene {
     this.add.rectangle(640, LANE_Y + 40, 1280, 80, lane).setDepth(-5);
     this.add.rectangle(640, LANE_Y + 2, 1280, 3, line).setDepth(-4);
 
-    this.playerBase = new Base(this, 105, LANE_Y - 10, this.stage.baseHp, 0x2f6fe0, 'base_ally');
+    // 🏰 우리 성: 성 레벨로 체력·단계 / 적 성: 관문(무한=웨이브)으로 단계
+    const ct = allyCastleTier(meta.castleLevel('castle'));
+    this.playerBase = new Base(this, 105, LANE_Y - 10, Math.round(this.stage.baseHp * castleHpMult(meta.castleLevel('castle'))), 0x2f6fe0, [castleLook('ally', ct), 'base_ally'], 1 + 0.04 * ct);
+    this.enemyTier = enemyCastleTier(this.endless, this.stage.id, 0);
     // 무한 모드: 적 기지는 부서지지 않는 생산 기지(버틴 웨이브가 기록)
-    this.enemyBase = new Base(this, 1175, LANE_Y - 10, this.endless ? 1e9 : this.stage.baseHp, 0xc0392b, 'base_enemy');
+    this.enemyBase = new Base(this, 1175, LANE_Y - 10, this.endless ? 1e9 : this.stage.baseHp, 0xc0392b, [castleLook('enemy', this.enemyTier), 'base_enemy'], 1 + 0.04 * this.enemyTier);
+    this.allyGunT = 1;
+    this.enemyGunT = 2.5;
     this.spawnHero();
     this.devHud();
     this.waveNo = 0;
@@ -489,6 +498,11 @@ export class BattleScene extends Phaser.Scene {
     // 🏰 기지 강화(소환 에너지 충전·상한) · 인구는 매번 계산
     this.energy.setRate(energyRate(meta.baseLevel('energy')));
     this.energy.setCap(energyMax(meta.baseLevel('energy')) + (awakened(this.skills, 'recharge') ? 50 : 0));
+    // 🏰 성 강화(체력 비율 유지 · 단계 그림)
+    const clv = meta.castleLevel('castle');
+    this.playerBase.setMaxHp(Math.round(this.stage.baseHp * castleHpMult(clv)));
+    const nt = allyCastleTier(clv);
+    if (castleLook('ally', nt) !== this.playerBase.look) this.playerBase.setLook([castleLook('ally', nt), 'base_ally'], 1 + 0.04 * nt);
     // 🔥 새로 산 특수 무기
     WEAPONS.forEach((w, i) => {
       if (!this.weapons[i] && meta.ownsWeapon(w.key)) this.weapons[i] = new WeaponCharge(w.chargeSec * weaponChargeMult(meta.weaponLevel(w.key)));
@@ -750,6 +764,7 @@ export class BattleScene extends Phaser.Scene {
     this.applyDevCheats();
     this.heroCd = this.heroCd.map((c) => Math.max(0, c - dt));
     this.updateHero(dt);
+    this.updateCastles(dt);
     for (const ev of this.waves.update(dt)) this.spawnEnemy(ev.type);
 
     // 적 기지가 병력을 계속 생산(기지 파괴 전까지) → 기지를 부숴야 생산이 멈춤
@@ -769,6 +784,13 @@ export class BattleScene extends Phaser.Scene {
       if (w !== this.waveNo) {
         this.waveNo = w;
         this.waveText?.setText(`🌊 웨이브 ${w}   (최고 ${meta.endlessBest})`);
+        const et = enemyCastleTier(true, 0, w);
+        if (et > this.enemyTier) {
+          this.enemyTier = et; // 🏰 무한 모드: 적 성 진화
+          this.enemyBase.setLook([castleLook('enemy', et), 'base_enemy'], 1 + 0.04 * et);
+          this.cameras.main.shake(400, 0.01);
+          this.time.delayedCall(900, () => this.banner(`🏰 적 성이 강해졌다! ${ENEMY_CASTLE_TIERS[et].name}`, 0xff5a4a));
+        }
         this.banner(w % 5 === 0 ? `🌊 웨이브 ${w} — 👑 보스!` : `🌊 웨이브 ${w}`, 0xd8b0ff);
       }
     }
@@ -1245,6 +1267,123 @@ export class BattleScene extends Phaser.Scene {
     mk(280, '💀 적 전멸', '#8a3a3aee', () => {
       for (const e of this.enemies) if (e.active) e.hp = 0;
     });
+  }
+
+  /** 🏰 성 공격 — 우리 성은 적을, 적 성은 우리 유닛·영웅을 자동으로 쏨 */
+  private updateCastles(dt: number): void {
+    if (!this.playerBase.destroyed) {
+      const lv = meta.castleLevel('castle');
+      const gun = allyCastleGun(lv, meta.castleLevel('castleRate'));
+      this.allyGunT -= dt;
+      if (this.allyGunT <= 0) {
+        const t = castleTarget(this.playerBase.x, 1, gun.range, this.enemies);
+        if (t) {
+          this.allyGunT = gun.interval;
+          this.castleFire('ally', ALLY_CASTLE_TIERS[allyCastleTier(lv)].shot, t, gun.dmg);
+        }
+      }
+    }
+    if (!this.enemyBase.destroyed || this.endless) {
+      const mult = this.endless ? endlessMult(this.waveNo) : this.stage.enemyMult ?? 1;
+      const gun = enemyCastleGun(this.enemyTier, mult);
+      this.enemyGunT -= dt;
+      if (this.enemyGunT <= 0) {
+        const targets: Unit[] = this.hero?.active ? [...this.units, this.hero] : this.units;
+        const t = castleTarget(this.enemyBase.x, -1, gun.range, targets);
+        if (t) {
+          this.enemyGunT = gun.interval;
+          this.castleFire('enemy', ENEMY_CASTLE_TIERS[this.enemyTier].shot, t, gun.dmg);
+        }
+      }
+    }
+  }
+
+  /** 🏹 성 발사 — 단계별 발사체(화살·대포·번개·빛줄기 / 돌·독·불·암흑·저주) */
+  private castleFire(side: 'ally' | 'enemy', shot: CastleShot, target: Unit | Enemy, dmg: number): void {
+    const base = side === 'ally' ? this.playerBase : this.enemyBase;
+    const sx = base.x + (side === 'ally' ? 20 : -20);
+    const sy = base.top + 30;
+    const foes: (Unit | Enemy)[] = side === 'ally' ? this.enemies : this.hero?.active ? [...this.units, this.hero] : this.units;
+    const hit = (o: Unit | Enemy, d: number): void => {
+      if (!o.active) return;
+      if (o.side === 'ally' && this.clock < this.guardUntil) return; // 🛡️ 수호
+      o.takeDamage(Math.max(1, computeDamage(d, o.stats.def)));
+    };
+    base.recoil();
+    // 즉발: ⚡ 연쇄 번개 · ✨ 빛줄기 · 💀 저주 번개
+    if (shot === 'chain' || shot === 'curse') {
+      const color = shot === 'chain' ? 0x9ae8ff : 0xff3a5a;
+      const chain = foes.filter((o) => o.active && Math.abs(o.x - target.x) <= 160).sort((a, b) => Math.abs(a.x - target.x) - Math.abs(b.x - target.x)).slice(0, 3);
+      const g = this.add.graphics().setDepth(85);
+      g.lineStyle(4, color, 1).beginPath().moveTo(sx, sy);
+      chain.forEach((o, i) => {
+        g.lineTo(o.x, LANE_Y - 30);
+        hit(o, dmg * (i === 0 ? 1 : 0.6));
+      });
+      g.strokePath();
+      this.tweens.add({ targets: g, alpha: 0, duration: 260, onComplete: () => g.destroy() });
+      sfx(this, 'magic');
+      return;
+    }
+    if (shot === 'beam') {
+      const x1 = target.x + 90;
+      const beam = this.add.rectangle((sx + x1) / 2, LANE_Y - 30, Math.abs(x1 - sx), 14, 0xfff0a0, 0.85).setDepth(85);
+      this.tweens.add({ targets: beam, scaleY: 0.1, alpha: 0, duration: 380, onComplete: () => beam.destroy() });
+      for (const o of foes) if (o.active && o.x >= sx && o.x <= x1) hit(o, dmg); // 관통
+      for (const u of this.units) if (u.active) u.heal(Math.round(u.maxHp * 0.03)); // 아군 소량 회복
+      sfx(this, 'magic');
+      return;
+    }
+    // 날아가는 발사체
+    const look: Record<string, [number, number, number]> = {
+      // 색, 크기, 비행 시간(ms)
+      arrow: [0xffe14d, 6, 260],
+      arrow2: [0xffe14d, 6, 260],
+      cannon: [0x2a2e36, 11, 420],
+      rock: [0x8a7a6a, 9, 420],
+      poison: [0x8aff5a, 6, 300],
+      fire: [0xff7a2a, 11, 420],
+      dark: [0x9a5aff, 10, 380],
+    };
+    const [color, size, ms] = look[shot] ?? look.arrow;
+    const arrowLike = shot === 'arrow' || shot === 'arrow2' || shot === 'poison';
+    const fly = (delay: number): void => {
+      this.time.delayedCall(delay, () => {
+        if (this.over || !target.active) return;
+        const tx = target.x;
+        const ty = LANE_Y - 30;
+        const o = arrowLike
+          ? this.add.rectangle(sx, sy, 22, 5, color).setStrokeStyle(1, 0x000000, 0.6).setDepth(80)
+          : this.add.circle(sx, sy, size, color).setStrokeStyle(2, 0x000000, 0.5).setDepth(80);
+        if (arrowLike) o.setRotation(Math.atan2(ty - sy, tx - sx));
+        // 포물선(위로 솟았다가 떨어짐)
+        const peak = Math.min(sy, ty) - (arrowLike ? 30 : 70);
+        this.tweens.addCounter({
+          from: 0,
+          to: 1,
+          duration: ms,
+          onUpdate: (tw) => {
+            const k = tw.getValue() ?? 0;
+            o.x = sx + (tx - sx) * k;
+            o.y = (1 - k) * (1 - k) * sy + 2 * (1 - k) * k * peak + k * k * ty;
+          },
+          onComplete: () => {
+            o.destroy();
+            if (shot === 'cannon' || shot === 'fire') {
+              for (const f of foes) if (f.active && Math.abs(f.x - tx) <= 70) hit(f, dmg); // 착탄 범위
+              const boom = this.add.circle(tx, ty, 16, color === 0x2a2e36 ? 0xffa04a : color, 0.6).setDepth(80);
+              this.tweens.add({ targets: boom, scale: 4, alpha: 0, duration: 320, onComplete: () => boom.destroy() });
+              sfx(this, 'boom');
+            } else {
+              hit(target, dmg);
+            }
+          },
+        });
+        sfx(this, arrowLike ? 'arrow' : 'magic');
+      });
+    };
+    fly(0);
+    if (shot === 'arrow2') fly(160); // ★2: 연속 2발
   }
 
   /** 🏰 적은 우리 성 앞, 아군은 적 성 앞까지만 */

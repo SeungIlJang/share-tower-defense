@@ -7,6 +7,7 @@ import { WEAPONS } from '../systems/weapons';
 import { SKINS, LEGEND_NAMES } from '../systems/skins';
 import { BASE_MAX_LV, BASE_UPGRADES } from '../systems/baseUpgrades';
 import { AURA_MAX_LV, HERO_MAX_LV, HERO_SKILLS, HERO_TIERS, SKILL_MAX_LV, heroTier } from '../systems/hero';
+import { ALLY_CASTLE_TIERS, CASTLE_MAX_LV, CASTLE_RATE_MAX_LV, allyCastleTier } from '../systems/castle';
 import { DEV_FLAG_INFO, clearDevFlags, devFlags, fmt, setDevFlag } from '../systems/dev';
 import { openKeypad } from '../ui/Keypad';
 import { sfx } from '../systems/sound';
@@ -167,6 +168,19 @@ export class DevScene extends Phaser.Scene {
     ]);
     this.row(290, '클리어 시간 기록', `${Object.keys(meta.bestTimes).length}개`, [['기록 지우기', () => this.edit((m) => (m.bestTimes = {}), '⏱️ 기록 지움'), 0x8a3a3a]]);
     this.row(355, '♾️ 무한 모드 기록', `최고 🌊 ${meta.endlessBest}`, [['명예의 전당 지우기', () => this.edit((m) => (m.endlessTop = []), '♾️ 기록 지움'), 0x8a3a3a]]);
+    const cl = meta.castleLevel('castle');
+    const setC = (key: 'castle' | 'castleRate', v: number, max: number) => (): void => this.edit((m) => (m.baseLevels[key] = clamp(v, 0, max)));
+    this.row(485, '🏰 성 레벨', `Lv ${cl} · ${ALLY_CASTLE_TIERS[allyCastleTier(cl)].name}`, [
+      ['−', setC('castle', cl - 1, CASTLE_MAX_LV), 0x8a3a3a],
+      ['+', setC('castle', cl + 1, CASTLE_MAX_LV), 0x2f7a4d],
+      ...ALLY_CASTLE_TIERS.map((t): [string, () => void] => [`Lv${t.min}`, setC('castle', t.min, CASTLE_MAX_LV)]),
+    ]);
+    const rl = meta.castleLevel('castleRate');
+    this.row(550, '🎯 성 공격 속도', `Lv ${rl} / ${CASTLE_RATE_MAX_LV}`, [
+      ['−', setC('castleRate', rl - 1, CASTLE_RATE_MAX_LV), 0x8a3a3a],
+      ['+', setC('castleRate', rl + 1, CASTLE_RATE_MAX_LV), 0x2f7a4d],
+      ['MAX', setC('castleRate', CASTLE_RATE_MAX_LV, CASTLE_RATE_MAX_LV)],
+    ]);
     this.row(420, '바로 전투', '', [
       ['🔢 관문 번호로 시작', () => this.askNumber('몇 관문?', 1, MAX_STAGE, (v) => this.scene.start('Battle', { stageId: Math.max(1, v) })), 0x7a4ad8],
       ['♾️ 무한 모드', () => this.scene.start('Battle', { stageId: 0, mode: 'endless' }), 0x7a4ad8],

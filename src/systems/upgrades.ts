@@ -6,6 +6,7 @@ import { addStats, dailyMissions, type Mission, type Stats } from './missions';
 import { pushRecord, type EndlessRecord } from './endless';
 import { BASE_MAX_LV, baseUpgradeCost, type BaseKey } from './baseUpgrades';
 import { timeRecord } from './pacing';
+import { CASTLE_MAX_LV, CASTLE_RATE_MAX_LV, castleUpCost } from './castle';
 
 /** 강화 순수 계산 (Vitest 검증) */
 
@@ -323,6 +324,25 @@ export class MetaProgress {
     if (this.heroLevel(key) >= max || this.gold < cost) return false;
     this.gold -= cost;
     this.heroLevels[key] = this.heroLevel(key) + 1;
+    this.save();
+    return true;
+  }
+
+  /** 🏰 성 레벨('castle' 0~20) · 공격 속도('castleRate' 0~10) */
+  castleLevel(key: 'castle' | 'castleRate'): number {
+    return this.baseLevels[key] ?? 0;
+  }
+
+  castleNextCost(key: 'castle' | 'castleRate'): number | null {
+    const lv = this.castleLevel(key);
+    return lv >= (key === 'castle' ? CASTLE_MAX_LV : CASTLE_RATE_MAX_LV) ? null : castleUpCost(key, lv);
+  }
+
+  upgradeCastle(key: 'castle' | 'castleRate'): boolean {
+    const cost = this.castleNextCost(key);
+    if (cost === null || this.gold < cost) return false;
+    this.gold -= cost;
+    this.baseLevels[key] = this.castleLevel(key) + 1;
     this.save();
     return true;
   }
