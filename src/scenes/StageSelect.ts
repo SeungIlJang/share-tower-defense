@@ -136,7 +136,7 @@ export class StageSelectScene extends Phaser.Scene {
           .setOrigin(0.5)
       );
     } else {
-      node.add(this.add.text(0, 0, '🔒', { fontSize: '30px' }).setOrigin(0.5));
+      node.add(this.add.text(0, 0, '🔒', { fontSize: '30px', padding: { top: 12, bottom: 4 } }).setOrigin(0.5));
     }
     if (cleared) {
       // 별 기록(1~3) — 켜진 별 금색, 빈 별 흰색

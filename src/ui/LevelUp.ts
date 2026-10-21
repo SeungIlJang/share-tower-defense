@@ -27,7 +27,7 @@ export class LevelUpOverlay {
       // 등급 띠 + 번호
       c.add(s.add.text(cx, cy - H / 2 + 22, `${def.grade === 'legend' ? '🌟 ' : ''}${g.label}`, { fontFamily: 'sans-serif', fontSize: '18px', fontStyle: 'bold', color: '#ffffff', backgroundColor: `#${g.edge.toString(16).padStart(6, '0')}55`, padding: { x: 14, y: 3 } }).setOrigin(0.5));
       c.add(s.add.text(cx - W / 2 + 14, cy - H / 2 + 10, String(i + 1), { fontFamily: 'sans-serif', fontSize: '20px', fontStyle: 'bold', color: '#3a2a10', backgroundColor: '#ffd34d', padding: { x: 7, y: 1 } }));
-      c.add(s.add.text(cx, cy - 115, def.icon, { fontSize: '60px' }).setOrigin(0.5));
+      c.add(s.add.text(cx, cy - 115, def.icon, { fontSize: '60px', padding: { top: 20, bottom: 6 } }).setOrigin(0.5));
       c.add(s.add.text(cx, cy - 48, def.name, { fontFamily: 'sans-serif', fontSize: '30px', fontStyle: 'bold', color: '#ffe680' }).setOrigin(0.5));
       c.add(s.add.text(cx, cy + 8, def.desc, { fontFamily: 'sans-serif', fontSize: '19px', color: '#fff', align: 'center', lineSpacing: 5 }).setOrigin(0.5));
       // 수치: 지금 → 다음 / 즉시 효과

@@ -238,7 +238,7 @@ export class UpgradeScene extends Phaser.Scene {
         img.setScale(Math.min(110 / def.frameHeight, 150 / def.frameWidth));
         layer.add(img);
       } else {
-        layer.add(this.add.text(x, y - 40, '❔', { fontSize: '54px' }).setOrigin(0.5).setAlpha(0.5));
+        layer.add(this.add.text(x, y - 40, '❔', { fontSize: '54px', padding: { top: 12, bottom: 4 } }).setOrigin(0.5).setAlpha(0.5));
       }
       layer.add(this.add.text(x, y - 112, o.grade, { fontFamily: 'sans-serif', fontSize: '14px', fontStyle: 'bold', color: '#6a6a80' }).setOrigin(0.5));
       layer.add(this.add.text(x, y + 38, o.name, { fontFamily: 'sans-serif', fontSize: '18px', fontStyle: 'bold', color: '#3a3a5a' }).setOrigin(0.5));

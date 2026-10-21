@@ -130,7 +130,7 @@ export class Hud {
     scene.add.rectangle(this.vsX + this.vsW / 2, 22, this.vsW + 4, 20, 0x000000, 0.5).setDepth(d);
     this.vsBlue = scene.add.rectangle(this.vsX, 22, this.vsW / 2, 16, 0x3aa0ff).setOrigin(0, 0.5).setDepth(d + 1);
     this.vsRed = scene.add.rectangle(this.vsX + this.vsW, 22, this.vsW / 2, 16, 0xff4a4a).setOrigin(1, 0.5).setDepth(d + 1);
-    scene.add.text(this.vsX + this.vsW / 2, 22, 'VS', { fontFamily: 'sans-serif', fontSize: '13px', fontStyle: 'bold', color: '#fff' }).setOrigin(0.5).setDepth(d + 2);
+    scene.add.text(this.vsX + this.vsW / 2, 22, 'VS', { fontFamily: 'sans-serif', fontSize: '15px', fontStyle: 'bold', color: '#fff', stroke: '#000000', strokeThickness: 3 }).setOrigin(0.5).setDepth(d + 2);
     this.vsMark = scene.add.triangle(this.vsX + this.vsW / 2, 36, 0, 8, 10, 8, 5, 0, 0xffffff).setDepth(d + 2);
     this.goldText = scene.add.text(1262, 22, '🪙 0', { fontFamily: 'sans-serif', fontSize: '22px', fontStyle: 'bold', color: '#ffd34d' }).setOrigin(1, 0.5).setDepth(d + 1);
 
@@ -140,12 +140,12 @@ export class Hud {
     const by = 428;
     scene.add.rectangle(240, by, 400, 22, 0x000000, 0.5).setDepth(d);
     this.foodFill = scene.add.rectangle(42, by, 396, 18, 0xe0a24e).setOrigin(0, 0.5).setDepth(d + 1);
-    this.foodText = scene.add.text(240, by, '', { fontFamily: 'sans-serif', fontSize: '15px', fontStyle: 'bold', color: '#fff' }).setOrigin(0.5).setDepth(d + 2);
-    scene.add.text(22, by, '🍖 인구', { fontFamily: 'sans-serif', fontSize: '13px', color: '#fff' }).setOrigin(0, 0.5).setDepth(d + 2);
+    this.foodText = scene.add.text(240, by, '', { fontFamily: 'sans-serif', fontSize: '15px', fontStyle: 'bold', color: '#fff', stroke: '#000000', strokeThickness: 3 }).setOrigin(0.5).setDepth(d + 2);
+    scene.add.text(22, by, '🍖 인구', { fontFamily: 'sans-serif', fontSize: '14px', fontStyle: 'bold', color: '#fff', stroke: '#000000', strokeThickness: 3 }).setOrigin(0, 0.5).setDepth(d + 2);
     scene.add.rectangle(1040, by, 400, 22, 0x000000, 0.5).setDepth(d);
     this.energyFill = scene.add.rectangle(842, by, 396, 18, 0x4ac8e0).setOrigin(0, 0.5).setDepth(d + 1);
-    this.energyText = scene.add.text(1040, by, '', { fontFamily: 'sans-serif', fontSize: '14px', fontStyle: 'bold', color: '#fff' }).setOrigin(0.5).setDepth(d + 2);
-    scene.add.text(1238, by, '⚡ 소환', { fontFamily: 'sans-serif', fontSize: '13px', color: '#fff' }).setOrigin(1, 0.5).setDepth(d + 2);
+    this.energyText = scene.add.text(1040, by, '', { fontFamily: 'sans-serif', fontSize: '14px', fontStyle: 'bold', color: '#fff', stroke: '#000000', strokeThickness: 3 }).setOrigin(0.5).setDepth(d + 2);
+    scene.add.text(1238, by, '⚡ 소환', { fontFamily: 'sans-serif', fontSize: '14px', fontStyle: 'bold', color: '#fff', stroke: '#000000', strokeThickness: 3 }).setOrigin(1, 0.5).setDepth(d + 2);
 
     // ⏱️ 리듬 소환 바 (초록 중앙 = PERFECT) — 하단 HUD, 인구/에너지 바 사이
     const beatY = by + 4;
@@ -177,7 +177,7 @@ export class Hud {
         // 데이터 없음 = '준비 중' / 구매 안 함 = 얼굴 흐리게 + '강화에서 구매'
         add(scene.add.rectangle(cx, cy, CARD_W, CARD_H, 0x20242e).setStrokeStyle(2, 0x3a3f4a));
         if (key && scene.textures.exists(iconKey(key))) add(scene.add.image(cx, cy - 10, iconKey(key)).setDisplaySize(72, 72).setAlpha(0.25));
-        add(scene.add.text(cx, cy - 10, '🔒', { fontSize: '30px' }).setOrigin(0.5).setAlpha(0.75));
+        add(scene.add.text(cx, cy - 10, '🔒', { fontSize: '30px', padding: { top: 12, bottom: 4 } }).setOrigin(0.5).setAlpha(0.75));
         if (key) {
           add(scene.add.rectangle(cx, cy + 46, CARD_W - 10, 26, 0x000000, 0.5)); // 이름 판
           add(scene.add.text(cx, cy + 46, units[key].name, { fontFamily: 'sans-serif', fontSize: units[key].name.length >= 5 ? '17px' : '19px', fontStyle: 'bold', color: '#e6ecf5', stroke: '#000000', strokeThickness: 3 }).setOrigin(0.5));
@@ -223,7 +223,7 @@ export class Hud {
       wStrip.add([card, bg]);
       if (!owned) {
         wStrip.add([
-          scene.add.text(cx, wy, '🔒', { fontSize: '24px' }).setOrigin(0.5).setAlpha(0.6),
+          scene.add.text(cx, wy, '🔒', { fontSize: '24px', padding: { top: 12, bottom: 4 } }).setOrigin(0.5).setAlpha(0.6),
           scene.add.text(tx, wy - 12, w.name, { fontFamily: 'sans-serif', fontSize: '16px', fontStyle: 'bold', color: '#7c8698' }).setOrigin(0, 0.5),
           scene.add.text(tx, wy + 14, '🛒 구매', { fontFamily: 'sans-serif', fontSize: '13px', color: '#7c8aa0' }).setOrigin(0, 0.5),
           num,
@@ -235,7 +235,7 @@ export class Hud {
       const iconTex = textureKey('weapon_icons'); // public/sprites 무기 아이콘 시트(프레임 i = i번째 무기)
       const icon = scene.textures.exists(iconTex)
         ? scene.add.image(cx, wy, iconTex, i).setDisplaySize(WEAPON_R * 1.45, WEAPON_R * 1.45)
-        : scene.add.text(cx, wy, w.icon, { fontSize: '30px' }).setOrigin(0.5);
+        : scene.add.text(cx, wy, w.icon, { fontSize: '30px', padding: { top: 12, bottom: 4 } }).setOrigin(0.5);
       const name = scene.add.text(tx, wy, w.name, { fontFamily: 'sans-serif', fontSize: w.name.length >= 4 ? '15px' : '17px', fontStyle: 'bold', color: '#cfe0ff' }).setOrigin(0, 0.5);
       wStrip.add([gauge, icon, ring, name, num]);
       card.setInteractive({ useHandCursor: true });
@@ -283,23 +283,23 @@ export class Hud {
     const s = this.scene;
     const x = HERO_PANEL_X;
     // 👑 영웅 체력(쓰러지면 패배) — 마나 바 왼쪽
-    s.add.rectangle(x - 150, 60, 136, 24, 0x000000, 0.55).setDepth(d);
-    this.heroHpFill = s.add.rectangle(x - 214, 60, 128, 16, 0x5cff9e).setOrigin(0, 0.5).setDepth(d + 1);
-    this.heroHpText = s.add.text(x - 150, 60, '', { fontFamily: 'sans-serif', fontSize: '13px', fontStyle: 'bold', color: '#fff' }).setOrigin(0.5).setDepth(d + 2);
-    s.add.rectangle(x, 60, 136, 24, 0x000000, 0.55).setDepth(d);
-    this.manaFill = s.add.rectangle(x - 64, 60, 128, 16, 0x4a9eff).setOrigin(0, 0.5).setDepth(d + 1);
-    this.manaText = s.add.text(x, 60, '', { fontFamily: 'sans-serif', fontSize: '13px', fontStyle: 'bold', color: '#fff' }).setOrigin(0.5).setDepth(d + 2);
+    s.add.rectangle(x - 85, 60, 136, 24, 0x000000, 0.55).setDepth(d);
+    this.heroHpFill = s.add.rectangle(x - 149, 60, 128, 16, 0x5cff9e).setOrigin(0, 0.5).setDepth(d + 1);
+    this.heroHpText = s.add.text(x - 85, 60, '', { fontFamily: 'sans-serif', fontSize: '16px', fontStyle: 'bold', color: '#fff', stroke: '#000000', strokeThickness: 4 }).setOrigin(0.5).setDepth(d + 2);
+    s.add.rectangle(x + 60, 60, 136, 24, 0x000000, 0.55).setDepth(d);
+    this.manaFill = s.add.rectangle(x - 4, 60, 128, 16, 0x4a9eff).setOrigin(0, 0.5).setDepth(d + 1);
+    this.manaText = s.add.text(x + 60, 60, '', { fontFamily: 'sans-serif', fontSize: '16px', fontStyle: 'bold', color: '#fff', stroke: '#000000', strokeThickness: 4 }).setOrigin(0.5).setDepth(d + 2);
     HERO_SKILLS.forEach((sk, i) => {
       const cy = HERO_BTN_Y;
       const bx = x - i * (HERO_BTN_R * 2 + 14); // 스킬이 늘면 왼쪽으로
       const bg = s.add.circle(bx, cy, HERO_BTN_R, 0x1a2133, 0.92).setStrokeStyle(4, 0xffd34d).setDepth(d);
-      s.add.text(bx, cy - 4, sk.icon, { fontSize: '32px' }).setOrigin(0.5).setDepth(d + 2);
-      s.add.text(bx, cy + 26, `💧${sk.mana}`, { fontFamily: 'sans-serif', fontSize: '13px', fontStyle: 'bold', color: '#aee0ff' }).setOrigin(0.5).setDepth(d + 2);
+      s.add.text(bx, cy - 4, sk.icon, { fontSize: '32px', padding: { top: 12, bottom: 4 } }).setOrigin(0.5).setDepth(d + 2);
+      s.add.text(bx, cy + 27, `💧${sk.mana}`, { fontFamily: 'sans-serif', fontSize: '15px', fontStyle: 'bold', color: '#d8f0ff', stroke: '#000000', strokeThickness: 4 }).setOrigin(0.5).setDepth(d + 2);
       s.add
         .text(bx - HERO_BTN_R + 2, cy - HERO_BTN_R + 2, sk.hotkey, { fontFamily: 'sans-serif', fontSize: '13px', fontStyle: 'bold', color: '#3a2a10', backgroundColor: '#ffd34d', padding: { x: 4, y: 0 } })
         .setDepth(d + 3);
       const shade = s.add.graphics().setDepth(d + 1);
-      if (!owned[i]) s.add.text(bx, cy - 4, '🔒', { fontSize: '26px' }).setOrigin(0.5).setDepth(d + 4).setAlpha(0.85); // 강화에서 해금
+      if (!owned[i]) s.add.text(bx, cy - 4, '🔒', { fontSize: '26px', padding: { top: 12, bottom: 4 } }).setOrigin(0.5).setDepth(d + 4).setAlpha(0.85); // 강화에서 해금
       bg.setInteractive({ useHandCursor: true });
       bg.on('pointerdown', () => onHeroSkill(i));
       this.heroBtns.push({ bg, shade, cx: bx, cy });

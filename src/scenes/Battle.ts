@@ -358,10 +358,10 @@ export class BattleScene extends Phaser.Scene {
     });
 
     // 보스 HP 바(상단, 보스 등장 시만)
-    this.bossBarBg = this.add.rectangle(640, 60, 540, 18, 0x000000, 0.6).setDepth(90).setVisible(false);
-    this.bossFill = this.add.rectangle(640 - 260, 60, 520, 12, 0xff3b3b).setOrigin(0, 0.5).setDepth(91).setVisible(false);
+    this.bossBarBg = this.add.rectangle(620, 60, 420, 20, 0x000000, 0.6).setDepth(90).setVisible(false);
+    this.bossFill = this.add.rectangle(620 - 202, 60, 404, 14, 0xff3b3b).setOrigin(0, 0.5).setDepth(91).setVisible(false);
     this.bossText = this.add
-      .text(640, 60, '', { fontFamily: 'sans-serif', fontSize: '13px', fontStyle: 'bold', color: '#fff' })
+      .text(620, 60, '', { fontFamily: 'sans-serif', fontSize: '15px', fontStyle: 'bold', color: '#fff', stroke: '#000000', strokeThickness: 4 })
       .setOrigin(0.5)
       .setDepth(92)
       .setVisible(false);
@@ -618,7 +618,7 @@ export class BattleScene extends Phaser.Scene {
     const boss = this.enemies.find((e) => e.active && BOSS.has(e.type));
     if (boss) {
       this.bossBarBg.setVisible(true);
-      this.bossFill.setVisible(true).setSize(520 * Math.max(0, boss.hp / boss.maxHp), 12);
+      this.bossFill.setVisible(true).setSize(404 * Math.max(0, boss.hp / boss.maxHp), 14);
       this.bossText.setVisible(true).setText(`👑 ${boss.stats.name}  ${Math.max(0, Math.ceil(boss.hp))}/${boss.maxHp}`);
     } else {
       this.bossBarBg.setVisible(false);
@@ -1504,7 +1504,7 @@ export class BattleScene extends Phaser.Scene {
     const fill = this.add.ellipse(0, 0, w, h, color, 0.38).setScale(0.05); // 차오르는 타이밍
     const cx = (x0 + x1) / 2;
     // 구역 양 끝 바닥에 경고 아이콘(큰 보스 몸에 가리지 않게)
-    const mark = this.add.text(x0 + 14, LANE_Y + 30, icon, { fontSize: '24px' }).setOrigin(0.5).setDepth(70);
+    const mark = this.add.text(x0 + 14, LANE_Y + 30, icon, { fontSize: '24px', padding: { top: 12, bottom: 4 } }).setOrigin(0.5).setDepth(70);
     const bang = this.add.text(x1 - 14, LANE_Y + 30, '⚠️', { fontSize: '22px' }).setOrigin(0.5).setDepth(70);
     const c = this.add.container(cx, LANE_Y + 30, [glow, base, fill, edge, inner]).setDepth(-2); // 바닥(유닛 아래)
     this.tweens.add({ targets: fill, scale: 1, duration: ms, ease: 'Quad.easeIn' });
