@@ -5006,5 +5006,1034 @@
       }
     },
     "icon": "icon_spear@legend_t3.png"
+  },
+  "baby_dragon": {
+    "file": "baby_dragon.png",
+    "filter": "linear",
+    "frameWidth": 282,
+    "frameHeight": 155,
+    "scale": 0.887,
+    "footY": 153,
+    "anims": {
+      "idle": {
+        "frames": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "fps": 5
+      },
+      "walk": {
+        "frames": [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "fps": 9
+      },
+      "attack": {
+        "frames": [
+          12,
+          13,
+          14,
+          15,
+          16
+        ],
+        "fps": 10
+      },
+      "death": {
+        "frames": [
+          18,
+          19,
+          20,
+          21
+        ],
+        "fps": 8
+      }
+    }
+  },
+  "banshee": {
+    "file": "banshee.png",
+    "filter": "linear",
+    "frameWidth": 163,
+    "frameHeight": 94,
+    "scale": 0.499,
+    "footY": 93,
+    "anims": {
+      "idle": {
+        "frames": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "fps": 5
+      },
+      "walk": {
+        "frames": [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "fps": 9
+      },
+      "attack": {
+        "frames": [
+          12,
+          13,
+          14,
+          15,
+          16
+        ],
+        "fps": 10
+      },
+      "death": {
+        "frames": [
+          18,
+          19,
+          20,
+          21
+        ],
+        "fps": 8
+      }
+    }
+  },
+  "dire_wolf": {
+    "file": "dire_wolf.png",
+    "filter": "linear",
+    "frameWidth": 147,
+    "frameHeight": 85,
+    "scale": 0.499,
+    "footY": 84,
+    "anims": {
+      "idle": {
+        "frames": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "fps": 5
+      },
+      "walk": {
+        "frames": [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "fps": 9
+      },
+      "attack": {
+        "frames": [
+          12,
+          13,
+          14,
+          15,
+          16
+        ],
+        "fps": 10
+      },
+      "death": {
+        "frames": [
+          18,
+          19,
+          20,
+          21
+        ],
+        "fps": 8
+      }
+    }
+  },
+  "frost_wolf": {
+    "file": "frost_wolf.png",
+    "filter": "linear",
+    "frameWidth": 205,
+    "frameHeight": 96,
+    "scale": 0.499,
+    "footY": 88,
+    "anims": {
+      "idle": {
+        "frames": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "fps": 5
+      },
+      "walk": {
+        "frames": [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "fps": 9
+      },
+      "attack": {
+        "frames": [
+          12,
+          13,
+          14,
+          15,
+          16
+        ],
+        "fps": 10
+      },
+      "death": {
+        "frames": [
+          18,
+          19,
+          20,
+          21
+        ],
+        "fps": 8
+      }
+    }
+  },
+  "goblin_archer": {
+    "file": "goblin_archer.png",
+    "filter": "linear",
+    "frameWidth": 182,
+    "frameHeight": 92,
+    "scale": 0.501,
+    "footY": 91,
+    "anims": {
+      "idle": {
+        "frames": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "fps": 5
+      },
+      "walk": {
+        "frames": [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "fps": 9
+      },
+      "attack": {
+        "frames": [
+          12,
+          13,
+          14,
+          15,
+          16
+        ],
+        "fps": 10
+      },
+      "death": {
+        "frames": [
+          18,
+          19,
+          20,
+          21
+        ],
+        "fps": 8
+      }
+    }
+  },
+  "goblin_bomber": {
+    "file": "goblin_bomber.png",
+    "filter": "linear",
+    "frameWidth": 195,
+    "frameHeight": 116,
+    "scale": 0.5,
+    "footY": 115,
+    "anims": {
+      "idle": {
+        "frames": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "fps": 5
+      },
+      "walk": {
+        "frames": [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "fps": 9
+      },
+      "attack": {
+        "frames": [
+          12,
+          13,
+          14,
+          15,
+          16
+        ],
+        "fps": 10
+      },
+      "death": {
+        "frames": [
+          18,
+          19,
+          20,
+          21
+        ],
+        "fps": 8
+      }
+    }
+  },
+  "goblin_shaman": {
+    "file": "goblin_shaman.png",
+    "filter": "linear",
+    "frameWidth": 174,
+    "frameHeight": 119,
+    "scale": 0.501,
+    "footY": 118,
+    "anims": {
+      "idle": {
+        "frames": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "fps": 5
+      },
+      "walk": {
+        "frames": [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "fps": 9
+      },
+      "attack": {
+        "frames": [
+          12,
+          13,
+          14,
+          15,
+          16
+        ],
+        "fps": 10
+      },
+      "death": {
+        "frames": [
+          18,
+          19,
+          20,
+          21
+        ],
+        "fps": 8
+      }
+    }
+  },
+  "ice_golem": {
+    "file": "ice_golem.png",
+    "filter": "linear",
+    "frameWidth": 284,
+    "frameHeight": 199,
+    "scale": 0.565,
+    "footY": 197,
+    "anims": {
+      "idle": {
+        "frames": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "fps": 5
+      },
+      "walk": {
+        "frames": [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "fps": 9
+      },
+      "attack": {
+        "frames": [
+          12,
+          13,
+          14,
+          15,
+          16
+        ],
+        "fps": 10
+      },
+      "death": {
+        "frames": [
+          18,
+          19,
+          20,
+          21
+        ],
+        "fps": 8
+      }
+    }
+  },
+  "king_slime": {
+    "file": "king_slime.png",
+    "filter": "linear",
+    "frameWidth": 115,
+    "frameHeight": 84,
+    "scale": 0.499,
+    "footY": 83,
+    "anims": {
+      "idle": {
+        "frames": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "fps": 5
+      },
+      "walk": {
+        "frames": [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "fps": 9
+      },
+      "attack": {
+        "frames": [
+          12,
+          13,
+          14,
+          15,
+          16
+        ],
+        "fps": 10
+      },
+      "death": {
+        "frames": [
+          18,
+          19,
+          20,
+          21
+        ],
+        "fps": 8
+      }
+    }
+  },
+  "lava_golem": {
+    "file": "lava_golem.png",
+    "filter": "linear",
+    "frameWidth": 300,
+    "frameHeight": 194,
+    "scale": 0.563,
+    "footY": 192,
+    "anims": {
+      "idle": {
+        "frames": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "fps": 5
+      },
+      "walk": {
+        "frames": [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "fps": 9
+      },
+      "attack": {
+        "frames": [
+          12,
+          13,
+          14,
+          15,
+          16
+        ],
+        "fps": 10
+      },
+      "death": {
+        "frames": [
+          18,
+          19,
+          20,
+          21
+        ],
+        "fps": 8
+      }
+    }
+  },
+  "necromancer": {
+    "file": "necromancer.png",
+    "filter": "linear",
+    "frameWidth": 146,
+    "frameHeight": 131,
+    "scale": 0.5,
+    "footY": 130,
+    "anims": {
+      "idle": {
+        "frames": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "fps": 5
+      },
+      "walk": {
+        "frames": [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "fps": 9
+      },
+      "attack": {
+        "frames": [
+          12,
+          13,
+          14,
+          15,
+          16
+        ],
+        "fps": 10
+      },
+      "death": {
+        "frames": [
+          18,
+          19,
+          20,
+          21
+        ],
+        "fps": 8
+      }
+    }
+  },
+  "orc_berserker": {
+    "file": "orc_berserker.png",
+    "filter": "linear",
+    "frameWidth": 219,
+    "frameHeight": 141,
+    "scale": 0.5,
+    "footY": 140,
+    "anims": {
+      "idle": {
+        "frames": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "fps": 5
+      },
+      "walk": {
+        "frames": [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "fps": 9
+      },
+      "attack": {
+        "frames": [
+          12,
+          13,
+          14,
+          15,
+          16
+        ],
+        "fps": 10
+      },
+      "death": {
+        "frames": [
+          18,
+          19,
+          20,
+          21
+        ],
+        "fps": 8
+      }
+    }
+  },
+  "orc_shield": {
+    "file": "orc_shield.png",
+    "filter": "linear",
+    "frameWidth": 193,
+    "frameHeight": 132,
+    "scale": 0.499,
+    "footY": 131,
+    "anims": {
+      "idle": {
+        "frames": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "fps": 5
+      },
+      "walk": {
+        "frames": [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "fps": 9
+      },
+      "attack": {
+        "frames": [
+          12,
+          13,
+          14,
+          15,
+          16
+        ],
+        "fps": 10
+      },
+      "death": {
+        "frames": [
+          18,
+          19,
+          20,
+          21
+        ],
+        "fps": 8
+      }
+    }
+  },
+  "orc_warchief": {
+    "file": "orc_warchief.png",
+    "filter": "linear",
+    "frameWidth": 187,
+    "frameHeight": 132,
+    "scale": 0.502,
+    "footY": 131,
+    "anims": {
+      "idle": {
+        "frames": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "fps": 5
+      },
+      "walk": {
+        "frames": [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "fps": 9
+      },
+      "attack": {
+        "frames": [
+          12,
+          13,
+          14,
+          15,
+          16
+        ],
+        "fps": 10
+      },
+      "death": {
+        "frames": [
+          18,
+          19,
+          20,
+          21
+        ],
+        "fps": 8
+      }
+    }
+  },
+  "poison_slime": {
+    "file": "poison_slime.png",
+    "filter": "linear",
+    "frameWidth": 198,
+    "frameHeight": 138,
+    "scale": 0.501,
+    "footY": 112,
+    "anims": {
+      "idle": {
+        "frames": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "fps": 5
+      },
+      "walk": {
+        "frames": [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "fps": 9
+      },
+      "attack": {
+        "frames": [
+          12,
+          13,
+          14,
+          15,
+          16
+        ],
+        "fps": 10
+      },
+      "death": {
+        "frames": [
+          18,
+          19,
+          20,
+          21
+        ],
+        "fps": 8
+      }
+    }
+  },
+  "skeleton_archer": {
+    "file": "skeleton_archer.png",
+    "filter": "linear",
+    "frameWidth": 199,
+    "frameHeight": 102,
+    "scale": 0.499,
+    "footY": 101,
+    "anims": {
+      "idle": {
+        "frames": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "fps": 5
+      },
+      "walk": {
+        "frames": [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "fps": 9
+      },
+      "attack": {
+        "frames": [
+          12,
+          13,
+          14,
+          15,
+          16
+        ],
+        "fps": 10
+      },
+      "death": {
+        "frames": [
+          18,
+          19,
+          20,
+          21
+        ],
+        "fps": 8
+      }
+    }
+  },
+  "skeleton_knight": {
+    "file": "skeleton_knight.png",
+    "filter": "linear",
+    "frameWidth": 174,
+    "frameHeight": 123,
+    "scale": 0.498,
+    "footY": 122,
+    "anims": {
+      "idle": {
+        "frames": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "fps": 5
+      },
+      "walk": {
+        "frames": [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "fps": 9
+      },
+      "attack": {
+        "frames": [
+          12,
+          13,
+          14,
+          15,
+          16
+        ],
+        "fps": 10
+      },
+      "death": {
+        "frames": [
+          18,
+          19,
+          20,
+          21
+        ],
+        "fps": 8
+      }
+    }
+  },
+  "stone_golem": {
+    "file": "stone_golem.png",
+    "filter": "linear",
+    "frameWidth": 319,
+    "frameHeight": 183,
+    "scale": 0.592,
+    "footY": 181,
+    "anims": {
+      "idle": {
+        "frames": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "fps": 5
+      },
+      "walk": {
+        "frames": [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "fps": 9
+      },
+      "attack": {
+        "frames": [
+          12,
+          13,
+          14,
+          15,
+          16
+        ],
+        "fps": 10
+      },
+      "death": {
+        "frames": [
+          18,
+          19,
+          20,
+          21
+        ],
+        "fps": 8
+      }
+    }
+  },
+  "toxic_mushroom": {
+    "file": "toxic_mushroom.png",
+    "filter": "linear",
+    "frameWidth": 189,
+    "frameHeight": 86,
+    "scale": 0.5,
+    "footY": 85,
+    "anims": {
+      "idle": {
+        "frames": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "fps": 5
+      },
+      "walk": {
+        "frames": [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "fps": 9
+      },
+      "attack": {
+        "frames": [
+          12,
+          13,
+          14,
+          15,
+          16
+        ],
+        "fps": 10
+      },
+      "death": {
+        "frames": [
+          18,
+          19,
+          20,
+          21
+        ],
+        "fps": 8
+      }
+    }
+  },
+  "vampire_bat": {
+    "file": "vampire_bat.png",
+    "filter": "linear",
+    "frameWidth": 169,
+    "frameHeight": 80,
+    "scale": 0.501,
+    "footY": 79,
+    "anims": {
+      "idle": {
+        "frames": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "fps": 5
+      },
+      "walk": {
+        "frames": [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "fps": 9
+      },
+      "attack": {
+        "frames": [
+          12,
+          13,
+          14,
+          15,
+          16
+        ],
+        "fps": 10
+      },
+      "death": {
+        "frames": [
+          18,
+          19,
+          20,
+          21
+        ],
+        "fps": 8
+      }
+    }
+  },
+  "wisp": {
+    "file": "wisp.png",
+    "filter": "linear",
+    "frameWidth": 130,
+    "frameHeight": 119,
+    "scale": 0.5,
+    "footY": 107,
+    "anims": {
+      "idle": {
+        "frames": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "fps": 5
+      },
+      "walk": {
+        "frames": [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "fps": 9
+      },
+      "attack": {
+        "frames": [
+          12,
+          13,
+          14,
+          15,
+          16
+        ],
+        "fps": 10
+      },
+      "death": {
+        "frames": [
+          18,
+          19,
+          20,
+          21
+        ],
+        "fps": 8
+      }
+    }
   }
 }

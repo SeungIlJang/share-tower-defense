@@ -1,6 +1,6 @@
 # 👾 새 적 그림 프롬프트 (21종)
 
-> 2026-10-21. 지금은 기존 적 그림을 **색·크기만 바꿔** 쓰는 중 — 전용 그림을 넣으면 자동으로 바뀜.
+> 2026-10-21. ✅ 21장 모두 생성·게임 적용 완료(`tools/sprites.config.json` 적 키 이름 그대로, 원본은 `images/image/enemies` · 저장소 제외).
 
 ## 저장 위치 · 파일 이름 (영문)
 `D:\AI\workspace\game\images\image\enemies\Enemy_<키>.png` (예: `Enemy_goblin_archer.png`)
