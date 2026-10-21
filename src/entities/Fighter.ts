@@ -40,6 +40,7 @@ export class Fighter {
   summonT = 0; // 보스 부하 소환 타이머(초)
   elite = false; // ⭐ 엘리트 적
   private baseTint: number | null = null; // 엘리트 금빛 등 기본 색
+  private sizeMult = 1; // 몸 크기 배율(변종·영웅)
 
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
@@ -76,6 +77,7 @@ export class Fighter {
     this.elite = false;
     this.baseTint = null;
     this.root.setScale(UNIT_SCALE);
+    this.sizeMult = 1;
 
     // 외형 재구성
     this.char.removeAll(true);
@@ -116,7 +118,7 @@ export class Fighter {
   makeElite(): void {
     this.elite = true;
     this.baseTint = 0xffe08a;
-    this.root.setScale(UNIT_SCALE * 1.3);
+    this.root.setScale(UNIT_SCALE * 1.3 * this.sizeMult);
     if (this.sprite) this.applyTint(this.sprite);
     this.updateHp();
   }
@@ -216,8 +218,16 @@ export class Fighter {
     this.stars.setText('★'.repeat(n)).setVisible(n >= 2);
   }
 
+  /** 👾 변종 — 기본 색 · 크기(전용 그림이 없을 때 빌린 그림을 바꿔 보이게) */
+  setVariant(tint: number | null, scale = 1): void {
+    this.baseTint = tint;
+    this.setBodyScale(scale);
+    if (this.sprite) this.applyTint(this.sprite);
+  }
+
   /** 몸 크기 배율(👑 영웅 등) */
   setBodyScale(m: number): void {
+    this.sizeMult = m;
     this.root.setScale(UNIT_SCALE * m);
   }
 

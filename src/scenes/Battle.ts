@@ -12,6 +12,7 @@ import { FOOD_BASE, energyMax, energyRate, popBonus } from '../systems/baseUpgra
 import { summonCooldown } from '../systems/pacing';
 import { anyDevFlag, devFlags } from '../systems/dev';
 import { UNIT_TIERS, unitTier } from '../systems/evolution';
+import { enemyLevel, hexColor, pickVariant, variantTable } from '../systems/enemyVariants';
 import { HERO_TYPE, HERO_TIERS, HERO_FALLBACK_LOOKS, heroTier, heroBodyScale, HERO_REGEN, HERO_SKILLS, AURA_ATK, AURA_GUARD, AURA_RADIUS, MANA_MAX, MANA_REGEN, MANA_START, MACE_MULT, MACE_RANGE, RALLY_SEC, RALLY_SPEED, HOLY_HEAL, HOLY_HERO_HEAL, HOLY_PUSH, HERO_ENEMY_HP, heroStats, heroLvMult, heroMoveRange, HERO_DRAG_MULT, heroSkillPower, auraRadius, inAura, maceTargets, stepToward } from '../systems/hero';
 import { HERO_PANEL_X, HERO_BTN_R, HERO_BTN_Y } from '../ui/Hud';
 import { Pool } from '../utils/pool';
@@ -36,7 +37,7 @@ import {
   PIERCE_MAX,
 } from '../systems/unitSkills';
 import { spriteOf, textureKey } from '../systems/sprites';
-import { ensureSkin } from '../systems/skinTextures';
+import { ensureHue, ensureSkin } from '../systems/skinTextures';
 import { sfx, bgm, setMute } from '../systems/sound';
 import { starsFor, STAR_GOLD } from '../systems/stars';
 import { activeSynergies, synergyMult, type Synergy } from '../systems/synergy';
@@ -84,9 +85,9 @@ import {
 } from '../systems/weapons';
 
 // 원거리 유닛: 투사체 모양 · 명중 시 범위 피해 배율(없으면 단일)
-const ORB_UNITS = new Set(['mage', 'earthmage', 'darkmage', 'cannon']);
+const ORB_UNITS = new Set(['mage', 'earthmage', 'darkmage', 'cannon', 'goblin_shaman', 'necromancer', 'banshee', 'baby_dragon']);
 const SPLASH: Record<string, number> = { mage: 0.6, earthmage: 0.8, cannon: 0.9 };
-const ORB_COLOR: Record<string, number> = { earthmage: 0xd8903a, darkmage: 0x6a2aff, cannon: 0x2a2e36 };
+const ORB_COLOR: Record<string, number> = { earthmage: 0xd8903a, darkmage: 0x6a2aff, cannon: 0x2a2e36, goblin_shaman: 0xc88aff, necromancer: 0x8a3aff, banshee: 0xff8ad8, baby_dragon: 0xff6a2a };
 const CLERIC_HEAL_MULT = 2.5; // 성직자 1회 치유량 = 공격력 × 2.5
 
 const FROZEN_TINT = 0x7cd8ff;
@@ -98,6 +99,7 @@ const BOSS = new Set(['ogre', 'dragon']); // 보스 타입
 
 const UNITS = unitsData as Record<string, UnitStats>;
 const ENEMIES = enemiesData as Record<string, EnemyStats>;
+const VARIANTS = variantTable(ENEMIES); // 👾 기본 적 → 변종
 const STAGES = stagesData as StageData[];
 
 const LANE_Y = 340; // 하단 HUD 2단(유닛 카드 + 특수 무기, 410~) 위 전장 바닥
@@ -657,11 +659,20 @@ export class BattleScene extends Phaser.Scene {
     return span > 0 ? (front - this.playerBase.x) / span : 0;
   }
 
-  private spawnEnemy(type: string, elite = false): void {
+  /** 적 등장 — at: 위치(없으면 적 기지 앞) · exact: 변종으로 바꾸지 않음(소환·분열) */
+  private spawnEnemy(type: string, elite = false, at?: number, exact = false): void {
+    if (!exact && !BOSS.has(type)) type = pickVariant(type, enemyLevel(this.endless, this.stage.id, this.waveNo), VARIANTS, Math.random); // 👾 변종
     const stats = ENEMIES[type];
     if (!stats) return;
     const e = this.enemyPool.acquire();
-    e.spawn(this.enemyBase.x - BASE_FRONT, LANE_Y, stats, type, 'enemy');
+    const x = Phaser.Math.Clamp(at ?? this.enemyBase.x - BASE_FRONT, this.playerBase.x + BASE_FRONT, this.enemyBase.x - BASE_FRONT);
+    // 전용 그림이 없으면 빌린 그림(색상 회전 사본 또는 곱하기 색)
+    const own = !!spriteOf(type);
+    const look = own ? type : stats.hue !== undefined && stats.look ? ensureHue(this, stats.look, stats.hue) : stats.look ?? type;
+    e.spawn(x, LANE_Y, stats, type, 'enemy', look);
+    e.setVariant(own ? null : hexColor(stats.tint), stats.scale ?? 1);
+    e.abilityT = 0;
+    e.raged = false;
     e.reward = stats.reward;
     e.maxHp = Math.round(e.maxHp * HERO_ENEMY_HP); // ⚖️ 영웅이 생긴 만큼 적 체력 +15%
     e.hp = e.maxHp;
@@ -801,6 +812,7 @@ export class BattleScene extends Phaser.Scene {
       e.setStatus(frozen ? FROZEN_TINT : null, frozen);
       if (frozen) continue; // ❄️ 빙결: 이동·공격 정지
       if (BOSS.has(e.type)) this.bossPattern(e, dt);
+      else if (ENEMIES[e.type]?.ability) this.enemyAbility(e, dt); // 👾 치유·소환·분노
       const target = this.nearest(e.x, allyTargets) as Unit | null;
       e.cooldown -= dt;
       if (target && inRange(e.x, target.x, e.stats.range + REACH)) {
@@ -925,6 +937,7 @@ export class BattleScene extends Phaser.Scene {
       if (this.inHeroAura(def.x)) dmg = Math.max(1, Math.round(dmg * AURA_GUARD * (1 - 0.06 * (this.skills.auraGuard ?? 0)))); // ⭕ 오라 · 🛡️ 수호 오라
     }
     if (devFlags.oneHit && ally) dmg = Math.max(dmg, def.hp + 1); // 🛠️ 한 방 처치
+    if (!ally && ENEMIES[att.type]?.ability === 'lifesteal') att.heal(Math.round(dmg * 0.5)); // 🦇 흡혈
     // 🎯 연쇄 폭발(각성): 치명타 때 주변 적도 절반 피해
     const chainDmg = Math.round(dmg * 0.5);
     const chain = crit && awakened(this.skills, 'crit') ? (x: number): void => this.splash(x, chainDmg, 'ally') : null;
@@ -1502,10 +1515,71 @@ export class BattleScene extends Phaser.Scene {
       { text: '⭐ 엘리트 부대 출현!', go: () => ['goblin', 'orc', 'skeleton'].forEach((t, i) => this.time.delayedCall(i * 700, () => this.spawnEnemy(t, true))) },
       { text: '👻 유령 행렬!', go: () => this.burstSpawn('ghost', 6, 360) },
     ];
+    // 👾 변종 특수 웨이브 — 그 변종이 나오는 단계부터
+    const lv = enemyLevel(this.endless, this.stage.id, this.waveNo);
+    const exact = (type: string, n: number, gap: number) => (): void => {
+      for (let i = 0; i < n; i++) this.time.delayedCall(i * gap, () => !this.over && this.spawnEnemy(type, false, undefined, true));
+    };
+    if (lv >= 3) events.push({ text: '💣 고블린 폭탄 돌격!', go: exact('goblin_bomber', 5, 420) });
+    if (lv >= 4) events.push({ text: '🧪 독 부대 행진!', go: () => (exact('poison_slime', 3, 600)(), exact('toxic_mushroom', 3, 700)()) });
+    if (lv >= 5) events.push({ text: '🏹 해골 궁수대!', go: exact('skeleton_archer', 5, 500) });
+    if (lv >= 6) events.push({ text: '🟡 킹 슬라임 출현!', go: exact('king_slime', 1, 0) });
+    if (lv >= 8) events.push({ text: '💀 강령술사 등장!', go: () => (exact('necromancer', 1, 0)(), exact('skeleton_knight', 2, 900)()) });
+    if (lv >= 9) events.push({ text: '🐲 새끼 드래곤 무리!', go: exact('baby_dragon', 3, 800) });
     const ev = events[Math.floor(Math.random() * events.length)];
     sfx(this, 'alert');
     this.banner(ev.text, 0xff9a3c);
     ev.go();
+  }
+
+  /** 👾 변종 능력 — 💚 치유(3초마다 주변 적) · 📣 소환 · 😡 분노(체력 40% 아래 공격력 ×1.8) */
+  private enemyAbility(e: Enemy, dt: number): void {
+    const d = ENEMIES[e.type];
+    e.abilityT += dt;
+    if (d.ability === 'heal' && e.abilityT >= 3) {
+      e.abilityT = 0;
+      const amt = Math.round(e.stats.atk * 2.5);
+      let any = false;
+      for (const o of this.enemies) {
+        if (!o.active || o.hp >= o.maxHp || Math.abs(o.x - e.x) > 140) continue;
+        o.heal(amt);
+        any = true;
+      }
+      if (any) {
+        const fx = this.add.circle(e.x, LANE_Y - 20, 20, 0x8aff8a, 0.4).setDepth(55);
+        this.tweens.add({ targets: fx, scale: 5, alpha: 0, duration: 500, onComplete: () => fx.destroy() });
+      }
+    } else if (d.ability === 'summon' && d.summon && e.abilityT >= (d.every ?? 8)) {
+      e.abilityT = 0;
+      this.spawnEnemy(d.summon, false, e.x + 40, true);
+      const fx = this.add.circle(e.x + 40, LANE_Y - 10, 16, 0x9a5aff, 0.5).setDepth(55);
+      this.tweens.add({ targets: fx, scale: 3, alpha: 0, duration: 450, onComplete: () => fx.destroy() });
+    } else if (d.ability === 'rage' && !e.raged && e.hp < e.maxHp * 0.4) {
+      e.raged = true;
+      e.stats = { ...e.stats, atk: Math.round(e.stats.atk * 1.8), speed: Math.round(e.stats.speed * 1.3) };
+      e.setVariant(0xff3a2a, (d.scale ?? 1) * 1.15);
+      const t = this.add.text(e.x, LANE_Y - 90, '😡 분노!', { fontFamily: 'sans-serif', fontSize: '18px', fontStyle: 'bold', color: '#ff5a4a', stroke: '#000', strokeThickness: 3 }).setOrigin(0.5).setDepth(70);
+      this.tweens.add({ targets: t, y: t.y - 30, alpha: 0, duration: 800, onComplete: () => t.destroy() });
+    }
+  }
+
+  /** 👾 쓰러질 때 — 💥 폭발(주변 아군·영웅 피해) · 🟢 분열(작은 적 여러 마리) */
+  private onEnemyDeath(e: Enemy): void {
+    const d = ENEMIES[e.type];
+    if (!d?.ability) return;
+    if (d.ability === 'explode') {
+      const dmg = Math.round((d.power ?? 40) * (e.stats.atk / d.atk));
+      const r = 85;
+      const victims: (Unit | null)[] = [...this.units, this.hero ?? null];
+      for (const u of victims) if (u?.active && Math.abs(u.x - e.x) <= r && this.clock >= this.guardUntil) u.takeDamage(dmg);
+      const color = hexColor(d.tint) ?? 0xff8a3a;
+      const boom = this.add.circle(e.x, LANE_Y - 10, 20, color, 0.6).setDepth(80);
+      this.tweens.add({ targets: boom, scale: (r / 20) * 1.1, alpha: 0, duration: 420, onComplete: () => boom.destroy() });
+      sfx(this, 'boom');
+    } else if (d.ability === 'split' && d.split) {
+      const n = d.count ?? 2;
+      for (let i = 0; i < n; i++) this.spawnEnemy(d.split, false, e.x + (i - (n - 1) / 2) * 34, true);
+    }
   }
 
   private burstSpawn(type: string, n: number, gapMs: number): void {
@@ -1652,6 +1726,7 @@ export class BattleScene extends Phaser.Scene {
           this.track('bosses');
           this.bossDown(e.x);
         }
+        this.onEnemyDeath(e); // 💥 폭발 · 🟢 분열
         e.playDeath();
         this.puff(e.x, 0xff8a6a);
         this.enemyPool.release(e);

@@ -16,6 +16,20 @@ export interface UnitStats extends CombatStats {
 
 export interface EnemyStats extends CombatStats {
   reward: number; // 처치 시 골드
+  // 👾 변종(데이터: enemies.json) — 전용 그림이 없으면 look 그림을 tint 색·scale 크기로
+  look?: string;
+  tint?: string; // 곱하기 색(밝은 그림용)
+  hue?: number; // 색상 회전(도) — 색 있는 그림을 다른 색으로
+  scale?: number;
+  variantOf?: string; // 이 적 대신 나옴
+  minStage?: number; // 몇 관문부터
+  chance?: number; // 확률
+  ability?: 'explode' | 'heal' | 'rage' | 'summon' | 'split' | 'lifesteal';
+  power?: number; // 💥 폭발 피해
+  summon?: string; // 📣 소환할 적
+  every?: number; // 소환 간격(초)
+  split?: string; // 🟢 쓰러지면 나뉠 적
+  count?: number;
 }
 
 export interface WaveEnemy {
