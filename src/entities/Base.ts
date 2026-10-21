@@ -55,12 +55,15 @@ export class Base {
       const def = spriteOf(key)!;
       const sc = def.scale * BASE_SCALE * sizeMult;
       this.stages = def.anims.idle!.frames;
+      // 넓은 성(★3 이상)은 화면 밖으로 잘리지 않게 안쪽으로(우리 성 = 왼쪽 끝, 적 성 = 오른쪽 끝 기준)
+      const half = (def.frameWidth * sc) / 2;
+      const sx = this.x < 640 ? Math.max(this.x, 6 + half) : Math.min(this.x, 1274 - half);
       this.sprite = this.scene.add
-        .sprite(this.x, this.ground, textureKey(key), this.stages[0])
+        .sprite(sx, this.ground, textureKey(key), this.stages[0])
         .setOrigin(0.5, def.footY / def.frameHeight)
         .setScale(sc)
         .setDepth(-1); // 유닛보다 뒤
-      this.shadow = this.scene.add.ellipse(this.x, this.ground + 4, def.frameWidth * sc * 0.9, 26, 0x000000, 0.35).setDepth(-2); // 바닥 그림자(묵직하게)
+      this.shadow = this.scene.add.ellipse(sx, this.ground + 4, def.frameWidth * sc * 0.9, 26, 0x000000, 0.35).setDepth(-2); // 바닥 그림자(묵직하게)
       barY = this.ground - def.footY * sc - 8;
       this.look = key;
     } else {
@@ -69,7 +72,7 @@ export class Base {
       this.look = '';
     }
     this.top = Math.max(barY, 70); // 상단 바에 가리지 않게
-    this.hpBar.setY(this.top);
+    this.hpBar.setPosition((this.sprite?.x ?? this.x) - 40, this.top); // 체력 바는 성 그림 가운데 위
     this.refresh();
   }
 

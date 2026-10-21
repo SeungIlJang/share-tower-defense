@@ -167,4 +167,4 @@ Style: crisp 32-bit pixel art, bold dark outlines, bright saturated colors, cute
 - ✅ 성 레벨 20 · 공격 속도 10 (강화 화면 🏰 기지 탭, 전투 중 상점 반영, 개발자 모드 🗺️ 진행 탭)
 - ✅ 우리 성·적 성 공격(단계별 발사체 10종), 적 성 단계 = 관문 / 무한 모드 웨이브 4·8·12·16 진화
 - ✅ 단계 그림 자리(`base_ally_t2~t5`, `base_enemy_t2~t5`) — 그림이 없으면 지금 그림
-- ⏳ 성 그림 8장 → `images/image/castle/`에 넣으면 `tools/sprites.config.json`에 등록(파손 3컷 `crops` + `anchors`, 지금 `base_ally`와 같은 방식)
+- ✅ 성 그림 8장 적용(`base_ally_t2~t5`, `base_enemy_t2~t5` — 파손 3컷 `crops`+`anchors`, 화면 폭 최대 약 280px, 넓은 성은 화면 안쪽으로 자동 이동)

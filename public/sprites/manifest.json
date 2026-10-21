@@ -6035,5 +6035,149 @@
         "fps": 8
       }
     }
+  },
+  "base_ally_t2": {
+    "file": "base_ally_t2.png",
+    "filter": "linear",
+    "frameWidth": 254,
+    "frameHeight": 270,
+    "scale": 0.5,
+    "footY": 270,
+    "anims": {
+      "idle": {
+        "frames": [
+          0,
+          1,
+          2
+        ],
+        "fps": 1
+      }
+    }
+  },
+  "base_ally_t3": {
+    "file": "base_ally_t3.png",
+    "filter": "linear",
+    "frameWidth": 280,
+    "frameHeight": 274,
+    "scale": 0.5,
+    "footY": 274,
+    "anims": {
+      "idle": {
+        "frames": [
+          0,
+          1,
+          2
+        ],
+        "fps": 1
+      }
+    }
+  },
+  "base_ally_t4": {
+    "file": "base_ally_t4.png",
+    "filter": "linear",
+    "frameWidth": 178,
+    "frameHeight": 288,
+    "scale": 0.5,
+    "footY": 288,
+    "anims": {
+      "idle": {
+        "frames": [
+          0,
+          1,
+          2
+        ],
+        "fps": 1
+      }
+    }
+  },
+  "base_ally_t5": {
+    "file": "base_ally_t5.png",
+    "filter": "linear",
+    "frameWidth": 189,
+    "frameHeight": 296,
+    "scale": 0.5,
+    "footY": 296,
+    "anims": {
+      "idle": {
+        "frames": [
+          0,
+          1,
+          2
+        ],
+        "fps": 1
+      }
+    }
+  },
+  "base_enemy_t2": {
+    "file": "base_enemy_t2.png",
+    "filter": "linear",
+    "frameWidth": 188,
+    "frameHeight": 270,
+    "scale": 0.5,
+    "footY": 270,
+    "anims": {
+      "idle": {
+        "frames": [
+          0,
+          1,
+          2
+        ],
+        "fps": 1
+      }
+    }
+  },
+  "base_enemy_t3": {
+    "file": "base_enemy_t3.png",
+    "filter": "linear",
+    "frameWidth": 177,
+    "frameHeight": 280,
+    "scale": 0.5,
+    "footY": 280,
+    "anims": {
+      "idle": {
+        "frames": [
+          0,
+          1,
+          2
+        ],
+        "fps": 1
+      }
+    }
+  },
+  "base_enemy_t4": {
+    "file": "base_enemy_t4.png",
+    "filter": "linear",
+    "frameWidth": 178,
+    "frameHeight": 288,
+    "scale": 0.5,
+    "footY": 288,
+    "anims": {
+      "idle": {
+        "frames": [
+          0,
+          1,
+          2
+        ],
+        "fps": 1
+      }
+    }
+  },
+  "base_enemy_t5": {
+    "file": "base_enemy_t5.png",
+    "filter": "linear",
+    "frameWidth": 224,
+    "frameHeight": 296,
+    "scale": 0.5,
+    "footY": 296,
+    "anims": {
+      "idle": {
+        "frames": [
+          0,
+          1,
+          2
+        ],
+        "fps": 1
+      }
+    }
   }
 }
