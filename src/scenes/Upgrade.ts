@@ -21,8 +21,8 @@ type Tab = 'units' | 'weapons' | 'base' | 'hero';
 /** 지속시간이 핵심인 무기(위력 대신 지속시간 표시) */
 const DURATION_WEAPONS = new Set(['freeze', 'guard', 'berserk']);
 
-const GRID_TOP = 160;
-const GRID_H = 470;
+const GRID_TOP = 118; // 제목·보유 골드를 한 줄로 올려서 카드 공간 확보
+const GRID_H = 548;
 
 /** 영구 강화 씬 — 메타 골드로 [유닛 강화] hp·atk / [특수 무기 강화] 위력·충전·지속 */
 export class UpgradeScene extends Phaser.Scene {
@@ -45,11 +45,11 @@ export class UpgradeScene extends Phaser.Scene {
     if (this.fromBattle) this.add.rectangle(640, 360, 1280, 720, 0x0d1018); // 멈춘 전투 화면을 가림
     else bgm(this, 'bgm_menu');
     this.add
-      .text(640, 46, '🔧 강화', { fontFamily: 'sans-serif', fontSize: '38px', color: '#ffd34d' })
-      .setOrigin(0.5);
+      .text(628, 38, '🔧 강화', { fontFamily: 'sans-serif', fontSize: '34px', fontStyle: 'bold', color: '#ffd34d' })
+      .setOrigin(1, 0.5);
     this.goldText = this.add
-      .text(640, 88, '', { fontFamily: 'sans-serif', fontSize: '20px', color: '#ffe14d' })
-      .setOrigin(0.5);
+      .text(652, 38, '', { fontFamily: 'sans-serif', fontSize: '24px', fontStyle: 'bold', color: '#ffe14d', stroke: '#000000', strokeThickness: 3 })
+      .setOrigin(0, 0.5); // '강화' 옆
 
     // 탭
     const tabs: [Tab, string, number][] = [
@@ -60,7 +60,7 @@ export class UpgradeScene extends Phaser.Scene {
     ];
     for (const [key, label, x] of tabs) {
       const t = this.add
-        .text(x, 128, label, { fontFamily: 'sans-serif', fontSize: '19px', fontStyle: 'bold', color: '#fff', padding: { x: 18, y: 7 } })
+        .text(x, 86, label, { fontFamily: 'sans-serif', fontSize: '19px', fontStyle: 'bold', color: '#fff', padding: { x: 18, y: 6 } })
         .setOrigin(0.5)
         .setInteractive({ useHandCursor: true });
       t.on('pointerdown', () => {
@@ -74,12 +74,13 @@ export class UpgradeScene extends Phaser.Scene {
     this.render();
 
     const back = this.add
-      .text(640, 668, this.fromBattle ? '⚔️ 전투로 돌아가기' : '← 스테이지 선택', {
+      .text(640, 694, this.fromBattle ? '⚔️ 전투로 돌아가기' : '← 스테이지 선택', {
         fontFamily: 'sans-serif',
-        fontSize: '22px',
+        fontSize: '20px',
+        fontStyle: 'bold',
         color: '#fff',
         backgroundColor: this.fromBattle ? '#2eae5a' : '#3a7bff',
-        padding: { x: 22, y: 10 },
+        padding: { x: 22, y: 6 },
       })
       .setOrigin(0.5)
       .setInteractive({ useHandCursor: true });
@@ -129,26 +130,31 @@ export class UpgradeScene extends Phaser.Scene {
     const parts: Phaser.GameObjects.GameObject[] = [
       this.add.rectangle(x, y, 600, h - 8, 0x1a2338).setStrokeStyle(2, 0x33406a),
     ];
-    if (icon) parts.push(icon.setPosition(x - 262, y).setDisplaySize(48, 48).setAlpha(dim ? 0.35 : 1));
+    // 3줄: 제목(크게) / 수치 / 스킬·스킨 — 휴대폰에서도 잘 보이게 큰 글씨·밝은 색·검은 테두리
+    const tall = h >= 86;
+    const l1 = tall ? y - 24 : y - 14;
+    const l2 = tall ? y + 2 : y + 12;
+    const l3 = y + 27;
+    if (icon) parts.push(icon.setPosition(x - 260, y).setDisplaySize(tall ? 58 : 48, tall ? 58 : 48).setAlpha(dim ? 0.5 : 1));
     parts.push(
-      this.add.text(x - 228, y - 14, title, { fontFamily: 'sans-serif', fontSize: '20px', color: dim ? '#7c8aa0' : '#fff' }).setOrigin(0, 0.5),
-      this.add.text(x - 228, y + 14, desc, { fontFamily: 'sans-serif', fontSize: '13px', color: '#9fb3d0' }).setOrigin(0, 0.5)
+      this.add.text(x - 222, l1, title, { fontFamily: 'sans-serif', fontSize: '21px', fontStyle: 'bold', color: dim ? '#aab6c8' : '#ffffff', stroke: '#000000', strokeThickness: 3 }).setOrigin(0, 0.5),
+      this.add.text(x - 222, l2, desc, { fontFamily: 'sans-serif', fontSize: '15px', fontStyle: 'bold', color: '#d6e2f5', wordWrap: { width: 380 } }).setOrigin(0, 0.5)
     );
     if (skin) {
       const sb = this.add
-        .text(x + 120, y + 14, skin.label, { fontFamily: 'sans-serif', fontSize: '12px', fontStyle: 'bold', color: '#ffffff', backgroundColor: `#${skin.color.toString(16).padStart(6, '0')}`, padding: { x: 7, y: 3 } })
+        .text(x + 110, tall ? l3 : y + 14, skin.label, { fontFamily: 'sans-serif', fontSize: '14px', fontStyle: 'bold', color: '#ffffff', backgroundColor: `#${skin.color.toString(16).padStart(6, '0')}`, padding: { x: 7, y: 3 } })
         .setOrigin(0.5)
         .setInteractive({ useHandCursor: true });
       sb.on('pointerdown', skin.onClick);
       parts.push(sb);
     }
-    if (extra) parts.push(this.add.text(x - 70, y - 14, extra, { fontFamily: 'sans-serif', fontSize: '13px', color: '#ffe680' }).setOrigin(0, 0.5));
+    if (extra) parts.push(this.add.text(tall ? x - 222 : x - 70, tall ? l3 : y - 14, extra, { fontFamily: 'sans-serif', fontSize: '14px', fontStyle: 'bold', color: '#ffe680' }).setOrigin(0, 0.5));
     const btn = this.add
       .rectangle(x + 232, y, 118, h - 20, canUp ? 0x2f7a4d : 0x3a3f55)
       .setStrokeStyle(2, canUp ? 0x5cff9e : 0x555)
       .setInteractive({ useHandCursor: true });
     const btnText = this.add
-      .text(x + 232, y, btnLabel, { fontFamily: 'sans-serif', fontSize: '15px', color: '#fff', align: 'center' })
+      .text(x + 232, y, btnLabel, { fontFamily: 'sans-serif', fontSize: '17px', fontStyle: 'bold', color: '#fff', align: 'center', stroke: '#000000', strokeThickness: 3 })
       .setOrigin(0.5);
     btn.on('pointerdown', onUp);
     parts.push(btn, btnText);
@@ -170,7 +176,7 @@ export class UpgradeScene extends Phaser.Scene {
         keys.length,
         icon,
         `${u.name} ${starText(lv)} Lv.${lv}`,
-        `❤️ ${scaleStat(u.hp, lv)}  ⚔️ ${scaleStat(u.atk, lv)}  →  Lv.${lv + 1}: ❤️ ${scaleStat(u.hp, lv + 1)} ⚔️ ${scaleStat(u.atk, lv + 1)}${nextUnitTier(lv) ? `  ·  ⭐Lv${nextUnitTier(lv)!.min} 진화` : ''}`,
+        `❤️ ${scaleStat(u.hp, lv)}  ⚔️ ${scaleStat(u.atk, lv)}  ▶  ❤️ ${scaleStat(u.hp, lv + 1)}  ⚔️ ${scaleStat(u.atk, lv + 1)}${nextUnitTier(lv) ? `   ⭐Lv${nextUnitTier(lv)!.min} 진화` : ''}`,
         owned ? `강화 🪙${meta.nextCost(key)}` : `🛒 구매\n🪙${price}`,
         owned ? meta.canUpgrade(key) : meta.gold >= price,
         !owned,
@@ -409,11 +415,12 @@ export class UpgradeScene extends Phaser.Scene {
     const g1 = allyCastleGun(cl + 1, rl);
     const tier = allyCastleTier(cl);
     const next = ALLY_CASTLE_TIERS[tier + 1];
-    const rows: { key: 'castle' | 'castleRate'; title: string; desc: string }[] = [
+    const rows: { key: 'castle' | 'castleRate'; title: string; desc: string; extra?: string }[] = [
       {
         key: 'castle',
         title: `🏰 ${ALLY_CASTLE_TIERS[tier].name}  Lv.${cl}${cl >= CASTLE_MAX_LV ? ' (MAX)' : ''}`,
-        desc: `체력 ×${castleHpMult(cl).toFixed(1)} · 공격 ${g0.dmg} · 사거리 ${g0.range}  →  ×${castleHpMult(cl + 1).toFixed(1)} · ${g1.dmg} · ${g1.range}${next ? `  ·  Lv${next.min} 진화` : ''}`,
+        desc: `❤️×${castleHpMult(cl).toFixed(1)} ⚔️${g0.dmg} 🎯${g0.range} ▶ ❤️×${castleHpMult(cl + 1).toFixed(1)} ⚔️${g1.dmg} 🎯${g1.range}`,
+        extra: next ? `⭐ Lv${next.min} 진화 → ${next.name}` : '',
       },
       {
         key: 'castleRate',
@@ -431,7 +438,7 @@ export class UpgradeScene extends Phaser.Scene {
           const after = allyCastleTier(meta.castleLevel('castle'));
           if (after > before) this.evolveFx(ALLY_CASTLE_TIERS[after].name); // ✨ 성 진화!
         }
-      });
+      }, r.extra ?? '');
     });
     BASE_UPGRADES.forEach((b, j) => {
       const i = j + 2;

@@ -1104,12 +1104,19 @@ export class BattleScene extends Phaser.Scene {
   private fireWeapon(i: number): void {
     if (this.over || this.picking || this.paused || this.reviving) return;
     const charge = this.weapons[i];
-    if (!charge?.ready) return;
+    if (!charge) return;
+    if (!charge.ready) {
+      this.hud.weaponDeny(i, `⏳ 충전 중 ${Math.floor(charge.ratio * 100)}%`); // 왜 안 나가는지 알려 줌
+      return;
+    }
     const def = WEAPONS[i];
     const live = this.enemies.filter((e) => e.active);
     // 대상이 필요한 무기는 적이 없으면 게이지를 쓰지 않음
     const needsEnemy = ['meteor', 'arrows', 'lightning', 'shockwave', 'snipe'].includes(def.key);
-    if (needsEnemy && live.length === 0) return;
+    if (needsEnemy && live.length === 0) {
+      this.hud.weaponDeny(i, '🎯 적이 없어요');
+      return;
+    }
     charge.fire();
     if (awakened(this.skills, 'charge')) charge.fill(0.3); // 🔥 무기 달인
     this.track('weapons');

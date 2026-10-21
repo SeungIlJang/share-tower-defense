@@ -67,8 +67,9 @@ export const HERO_PANEL_X = 1010; // 👑 영웅 스킬 버튼 x(적 성 그림 
 export const HERO_BTN_R = 40;
 export const HERO_BTN_Y = 114; // 적 기지 그림(위쪽 ~165)보다 위
 const W_CARD_W = 150; // 📱 특수 무기 카드(가로 스크롤)
-const W_CARD_H = 100;
-const W_CARD_CY = 664;
+const W_CARD_H = 92;
+const W_CARD_CY = 658; // 화면 맨 아래(제스처 영역)에서 조금 위로
+const DRAG_START = 24; // 이만큼 이상 끌어야 스크롤(그 아래는 탭)
 const CARD_W = 140; // 📱 유닛 카드(가로 스크롤)
 const CARD_H = 160;
 const CARD_GAP = 8;
@@ -275,7 +276,7 @@ export class Hud {
     const move = (p: Phaser.Input.Pointer): void => {
       if (downX === null || !p.isDown) return;
       const dx = p.x - downX;
-      if (Math.abs(dx) > 10) this.dragged = true;
+      if (Math.abs(dx) > DRAG_START) this.dragged = true; // 손가락이 조금 흔들린 건 탭으로
       if (this.dragged) strip.x = Phaser.Math.Clamp(startX + dx, minX, 0);
     };
     const up = (): void => {
@@ -367,6 +368,19 @@ export class Hud {
   }
 
   /** 소환 실패 피드백 — 카드 흔들림 + 사유 표시 */
+  /** 🔥 특수 무기를 못 쓸 때 안내(카드 흔들림 + 이유) */
+  weaponDeny(index: number, msg: string): void {
+    const b = this.weaponBtns.find((w) => w.index === index);
+    const strip = b?.bg.parentContainer;
+    const x = (b?.cx ?? 640) + (strip?.x ?? 0) + 40;
+    if (b) this.scene.tweens.add({ targets: b.bg, x: b.cx + 5, duration: 50, yoyo: true, repeat: 2 });
+    const t = this.scene.add
+      .text(x, W_CARD_CY - 62, msg, { fontFamily: 'sans-serif', fontSize: '18px', fontStyle: 'bold', color: '#ffd34d', stroke: '#000000', strokeThickness: 4 })
+      .setOrigin(0.5)
+      .setDepth(130);
+    this.scene.tweens.add({ targets: t, y: t.y - 40, alpha: 0, duration: 800, onComplete: () => t.destroy() });
+  }
+
   deny(key: string, reason: 'energy' | 'food' | 'cooldown'): void {
     const slot = this.slots.find((s) => s.key === key);
     if (!slot) return;
