@@ -1,6 +1,6 @@
 # 👾 기존 적 10종 리메이크 프롬프트
 
-> 2026-10-21. 지금 쓰는 기존 적 10종을 새 적 21종과 같은 품질·크기로 다시 그리기.
+> 2026-10-21. ✅ 10장 모두 생성·게임 적용 완료(보스는 스킬 동작 포함, 원본 `images/image/enemies/remake` · 저장소 제외).
 
 ## 저장 위치 · 파일 이름 (영문)
 `D:\AI\workspace\game\images\image\enemies\remake\Enemy_<키>.png` (예: `Enemy_goblin.png`)

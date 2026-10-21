@@ -1892,6 +1892,7 @@ export class BattleScene extends Phaser.Scene {
     const x0 = slam ? e.x - 120 : e.x - 260; // 영향 범위(왼쪽 = 우리 쪽)
     const x1 = slam ? e.x + 120 : e.x;
     const warn = this.dangerZone(x0, x1, slam ? 0xff8a3a : 0xff3b3b, slam ? '💥' : '🔥', 800);
+    e.skillMotion(); // 👑 보스 스킬 동작(골렘 땅 내려치기 · 드래곤 화염 숨결)
     this.time.delayedCall(800, () => {
       warn.destroy();
       if (!e.active || this.over) return;
