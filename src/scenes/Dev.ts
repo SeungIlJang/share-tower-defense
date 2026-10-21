@@ -46,12 +46,14 @@ export class DevScene extends Phaser.Scene {
 
   create(): void {
     this.add.rectangle(640, 360, 1280, 720, 0x0d1424);
-    this.add.text(640, 34, '🛠️ 개발자 모드', { fontFamily: 'sans-serif', fontSize: '32px', fontStyle: 'bold', color: '#ffd34d' }).setOrigin(0.5);
-    this.goldText = this.add.text(1250, 34, '', { fontFamily: 'sans-serif', fontSize: '22px', fontStyle: 'bold', color: '#ffe14d' }).setOrigin(1, 0.5);
-    this.btn(80, 34, '← 메인', 0x3a7bff, () => this.scene.start('Menu'), 20);
+    this.add.text(640, 40, '🛠️ 개발자 모드', { fontFamily: 'sans-serif', fontSize: '32px', fontStyle: 'bold', color: '#ffd34d' }).setOrigin(0.5);
+    this.goldText = this.add.text(1180, 40, '', { fontFamily: 'sans-serif', fontSize: '22px', fontStyle: 'bold', color: '#ffe14d' }).setOrigin(1, 0.5);
+    // 휴대폰 가장자리(둥근 모서리·제스처 영역)에 가리지 않게 안쪽에 + 아래쪽에도 하나 더
+    this.btn(150, 40, '← 메인', 0x3a7bff, () => this.scene.start('Menu'), 22);
+    this.btn(640, 690, '🏠 메인으로', 0x3a7bff, () => this.scene.start('Menu'), 20);
     TABS.forEach(([key, label], i) => {
       const t = this.add
-        .text(84 + i * 159, 92, label, { fontFamily: 'sans-serif', fontSize: '18px', fontStyle: 'bold', color: '#fff', padding: { x: 12, y: 8 }, fixedWidth: 150, align: 'center' })
+        .text(640 + (i - 3.5) * 146, 96, label, { fontFamily: 'sans-serif', fontSize: '17px', fontStyle: 'bold', color: '#fff', padding: { x: 8, y: 8 }, fixedWidth: 138, align: 'center' })
         .setOrigin(0.5)
         .setInteractive({ useHandCursor: true });
       t.on('pointerdown', () => {
@@ -80,8 +82,8 @@ export class DevScene extends Phaser.Scene {
   }
 
   /** 한 줄: 이름 · 지금 값 · 버튼들 */
-  private row(y: number, label: string, value: string, buttons: [string, () => void, number?][], cols: [number, number] = [330, 560]): void {
-    this.layer.add(this.add.text(50, y, label, { fontFamily: 'sans-serif', fontSize: '20px', fontStyle: 'bold', color: '#cfe0ff' }).setOrigin(0, 0.5));
+  private row(y: number, label: string, value: string, buttons: [string, () => void, number?][], cols: [number, number] = [360, 580]): void {
+    this.layer.add(this.add.text(90, y, label, { fontFamily: 'sans-serif', fontSize: '20px', fontStyle: 'bold', color: '#cfe0ff' }).setOrigin(0, 0.5));
     this.layer.add(this.add.text(cols[0], y, value, { fontFamily: 'sans-serif', fontSize: '20px', fontStyle: 'bold', color: '#ffe680' }).setOrigin(0, 0.5));
     let x = cols[1];
     for (const [lab, fn, color] of buttons) {
@@ -103,7 +105,7 @@ export class DevScene extends Phaser.Scene {
   private say(msg: string): void {
     this.toast?.destroy();
     this.toast = this.add
-      .text(640, 680, msg, { fontFamily: 'sans-serif', fontSize: '20px', fontStyle: 'bold', color: '#7cff9a', backgroundColor: '#0b0f1acc', padding: { x: 16, y: 8 } })
+      .text(640, 640, msg, { fontFamily: 'sans-serif', fontSize: '20px', fontStyle: 'bold', color: '#7cff9a', backgroundColor: '#0b0f1acc', padding: { x: 16, y: 8 } })
       .setOrigin(0.5)
       .setDepth(50);
     this.tweens.add({ targets: this.toast, alpha: 0, delay: 1400, duration: 400 });
@@ -146,7 +148,7 @@ export class DevScene extends Phaser.Scene {
     this.row(310, '빼기', '', [['-100', add(-100), 0x8a3a3a], ['-1,000', add(-1000), 0x8a3a3a], ['-10,000', add(-10000), 0x8a3a3a], ['절반', () => this.edit((m) => (m.gold = Math.floor(m.gold / 2)), '🪙 절반'), 0x8a3a3a]]);
     this.row(380, '한 번에 설정', '', [['0', set(0), 0x5a5a6a], ['1,000', set(1000)], ['10,000', set(10000)], ['100,000', set(100000)], ['9,999,999', set(9_999_999), 0xd8962a]]);
     this.row(450, '두 배', '', [['× 2', () => this.edit((m) => (m.gold = clamp(m.gold * 2, 0, GOLD_MAX)), '🪙 × 2')], ['× 10', () => this.edit((m) => (m.gold = clamp(m.gold * 10, 0, GOLD_MAX)), '🪙 × 10')]]);
-    this.layer.add(this.add.text(50, 540, '※ 골드는 강화·유닛/무기 구매·스킨·영웅 강화에 쓰여요. 최대 999,999,999', { fontFamily: 'sans-serif', fontSize: '16px', color: '#7c8aa0' }));
+    this.layer.add(this.add.text(90, 540, '※ 골드는 강화·유닛/무기 구매·스킨·영웅 강화에 쓰여요. 최대 999,999,999', { fontFamily: 'sans-serif', fontSize: '16px', color: '#7c8aa0' }));
   }
 
   // ───────── 🗺️ 진행
@@ -184,23 +186,23 @@ export class DevScene extends Phaser.Scene {
       ['모두 Lv0', () => this.edit((m) => (m.levels = {})), 0x8a3a3a],
     ]);
     keys.forEach((k, i) => {
-      const x = 170 + (i % 4) * 315;
+      const x = 640 + ((i % 4) - 1.5) * 285;
       const y = 250 + Math.floor(i / 4) * 130;
       const owned = meta.ownsUnit(k);
       const lv = meta.level(k);
-      this.layer.add(this.add.rectangle(x, y, 300, 115, owned ? 0x1e2a44 : 0x20242e).setStrokeStyle(2, owned ? 0x4a78c8 : 0x3a3f4a));
-      this.layer.add(this.add.text(x - 135, y - 34, UNITS[k].name, { fontFamily: 'sans-serif', fontSize: '20px', fontStyle: 'bold', color: owned ? '#fff' : '#7c8698' }).setOrigin(0, 0.5));
-      const own = this.btn(x + 90, y - 34, owned ? '✓ 보유' : '보유 안 함', owned ? 0x2f7a4d : 0x4a4f60, () => {
+      this.layer.add(this.add.rectangle(x, y, 270, 115, owned ? 0x1e2a44 : 0x20242e).setStrokeStyle(2, owned ? 0x4a78c8 : 0x3a3f4a));
+      this.layer.add(this.add.text(x - 122, y - 34, UNITS[k].name, { fontFamily: 'sans-serif', fontSize: '20px', fontStyle: 'bold', color: owned ? '#fff' : '#7c8698' }).setOrigin(0, 0.5));
+      const own = this.btn(x + 72, y - 34, owned ? '✓ 보유' : '보유 안 함', owned ? 0x2f7a4d : 0x4a4f60, () => {
         this.edit((m) => (m.ownedUnits = owned ? m.ownedUnits.filter((u) => u !== k) : [...m.ownedUnits, k]));
         this.render();
       }, 15);
       this.layer.add(own);
-      this.layer.add(this.add.text(x - 135, y + 22, `Lv ${lv}`, { fontFamily: 'sans-serif', fontSize: '22px', fontStyle: 'bold', color: '#ffe680' }).setOrigin(0, 0.5));
+      this.layer.add(this.add.text(x - 122, y + 22, `Lv ${lv}`, { fontFamily: 'sans-serif', fontSize: '22px', fontStyle: 'bold', color: '#ffe680' }).setOrigin(0, 0.5));
       const step = (d: number) => (): void => {
         this.edit((m) => (m.levels[k] = clamp(lv + d, 0, UNIT_MAX_LV)));
         this.render();
       };
-      this.layer.add([this.btn(x + 10, y + 22, '−', 0x8a3a3a, step(-1), 20), this.btn(x + 62, y + 22, '+', 0x2f7a4d, step(1), 20), this.btn(x + 116, y + 22, '+5', 0x2f5a8a, step(5), 16)]);
+      this.layer.add([this.btn(x - 6, y + 22, '−', 0x8a3a3a, step(-1), 20), this.btn(x + 44, y + 22, '+', 0x2f7a4d, step(1), 20), this.btn(x + 96, y + 22, '+5', 0x2f5a8a, step(5), 16)]);
     });
   }
 
@@ -215,24 +217,24 @@ export class DevScene extends Phaser.Scene {
       ['모두 Lv0', () => this.edit((m) => (m.weaponLevels = {})), 0x8a3a3a],
     ]);
     WEAPONS.forEach((w, i) => {
-      const x = 220 + (i % 3) * 420;
+      const x = 640 + ((i % 3) - 1) * 380;
       const y = 250 + Math.floor(i / 3) * 130;
       const owned = meta.ownsWeapon(w.key);
       const lv = meta.weaponLevel(w.key);
-      this.layer.add(this.add.rectangle(x, y, 400, 115, owned ? 0x1e2a44 : 0x20242e).setStrokeStyle(2, owned ? 0x4a78c8 : 0x3a3f4a));
-      this.layer.add(this.add.text(x - 185, y - 34, `${w.icon} ${w.name}`, { fontFamily: 'sans-serif', fontSize: '20px', fontStyle: 'bold', color: owned ? '#fff' : '#7c8698' }).setOrigin(0, 0.5));
+      this.layer.add(this.add.rectangle(x, y, 360, 115, owned ? 0x1e2a44 : 0x20242e).setStrokeStyle(2, owned ? 0x4a78c8 : 0x3a3f4a));
+      this.layer.add(this.add.text(x - 165, y - 34, `${w.icon} ${w.name}`, { fontFamily: 'sans-serif', fontSize: '20px', fontStyle: 'bold', color: owned ? '#fff' : '#7c8698' }).setOrigin(0, 0.5));
       this.layer.add(
-        this.btn(x + 130, y - 34, owned ? '✓ 보유' : '보유 안 함', owned ? 0x2f7a4d : 0x4a4f60, () => {
+        this.btn(x + 110, y - 34, owned ? '✓ 보유' : '보유 안 함', owned ? 0x2f7a4d : 0x4a4f60, () => {
           this.edit((m) => (m.ownedWeapons = owned ? m.ownedWeapons.filter((u) => u !== w.key) : [...m.ownedWeapons, w.key]));
           this.render();
         }, 15)
       );
-      this.layer.add(this.add.text(x - 185, y + 22, `Lv ${lv}`, { fontFamily: 'sans-serif', fontSize: '22px', fontStyle: 'bold', color: '#ffe680' }).setOrigin(0, 0.5));
+      this.layer.add(this.add.text(x - 165, y + 22, `Lv ${lv}`, { fontFamily: 'sans-serif', fontSize: '22px', fontStyle: 'bold', color: '#ffe680' }).setOrigin(0, 0.5));
       const step = (d: number) => (): void => {
         this.edit((m) => (m.weaponLevels[w.key] = clamp(lv + d, 0, UNIT_MAX_LV)));
         this.render();
       };
-      this.layer.add([this.btn(x + 40, y + 22, '−', 0x8a3a3a, step(-1), 20), this.btn(x + 92, y + 22, '+', 0x2f7a4d, step(1), 20), this.btn(x + 146, y + 22, '+5', 0x2f5a8a, step(5), 16)]);
+      this.layer.add([this.btn(x + 20, y + 22, '−', 0x8a3a3a, step(-1), 20), this.btn(x + 72, y + 22, '+', 0x2f7a4d, step(1), 20), this.btn(x + 126, y + 22, '+5', 0x2f5a8a, step(5), 16)]);
     });
   }
 
@@ -283,7 +285,7 @@ export class DevScene extends Phaser.Scene {
 
   // ───────── 🎁 보상 · 👗 스킨
   private renderReward(): void {
-    const C: [number, number] = [290, 650]; // 값이 길어서 버튼을 오른쪽으로
+    const C: [number, number] = [330, 660]; // 값이 길어서 버튼을 오른쪽으로
     this.row(160, '📅 일일 출석', `연속 ${meta.dailyDayNumber()}일째 · ${meta.canClaimDaily() ? '받을 수 있음' : '오늘 받음'}`, [
       ['다시 받게', () => this.edit((m) => (m.lastDaily = -1), '📅 오늘 다시 받기 가능'), 0x2f7a4d],
       ['연속 −1', () => this.edit((m) => (m.streak = Math.max(0, m.streak - 1)))],
@@ -317,7 +319,7 @@ export class DevScene extends Phaser.Scene {
 
   // ───────── ⚔️ 전투 치트(이 기기에만 저장)
   private renderCheat(): void {
-    this.layer.add(this.add.text(50, 140, '전투에 바로 적용 · 이 기기에만 저장 · 켜져 있으면 전투 화면 왼쪽 위에 🛠️ DEV 표시', { fontFamily: 'sans-serif', fontSize: '16px', color: '#9fb3d0' }));
+    this.layer.add(this.add.text(90, 140, '전투에 바로 적용 · 이 기기에만 저장 · 켜져 있으면 전투 화면 왼쪽 위에 🛠️ DEV 표시', { fontFamily: 'sans-serif', fontSize: '16px', color: '#9fb3d0' }));
     DEV_FLAG_INFO.forEach((f, i) => {
       const on = devFlags[f.key];
       this.row(195 + i * 62, f.label, on ? '🟢 ON' : '⚪ OFF', [[on ? '끄기' : '켜기', () => setDevFlag(f.key, !on), on ? 0x8a3a3a : 0x2f7a4d]], [620, 760]);
@@ -347,7 +349,7 @@ export class DevScene extends Phaser.Scene {
       ],
     ]);
     this.layer.add(
-      this.add.text(50, 340, '골드 · 관문 · 별 · 유닛/무기/영웅/기지 강화 · 스킨 · 출석 · 미션 · 기록이 모두 지워져요. 되돌릴 수 없어요.', { fontFamily: 'sans-serif', fontSize: '16px', color: '#ff9a9a' })
+      this.add.text(90, 340, '골드 · 관문 · 별 · 유닛/무기/영웅/기지 강화 · 스킨 · 출석 · 미션 · 기록이 모두 지워져요. 되돌릴 수 없어요.', { fontFamily: 'sans-serif', fontSize: '16px', color: '#ff9a9a' })
     );
   }
 }
