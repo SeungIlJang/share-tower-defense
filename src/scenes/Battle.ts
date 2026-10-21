@@ -10,6 +10,7 @@ import { Base } from '../entities/Base';
 import { UNIT_SCALE } from '../entities/Fighter';
 import { FOOD_BASE, energyMax, energyRate, popBonus } from '../systems/baseUpgrades';
 import { summonCooldown } from '../systems/pacing';
+import { anyDevFlag, devFlags } from '../systems/dev';
 import { HERO_TYPE, HERO_TIERS, HERO_FALLBACK_LOOKS, heroTier, heroBodyScale, HERO_REGEN, HERO_SKILLS, AURA_ATK, AURA_GUARD, AURA_RADIUS, MANA_MAX, MANA_REGEN, MANA_START, MACE_MULT, MACE_RANGE, RALLY_SEC, RALLY_SPEED, HOLY_HEAL, HOLY_HERO_HEAL, HOLY_PUSH, HERO_ENEMY_HP, heroStats, heroLvMult, heroMoveRange, HERO_DRAG_MULT, heroSkillPower, auraRadius, inAura, maceTargets, stepToward } from '../systems/hero';
 import { HERO_PANEL_X, HERO_BTN_R, HERO_BTN_Y } from '../ui/Hud';
 import { Pool } from '../utils/pool';
@@ -258,6 +259,7 @@ export class BattleScene extends Phaser.Scene {
     // 무한 모드: 적 기지는 부서지지 않는 생산 기지(버틴 웨이브가 기록)
     this.enemyBase = new Base(this, 1175, LANE_Y - 10, this.endless ? 1e9 : this.stage.baseHp, 0xc0392b, 'base_enemy');
     this.spawnHero();
+    this.devHud();
     this.waveNo = 0;
     this.waveText = null;
     if (this.endless) {
@@ -480,7 +482,7 @@ export class BattleScene extends Phaser.Scene {
     const bm = 1 + (this.battleUpg[type] ?? 0) * 0.2; // 🛠️ 전장 강화
     if (this.freeSummons > 0) this.freeSummons--;
     this.summonCount++;
-    this.summonCd[type] = summonCooldown(base.cost); // ⏱️ 같은 유닛 재소환 대기
+    if (!devFlags.noCooldown) this.summonCd[type] = summonCooldown(base.cost); // ⏱️ 같은 유닛 재소환 대기(🛠️ 치트면 없음)
     const vm = vigorMult(this.skills.vigor ?? 0); // ❤️ 튼튼한 몸
     const stats = { ...m, hp: Math.round(m.hp * bm * pm * vm), atk: Math.round(m.atk * bm * pm) };
     const u = this.unitPool.acquire();
@@ -663,6 +665,7 @@ export class BattleScene extends Phaser.Scene {
     this.energy.update(dt * rechargeMult(this.skills.recharge ?? 0)); // 🔋 에너지 충전
     for (const k in this.summonCd) this.summonCd[k] = Math.max(0, this.summonCd[k] - dt);
     this.mana.update(dt * (1 + 0.2 * (this.skills.prayer ?? 0))); // 🙏 기도
+    this.applyDevCheats();
     this.heroCd = this.heroCd.map((c) => Math.max(0, c - dt));
     this.updateHero(dt);
     for (const ev of this.waves.update(dt)) this.spawnEnemy(ev.type);
@@ -850,6 +853,7 @@ export class BattleScene extends Phaser.Scene {
       if (awakened(this.skills, 'vigor')) dmg = Math.max(1, Math.round(dmg * 0.85)); // ❤️ 강철 피부
       if (this.inHeroAura(def.x)) dmg = Math.max(1, Math.round(dmg * AURA_GUARD * (1 - 0.06 * (this.skills.auraGuard ?? 0)))); // ⭕ 오라 · 🛡️ 수호 오라
     }
+    if (devFlags.oneHit && ally) dmg = Math.max(dmg, def.hp + 1); // 🛠️ 한 방 처치
     // 🎯 연쇄 폭발(각성): 치명타 때 주변 적도 절반 피해
     const chainDmg = Math.round(dmg * 0.5);
     const chain = crit && awakened(this.skills, 'crit') ? (x: number): void => this.splash(x, chainDmg, 'ally') : null;
@@ -1124,6 +1128,39 @@ export class BattleScene extends Phaser.Scene {
   /** ⭕ 지금 오라 반지름(영구 강화 + 레벨업 '오라 확장' + 각성) */
   private auraR(): number {
     return auraRadius(meta.heroLevel('aura'), this.skills.auraSize ?? 0, awakened(this.skills, 'auraSize'));
+  }
+
+  /** 🛠️ 개발자 치트(설정은 개발자 모드 ⚔️ 탭) */
+  private applyDevCheats(): void {
+    if (devFlags.infEnergy) this.energy.add(this.energy.max);
+    if (devFlags.infMana) this.mana.add(this.mana.max);
+    if (devFlags.godBase && this.playerBase.hp < this.playerBase.maxHp) this.playerBase.heal(this.playerBase.maxHp);
+    if (devFlags.godHero && this.hero?.active) this.hero.heal(this.hero.maxHp);
+    if (devFlags.noCooldown) {
+      this.summonCd = {};
+      this.heroCd = this.heroCd.map(() => 0);
+      for (const w of this.weapons) w?.fill(1);
+    }
+  }
+
+  /** 🛠️ 전투 화면 DEV 표시 + (켜 두면) 즉시 승리 · 레벨업 · 적 전멸 버튼 */
+  private devHud(): void {
+    if (!anyDevFlag()) return;
+    const mk = (x: number, label: string, color: string, fn: () => void): void => {
+      const t = this.add
+        .text(x, 96, label, { fontFamily: 'sans-serif', fontSize: '15px', fontStyle: 'bold', color: '#fff', backgroundColor: color, padding: { x: 8, y: 5 } })
+        .setOrigin(0, 0.5)
+        .setDepth(120)
+        .setInteractive({ useHandCursor: true });
+      t.on('pointerdown', () => !this.over && !this.picking && fn());
+    };
+    this.add.text(12, 96, '🛠️ DEV', { fontFamily: 'sans-serif', fontSize: '15px', fontStyle: 'bold', color: '#ffd34d', backgroundColor: '#3a2a10cc', padding: { x: 8, y: 5 } }).setOrigin(0, 0.5).setDepth(120);
+    if (!devFlags.battleButtons) return;
+    mk(96, '🏆 승리', '#2f7a4dee', () => (this.endless ? this.end(false) : this.end(true)));
+    mk(178, '⬆️ 레벨업', '#2f5a8aee', () => this.gainXp(Math.max(1, this.xpNext - this.xp)));
+    mk(280, '💀 적 전멸', '#8a3a3aee', () => {
+      for (const e of this.enemies) if (e.active) e.hp = 0;
+    });
   }
 
   /** 🏰 적은 우리 성 앞, 아군은 적 성 앞까지만 */

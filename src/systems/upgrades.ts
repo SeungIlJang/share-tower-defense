@@ -411,6 +411,21 @@ export class MetaProgress {
     }
   }
 
+  /** 🛠️ 개발자 모드 — 값을 직접 바꾼 뒤 저장 */
+  devEdit(fn: (m: MetaProgress) => void): void {
+    fn(this);
+    this.save();
+  }
+
+  /** 🛠️ 개발자 모드 — 저장 전부 초기화(처음 설치한 상태) */
+  devReset(): void {
+    const fresh = new MetaProgress();
+    const keep = { ready: true };
+    Object.assign(this, fresh, keep);
+    this.lastSeen = Date.now();
+    this.save();
+  }
+
   private save(): void {
     storageSet(
       KEY,

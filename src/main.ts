@@ -6,6 +6,7 @@ import { StageSelectScene } from './scenes/StageSelect';
 import { BattleScene } from './scenes/Battle';
 import { UpgradeScene } from './scenes/Upgrade';
 import { ResultScene } from './scenes/Result';
+import { DevScene } from './scenes/Dev';
 
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
@@ -29,6 +30,7 @@ const config: Phaser.Types.Core.GameConfig = {
     BattleScene,
     UpgradeScene,
     ResultScene,
+    DevScene,
   ],
 };
 

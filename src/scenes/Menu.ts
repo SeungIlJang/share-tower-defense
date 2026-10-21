@@ -4,6 +4,8 @@ import { animKey, spriteOf, textureKey } from '../systems/sprites';
 import { bgm, sfx } from '../systems/sound';
 import { ACHIEVEMENTS, missionText, type Mission } from '../systems/missions';
 import { GROUND_Y, cuteButton, drawSky } from '../ui/cute';
+import { openKeypad } from '../ui/Keypad';
+import { DEV_PIN_LEN, checkDevPin } from '../systems/dev';
 
 /** 메인 화면 행진에 나오는 아군(오른쪽으로) / 적(왼쪽으로) */
 const PARADE_ALLY = ['knight', 'soldier', 'archer', 'cleric', 'mage', 'spear'];
@@ -32,6 +34,18 @@ export class MenuScene extends Phaser.Scene {
       this.time.delayedCall(250, () => this.openRewards());
     }
     if (meta.hasClaimable(ACHIEVEMENTS)) this.badge(mission);
+  }
+
+  /** 🛠️ 개발자 모드 비밀번호(숫자 키패드) */
+  private askDevPin(): void {
+    const kp = openKeypad(this, { title: '🛠️ 개발자 모드', mask: true, maxLen: DEV_PIN_LEN, hint: '비밀번호를 입력하세요' }, (pin) => {
+      void checkDevPin(pin).then((ok) => {
+        if (ok) {
+          kp.close();
+          this.scene.start('Dev');
+        } else kp.shake('비밀번호가 틀렸어요');
+      });
+    });
   }
 
   private badge(btn: Phaser.GameObjects.Container): void {
@@ -138,12 +152,13 @@ export class MenuScene extends Phaser.Scene {
 
   /** 양쪽 기지 + 걸어가는 캐릭터들 */
   private drawParade(): void {
-    const base = (key: string, x: number): void => {
+    const base = (key: string, x: number): Phaser.GameObjects.Sprite | null => {
       const d = spriteOf(key);
-      if (!d || !this.textures.exists(textureKey(key))) return;
-      this.add.sprite(x, GROUND_Y + 4, textureKey(key), d.anims.idle!.frames[0]).setOrigin(0.5, 1).setScale(d.scale * 1.15);
+      if (!d || !this.textures.exists(textureKey(key))) return null;
+      return this.add.sprite(x, GROUND_Y + 4, textureKey(key), d.anims.idle!.frames[0]).setOrigin(0.5, 1).setScale(d.scale * 1.15);
     };
-    base('base_ally', 90);
+    // 🛠️ 우리 성을 누르면 비밀번호 → 개발자 모드
+    base('base_ally', 90)?.setInteractive({ useHandCursor: true }).on('pointerdown', () => this.askDevPin());
     base('base_enemy', 1190);
 
     const walker = (type: string, fromX: number, toX: number, delay: number, faceLeft: boolean): void => {
