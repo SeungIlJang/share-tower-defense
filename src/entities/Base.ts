@@ -22,6 +22,9 @@ export class Base {
   readonly x: number;
   top = 0; // 성 꼭대기 y(체력 바 위치) — 발사 위치
   look = ''; // 지금 그림 키
+  cx = 0; // 그림 가운데 x(넓은 성은 안쪽으로 이동)
+  width = 60; // 그림 폭
+  private tapCb: (() => void) | null = null;
 
   constructor(
     private scene: Phaser.Scene,
@@ -66,14 +69,25 @@ export class Base {
       this.shadow = this.scene.add.ellipse(sx, this.ground + 4, def.frameWidth * sc * 0.9, 26, 0x000000, 0.35).setDepth(-2); // 바닥 그림자(묵직하게)
       barY = this.ground - def.footY * sc - 8;
       this.look = key;
+      this.cx = sx;
+      this.width = half * 2;
+      if (this.tapCb) this.sprite.setInteractive({ useHandCursor: true }).on('pointerdown', this.tapCb);
     } else {
       this.stages = [];
       this.rect = this.scene.add.rectangle(this.x, this.y, RECT_W, RECT_H, this.color).setStrokeStyle(3, 0xffffff, 0.3);
       this.look = '';
+      this.cx = this.x;
+      this.width = RECT_W;
     }
     this.top = Math.max(barY, 70); // 상단 바에 가리지 않게
     this.hpBar.setPosition((this.sprite?.x ?? this.x) - 40, this.top); // 체력 바는 성 그림 가운데 위
     this.refresh();
+  }
+
+  /** 🎯 성을 누르면(특수 공격) — 그림이 바뀌어도 유지 */
+  onTap(cb: () => void): void {
+    this.tapCb = cb;
+    this.sprite?.setInteractive({ useHandCursor: true }).on('pointerdown', cb);
   }
 
   /** 최대 체력 바꾸기(성 강화) — 체력 비율 유지 */

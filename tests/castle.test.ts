@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { allyCastleGun, allyCastleTier, castleHpMult, castleLook, castleTarget, castleUpCost, enemyCastleGun, enemyCastleTier } from '../src/systems/castle';
+import { castleArchers, allyCastleGun, allyCastleTier, castleHpMult, castleLook, castleTarget, castleUpCost, enemyCastleGun, enemyCastleTier } from '../src/systems/castle';
 
 describe('🏰 성', () => {
   it('우리 성 단계(레벨 0·5·10·15·20)', () => {
@@ -18,7 +18,10 @@ describe('🏰 성', () => {
 
   it('강화 효과 · 비용', () => {
     expect(castleHpMult(20)).toBeCloseTo(3);
-    expect(allyCastleGun(0, 0)).toEqual({ dmg: 18, range: 300, interval: 1.2 });
+    expect(allyCastleGun(0, 0)).toEqual({ dmg: 30, range: 460, interval: 1.2 });
+    expect(allyCastleGun(20, 0).range).toBe(660);
+    expect(castleArchers(0)).toBe(1);
+    expect(castleArchers(4)).toBe(4);
     expect(allyCastleGun(10, 10).dmg).toBeGreaterThan(allyCastleGun(0, 0).dmg);
     expect(allyCastleGun(0, 10).interval).toBeCloseTo(0.48);
     expect(castleUpCost('castle', 0)).toBe(200);
@@ -38,6 +41,7 @@ describe('🏰 성', () => {
     ];
     expect(castleTarget(100, 1, 300, list)?.x).toBe(300);
     expect(castleTarget(100, 1, 100, list)).toBeNull();
+    expect(castleTarget(100, 1, 460, list)?.x).toBe(300);
     expect(castleTarget(600, -1, 200, list)?.x).toBe(500);
   });
 });

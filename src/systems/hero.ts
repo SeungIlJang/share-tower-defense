@@ -148,7 +148,7 @@ export function heroUpCost(kind: 'hero' | 'aura' | 'skill', lv: number): number 
 }
 
 /** ⚖️ 영웅이 생긴 만큼 적 체력 상향 */
-export const HERO_ENEMY_HP = 1.15;
+export const HERO_ENEMY_HP = 1.25; // 영웅·성 공격이 생긴 만큼 적 체력 상향
 
 /** 오라 반지름 = 기본 + 영구 강화 + 레벨업 '오라 확장'(+ 각성 거대 오라) */
 export function auraRadius(permLv: number, cardLv: number, awakened: boolean): number {

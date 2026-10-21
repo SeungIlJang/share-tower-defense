@@ -69,8 +69,8 @@ export interface CastleGun {
 /** 우리 성 공격력·사거리·간격 */
 export function allyCastleGun(lv: number, rateLv: number): CastleGun {
   return {
-    dmg: Math.round(18 * (1 + 0.12 * lv)),
-    range: 300 + 8 * lv,
+    dmg: Math.round(30 * (1 + 0.12 * lv)),
+    range: 460 + 10 * lv, // 전장 앞쪽 1/3을 지킴(최대 +200)
     interval: Math.round(1.2 * (1 - 0.06 * rateLv) * 100) / 100,
   };
 }
@@ -79,10 +79,21 @@ export function allyCastleGun(lv: number, rateLv: number): CastleGun {
 export function enemyCastleGun(tier: number, enemyMult: number): CastleGun {
   return {
     dmg: Math.round(8 * (1 + 0.35 * tier) * enemyMult),
-    range: 240 + 20 * tier,
+    range: 380 + 20 * tier,
     interval: 1.8,
   };
 }
+
+/** 성벽 궁수(발사 위치) 수 — 단계마다 늘어남(최대 4) */
+export function castleArchers(tier: number): number {
+  return Math.min(4, tier + 1);
+}
+
+// 🎯 성 특수 공격(우리 성을 탭) — 20초마다, 사거리 안 적 최대 8명에게 큰 피해
+export const VOLLEY_CD = 20;
+export const VOLLEY_MULT = 2.5;
+export const VOLLEY_MAX = 8;
+export const VOLLEY_NAMES = ['🏹 화살비', '🏹 화살 폭풍', '💣 일제 포격', '⚡ 번개 폭풍', '✨ 성광 기둥'];
 
 /** 강화 비용 */
 export function castleUpCost(kind: 'castle' | 'castleRate', lv: number): number {
