@@ -37,5 +37,6 @@
   "crystal_golem": {"name": "수정 골렘", "hp": 2800, "atk": 52, "def": 22, "atkSpeed": 0.6, "range": 58, "speed": 20, "reward": 270},
   "storm_griffin": {"name": "폭풍 그리폰", "hp": 2300, "atk": 58, "def": 12, "atkSpeed": 0.9, "range": 56, "speed": 40, "reward": 280},
   "shadow_lord": {"name": "그림자 군주", "hp": 2600, "atk": 62, "def": 16, "atkSpeed": 0.8, "range": 60, "speed": 28, "reward": 300},
-  "demon_king": {"name": "마왕", "hp": 3600, "atk": 72, "def": 20, "atkSpeed": 0.7, "range": 64, "speed": 22, "reward": 500}
+  "demon_king": {"name": "마왕", "hp": 3600, "atk": 72, "def": 20, "atkSpeed": 0.7, "range": 64, "speed": 22, "reward": 500},
+  "ancient_treant": {"name": "고대 나무 거인", "hp": 1700, "atk": 40, "def": 10, "atkSpeed": 0.7, "range": 58, "speed": 24, "reward": 180}
 }

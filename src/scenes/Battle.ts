@@ -1912,7 +1912,7 @@ export class BattleScene extends Phaser.Scene {
   /** 👑 보스 스킬 효과 — 구역 안 아군·영웅에게 피해 + 스킬별 추가 효과 */
   private bossSkill(e: Enemy, def: (typeof BOSSES)[string], x0: number, x1: number): void {
     const now = this.time.now;
-    const mul: Record<string, number> = { slam: 1.2, breath: 1.4, frost: 1.1, poison: 0.9, eruption: 1.5, raise: 0.6, shards: 1.6, charge: 1.3, shadow: 1.0, hellfire: 1.5 };
+    const mul: Record<string, number> = { roots: 1.0, slam: 1.2, breath: 1.4, frost: 1.1, poison: 0.9, eruption: 1.5, raise: 0.6, shards: 1.6, charge: 1.3, shadow: 1.0, hellfire: 1.5 };
     const victims: Unit[] = this.hero?.active ? [...this.units, this.hero] : this.units;
     for (const u of victims) {
       if (!u.active || u.x < x0 || u.x > x1) continue;
@@ -1921,6 +1921,7 @@ export class BattleScene extends Phaser.Scene {
       if (this.clock >= this.guardUntil) u.takeDamage(Math.max(1, Math.round(dmg)));
       if (def.skill === 'slam') u.stunUntil = now + 1500; // 💫 기절
       if (def.skill === 'frost') u.stunUntil = now + 2000; // ❄️ 빙결
+      if (def.skill === 'roots') u.stunUntil = now + 2000; // 🌿 뿌리 묶기
       if (def.skill === 'poison') this.poisonTick(u, Math.round(dmg * 0.25), 4); // 🧪 독(4초)
       if (def.skill === 'shadow') u.stats = { ...u.stats, atk: Math.round(u.stats.atk * 0.97) }; // 🌑 공격력 조금씩 약화
     }
@@ -1936,6 +1937,11 @@ export class BattleScene extends Phaser.Scene {
       this.tweens.add({ targets: glow, alpha: 0, duration: 600, onComplete: () => glow.destroy() });
     };
     switch (def.skill) {
+      case 'roots':
+        fx(0x6ad84a, '🌿');
+        for (let i = 0; i < (def.summon?.n ?? 2); i++) this.time.delayedCall(i * 250, () => !this.over && e.active && this.spawnEnemy(def.summon?.type ?? 'mushroom', false, e.x - 50 - i * 40, true));
+        sfx(this, 'boom');
+        break;
       case 'slam':
         this.cameras.main.shake(300, 0.012);
         this.burst(e.x, 0xb08a5a, 120);

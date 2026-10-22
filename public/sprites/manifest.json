@@ -6768,5 +6768,63 @@
         "fps": 8
       }
     }
+  },
+  "ancient_treant": {
+    "file": "ancient_treant.png",
+    "filter": "linear",
+    "frameWidth": 448,
+    "frameHeight": 208,
+    "scale": 0.616,
+    "footY": 206,
+    "anims": {
+      "idle": {
+        "frames": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "fps": 4
+      },
+      "walk": {
+        "frames": [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "fps": 7
+      },
+      "attack": {
+        "frames": [
+          12,
+          13,
+          14,
+          15,
+          16
+        ],
+        "fps": 8
+      },
+      "death": {
+        "frames": [
+          18,
+          19,
+          20,
+          21
+        ],
+        "fps": 7
+      },
+      "skill": {
+        "frames": [
+          24,
+          25,
+          26,
+          27
+        ],
+        "fps": 8
+      }
+    }
   }
 }

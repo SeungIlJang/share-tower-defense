@@ -27,11 +27,14 @@ describe('🗺️ 관문 100개 · 월드 10개', () => {
   });
 
   it('보스 표시', () => {
-    expect(bossOf(10)).toBe('ogre'); // 10 = 골렘 두목, 20 = 레드 드래곤(다르게)
+    expect(bossOf(10)).toBe('ancient_treant'); // 5 = 골렘 두목, 10 = 고대 나무 거인, 20 = 레드 드래곤
+    expect(STAGES[9].waves.some((w) => w.enemies.some((e) => e.type === 'ancient_treant'))).toBe(true);
+    expect(STAGES[14].waves.some((w) => w.enemies.some((e) => e.type === 'ancient_treant'))).toBe(true);
     expect(bossOf(20)).toBe('dragon');
     expect(bossOf(5)).toBe('ogre');
     expect(STAGES[4].waves.some((w) => w.enemies.some((e) => e.type === 'ogre'))).toBe(true);
-    expect(bossOf(15)).toBe('ogre');
+    expect(bossOf(15)).toBe('ancient_treant');
+    expect(bossOf(25)).toBe('dragon');
     expect(STAGES[9].waves.some((w) => w.enemies.some((e) => e.type === 'dragon'))).toBe(false);
     expect(STAGES[19].waves.some((w) => w.enemies.some((e) => e.type === 'dragon'))).toBe(true);
     expect(bossOf(30)).toBe('frost_giant');

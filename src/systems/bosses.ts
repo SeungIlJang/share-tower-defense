@@ -3,7 +3,7 @@
  * 월드 3~10: 10번째 관문 = 그 월드 보스, 5번째 관문 = 앞 월드 보스(중간 보스). 월드 1·2 = 골렘(5)·드래곤(10).
  */
 
-export type BossSkill = 'slam' | 'breath' | 'frost' | 'poison' | 'eruption' | 'raise' | 'shards' | 'charge' | 'shadow' | 'hellfire';
+export type BossSkill = 'roots' | 'slam' | 'breath' | 'frost' | 'poison' | 'eruption' | 'raise' | 'shards' | 'charge' | 'shadow' | 'hellfire';
 
 export interface BossDef {
   key: string;
@@ -18,7 +18,8 @@ export interface BossDef {
 }
 
 export const BOSSES: Record<string, BossDef> = {
-  ogre: { key: 'ogre', name: '골렘 두목', world: 1, skill: 'slam', every: 6, icon: '💥', color: 0xff8a3a, reach: [120, 120] },
+  ancient_treant: { key: 'ancient_treant', name: '고대 나무 거인', world: 1, skill: 'roots', every: 7, icon: '🌿', color: 0x6ad84a, reach: [220, 40], summon: { type: 'mushroom', n: 2, every: 0 } },
+  ogre: { key: 'ogre', name: '골렘 두목', world: 0, skill: 'slam', every: 6, icon: '💥', color: 0xff8a3a, reach: [120, 120] },
   dragon: { key: 'dragon', name: '레드 드래곤', world: 2, skill: 'breath', every: 7, icon: '🔥', color: 0xff3b3b, reach: [260, 0], summon: { type: 'bat', n: 2, every: 14 } },
   frost_giant: { key: 'frost_giant', name: '서리 거인', world: 3, skill: 'frost', every: 7, icon: '❄️', color: 0x7ad8ff, reach: [150, 120] },
   swamp_hydra: { key: 'swamp_hydra', name: '늪 히드라', world: 4, skill: 'poison', every: 7, icon: '🧪', color: 0x8aff5a, reach: [300, 0] },
@@ -45,7 +46,7 @@ export function worldBoss(world: number): string {
 export function bossForStage(id: number): string | null {
   const w = Math.ceil(id / 10);
   const slot = ((id - 1) % 10) + 1;
-  if (slot === 10) return worldBoss(w); // 월드 1 = 골렘 두목, 2 = 레드 드래곤, 3~10 = 월드 보스
+  if (slot === 10) return worldBoss(w); // 월드 1 = 고대 나무 거인, 2 = 레드 드래곤, 3~10 = 월드 보스
   if (slot === 5) return w === 1 ? 'ogre' : worldBoss(w - 1); // 중간 보스 = 앞 월드 보스(월드 1은 골렘 두목)
   return null;
 }
