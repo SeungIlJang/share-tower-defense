@@ -87,7 +87,12 @@ export function makeStage(id: number, base: StageData[]): StageData {
 
 /** 전체 관문 100개 */
 export function buildStages(base: StageData[]): StageData[] {
-  const out = [...base];
+  // 1~20관문: 10번째의 레드 드래곤을 그 월드 보스로(10 = 골렘 두목, 20 = 레드 드래곤 — 서로 다르게)
+  const out = base.map((s) => {
+    if (s.id % 10 !== 0) return s;
+    const boss = bossForStage(s.id)!;
+    return { ...s, waves: s.waves.map((w) => ({ ...w, enemies: w.enemies.map((e) => (e.type === 'dragon' ? { ...e, type: boss } : e)) })) };
+  });
   for (let id = base.length + 1; id <= MAX_STAGE; id++) out.push(makeStage(id, base));
   return out;
 }

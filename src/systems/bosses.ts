@@ -45,7 +45,7 @@ export function worldBoss(world: number): string {
 export function bossForStage(id: number): string | null {
   const w = Math.ceil(id / 10);
   const slot = ((id - 1) % 10) + 1;
-  if (slot === 10) return w <= 2 ? 'dragon' : worldBoss(w);
-  if (slot === 5) return w <= 3 ? 'ogre' : worldBoss(w - 1); // 월드 3 중간 보스 = 골렘(월드 2 '주인'은 드래곤이라 반복 방지)
+  if (slot === 10) return worldBoss(w); // 월드 1 = 골렘 두목, 2 = 레드 드래곤, 3~10 = 월드 보스
+  if (slot === 5) return w === 1 ? null : worldBoss(w - 1); // 중간 보스 = 앞 월드 보스(월드 1은 없음)
   return null;
 }
