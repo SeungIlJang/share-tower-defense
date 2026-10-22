@@ -29,7 +29,8 @@ describe('🗺️ 관문 100개 · 월드 10개', () => {
   it('보스 표시', () => {
     expect(bossOf(10)).toBe('ogre'); // 10 = 골렘 두목, 20 = 레드 드래곤(다르게)
     expect(bossOf(20)).toBe('dragon');
-    expect(bossOf(5)).toBeNull();
+    expect(bossOf(5)).toBe('ogre');
+    expect(STAGES[4].waves.some((w) => w.enemies.some((e) => e.type === 'ogre'))).toBe(true);
     expect(bossOf(15)).toBe('ogre');
     expect(STAGES[9].waves.some((w) => w.enemies.some((e) => e.type === 'dragon'))).toBe(false);
     expect(STAGES[19].waves.some((w) => w.enemies.some((e) => e.type === 'dragon'))).toBe(true);
