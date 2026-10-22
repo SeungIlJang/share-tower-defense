@@ -136,3 +136,32 @@ Row 5 Death: 4 frames (crown falls, kneels, bursts into fire and fades)
 
 Style: crisp 32-bit pixel art, bold dark outlines, bright saturated colors, chibi proportions, expressive face, soft shading. No text, no labels, no UI, no shadows on the background, no overlapping between frames. 1448x1086 PNG.
 ```
+
+---
+
+## 🌳 추가: 월드 1 보스 (10관문) — 5관문 골렘 두목과 겹치지 않게
+
+| 관문 | 지금 | 바꾼 뒤 |
+|---|---|---|
+| 5 | 🗿 골렘 두목 | 🗿 골렘 두목 (중간 보스, 그대로) |
+| 10 | 🗿 골렘 두목 | 🌳 **고대 나무 거인** (월드 1 보스) |
+| 15 | 🗿 골렘 두목 | 🌳 고대 나무 거인 (월드 2 중간 보스) |
+| 20 | 🐉 레드 드래곤 | 🐉 레드 드래곤 (그대로) |
+
+- 키: `ancient_treant` · 스킬: 🌿 **뿌리 묶기** — 앞쪽 넓은 범위 피해 + 아군 2초 묶임(이동·공격 불가) + 작은 버섯 몬스터 2마리 소환
+- 저장: `D:\AI\workspace\game\images\image\enemies\bosses\Boss_ancient_treant.png`
+- 참고 이미지: `images/image/enemies/remake/Enemy_ogre.png`(화풍·크기) + `Enemy_mushroom.png`(숲 분위기)
+
+### 🌳 고대 나무 거인 → `Boss_ancient_treant.png`
+```
+Pixel art sprite sheet of an ancient treant BOSS for a 2D side-scrolling tower defense game, facing RIGHT (the game flips it to walk left). A huge chibi living tree giant with thick mossy bark skin, a grumpy wise face with glowing green eyes in the trunk, a crown of leafy branches with small pink flowers and a bird nest, long root legs and big branch arms, tiny mushrooms growing on its shoulders. Same cute chibi fantasy pixel style as the attached reference bosses. Big, heavy and intimidating, but still cute.
+
+Layout: 5 rows on a plain dark navy background (#1a2133), each row clearly separated with generous empty space between frames, same size and same ground line in every frame:
+Row 1 Idle: 4 frames (leaves rustling, swaying slowly)
+Row 2 Walk: 6 frames (slow heavy root steps forward to the right)
+Row 3 Attack: 5 frames (branch arm swing)
+Row 4 Skill: 4 frames (slamming its roots into the ground, thick roots and vines burst out of the earth in front)
+Row 5 Death: 4 frames (cracks, leaves fall, collapses into a pile of logs and leaves)
+
+Style: crisp 32-bit pixel art, bold dark outlines, bright saturated colors, chibi proportions, expressive face, soft shading. No text, no labels, no UI, no shadows on the background, no overlapping between frames. 1448x1086 PNG.
+```
