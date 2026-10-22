@@ -6,6 +6,7 @@ import { addStats, dailyMissions, type Mission, type Stats } from './missions';
 import { pushRecord, type EndlessRecord } from './endless';
 import { BASE_MAX_LV, baseUpgradeCost, type BaseKey } from './baseUpgrades';
 import { timeRecord } from './pacing';
+import { rankUpCost, type ChestLoot } from './chests';
 import { CASTLE_MAX_LV, CASTLE_RATE_MAX_LV, castleUpCost } from './castle';
 
 /** 강화 순수 계산 (Vitest 검증) */
@@ -76,6 +77,9 @@ export class MetaProgress {
   skinEquipped: Record<string, string> = {}; // 유닛별 착용 스킨
   clearedMax = 0; // 클리어한 최고 스테이지 id
   tips: string[] = []; // 🎓 본 👆 안내
+  shards: Record<string, number> = {}; // 🃏 유닛별 카드 조각
+  ranks: Record<string, number> = {}; // 🃏 유닛별 카드 랭크(0~5)
+  chestsOpened = 0; // 🎁 연 상자 수
   lastDaily = -1; // 마지막 일일보상 수령 day index
   streak = 0; // 연속 출석
   lastSeen = 0; // 마지막 접속(ms) — 방치 보상 기준
@@ -382,6 +386,29 @@ export class MetaProgress {
     return r;
   }
 
+  /** 🎁 상자 보상 받기(골드 + 조각) */
+  grantChest(loot: ChestLoot): void {
+    this.gold += loot.gold;
+    for (const [k, n] of Object.entries(loot.shards)) this.shards[k] = (this.shards[k] ?? 0) + n;
+    this.chestsOpened++;
+    this.save();
+  }
+
+  /** 🃏 카드 랭크 */
+  rank(key: string): number {
+    return this.ranks[key] ?? 0;
+  }
+
+  /** 🃏 조각으로 랭크업 — 성공하면 true */
+  rankUp(key: string): boolean {
+    const cost = rankUpCost(this.rank(key));
+    if (cost === null || (this.shards[key] ?? 0) < cost) return false;
+    this.shards[key] -= cost;
+    this.ranks[key] = this.rank(key) + 1;
+    this.save();
+    return true;
+  }
+
   /** 🎓 👆 안내를 봤음(다시 안 나옴) */
   markTip(key: string): void {
     if (this.tips.includes(key)) return;
@@ -416,6 +443,9 @@ export class MetaProgress {
         skinEquipped?: Record<string, string>;
         clearedMax?: number;
         tips?: string[];
+        shards?: Record<string, number>;
+        ranks?: Record<string, number>;
+        chestsOpened?: number;
         lastDaily?: number;
         streak?: number;
         lastSeen?: number;
@@ -437,6 +467,9 @@ export class MetaProgress {
       this.skinsOwned = obj.skinsOwned ?? [];
       this.skinEquipped = obj.skinEquipped ?? {};
       this.clearedMax = obj.clearedMax ?? 0;
+      this.shards = obj.shards ?? {};
+      this.ranks = obj.ranks ?? {};
+      this.chestsOpened = obj.chestsOpened ?? 0;
       this.tips = obj.tips ?? (this.clearedMax > 0 ? ['summon', 'hero'] : []); // 예전 저장 = 기본 안내는 본 것으로
       this.lastDaily = obj.lastDaily ?? -1;
       this.streak = obj.streak ?? 0;
@@ -483,6 +516,9 @@ export class MetaProgress {
         skinEquipped: this.skinEquipped,
         clearedMax: this.clearedMax,
         tips: this.tips,
+        shards: this.shards,
+        ranks: this.ranks,
+        chestsOpened: this.chestsOpened,
         lastDaily: this.lastDaily,
         streak: this.streak,
         lastSeen: this.lastSeen,

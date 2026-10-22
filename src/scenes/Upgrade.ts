@@ -11,6 +11,7 @@ import { skinType, skinsFor } from '../systems/skins';
 import { ensureSkin, loadLook } from '../systems/skinTextures';
 import { BASE_MAX_LV, BASE_UPGRADES } from '../systems/baseUpgrades';
 import { ALLY_CASTLE_TIERS, CASTLE_MAX_LV, CASTLE_RATE_MAX_LV, allyCastleGun, allyCastleTier, castleHpMult, castleLook } from '../systems/castle';
+import { RANK_MAX, rankMult, rankUpCost } from '../systems/chests';
 import { UNIT_TIERS, evolvedKey, nextUnitTier, starText, unitTier } from '../systems/evolution';
 import { AURA_MAX_LV, AURA_RADIUS, HERO_MAX_LV, HERO_SKILLS, HERO_TIERS, SKILL_MAX_LV, auraBonus, heroLvMult, heroSkillPower, heroTier, heroUpCost, nextHeroTier } from '../systems/hero';
 
@@ -124,7 +125,8 @@ export class UpgradeScene extends Phaser.Scene {
     dim: boolean,
     onUp: () => void,
     extra = '', // 제목 오른쪽 작은 글씨(유닛 스킬)
-    skin?: { label: string; color: number; onClick: () => void } // 👗 스킨 버튼
+    skin?: { label: string; color: number; onClick: () => void }, // 👗 스킨 버튼
+    chip?: { label: string; color: number; onClick: () => void; pulse?: boolean } // 🃏 카드 랭크(제목 줄 오른쪽)
   ): void {
     const { x, y, h } = this.cell(i, count);
     const parts: Phaser.GameObjects.GameObject[] = [
@@ -147,6 +149,15 @@ export class UpgradeScene extends Phaser.Scene {
         .setInteractive({ useHandCursor: true });
       sb.on('pointerdown', skin.onClick);
       parts.push(sb);
+    }
+    if (chip) {
+      const cb = this.add
+        .text(x + 110, l1, chip.label, { fontFamily: 'sans-serif', fontSize: '14px', fontStyle: 'bold', color: '#ffffff', backgroundColor: `#${chip.color.toString(16).padStart(6, '0')}`, padding: { x: 7, y: 3 } })
+        .setOrigin(0.5)
+        .setInteractive({ useHandCursor: true });
+      cb.on('pointerdown', chip.onClick);
+      if (chip.pulse) this.tweens.add({ targets: cb, scale: 1.12, duration: 420, yoyo: true, repeat: -1 });
+      parts.push(cb);
     }
     if (extra) parts.push(this.add.text(tall ? x - 222 : x - 70, tall ? l3 : y - 14, extra, { fontFamily: 'sans-serif', fontSize: '14px', fontStyle: 'bold', color: '#ffe680' }).setOrigin(0, 0.5));
     const btn = this.add
@@ -197,9 +208,30 @@ export class UpgradeScene extends Phaser.Scene {
           }
         },
         this.skillLabel(key, lv),
-        owned ? this.skinButton(key) : undefined
+        owned ? this.skinButton(key) : undefined,
+        owned ? this.rankChip(key) : undefined
       );
     });
+  }
+
+  /** 🃏 카드 랭크 칩 — 조각이 모이면 눌러서 랭크업(체력·공격 +6%) */
+  private rankChip(key: string): { label: string; color: number; onClick: () => void; pulse?: boolean } {
+    const r = meta.rank(key);
+    const have = meta.shards[key] ?? 0;
+    const need = rankUpCost(r);
+    const ready = need !== null && have >= need;
+    return {
+      label: need === null ? `🃏 R${RANK_MAX} MAX` : ready ? `🃏 랭크업!` : `🃏 R${r} ${have}/${need}`,
+      color: ready ? 0x2fa25a : r > 0 ? 0x8a5ad8 : 0x4a5578,
+      pulse: ready,
+      onClick: () => {
+        if (meta.rankUp(key)) {
+          sfx(this, 'levelup');
+          this.render();
+          this.evolveFx(`🃏 ${UNITS[key].name} 랭크 ${meta.rank(key)}! ❤️⚔️ ×${rankMult(meta.rank(key)).toFixed(2)}`, '');
+        } else this.toast(need === null ? '🃏 최고 랭크예요' : `🃏 조각 ${need - have}개 더 필요 — 🎁 상자에서 모아요`);
+      },
+    };
   }
 
   /** 👗 레어 스킨 버튼 — 없으면 구매(바로 착용), 있으면 착용/해제 */
@@ -391,13 +423,22 @@ export class UpgradeScene extends Phaser.Scene {
     if (missing) loadLook(this, missing, () => this.scene.isActive() && this.render());
   }
 
+  /** 짧은 안내(화면 아래쪽) */
+  private toast(msg: string): void {
+    const t = this.add
+      .text(640, 640, msg, { fontFamily: 'sans-serif', fontSize: '20px', fontStyle: 'bold', color: '#ffe680', backgroundColor: '#0d1424ee', padding: { x: 14, y: 8 } })
+      .setOrigin(0.5)
+      .setDepth(300);
+    this.tweens.add({ targets: t, y: 610, alpha: 0, delay: 900, duration: 500, onComplete: () => t.destroy() });
+  }
+
   /** ✨ 진화 연출 */
-  private evolveFx(name: string): void {
+  private evolveFx(name: string, head = '✨ 진화!'): void {
     sfx(this, 'levelup');
     const flash = this.add.rectangle(640, 360, 1280, 720, 0xfff6c0, 0.7).setDepth(300);
     this.tweens.add({ targets: flash, alpha: 0, duration: 700, onComplete: () => flash.destroy() });
     const t = this.add
-      .text(640, 300, `✨ 진화! ${name} ✨`, { fontFamily: 'sans-serif', fontSize: '52px', fontStyle: 'bold', color: '#ffd34d', stroke: '#5a3a00', strokeThickness: 8 })
+      .text(640, 300, `${head} ${name} ✨`, { fontFamily: 'sans-serif', fontSize: head ? '52px' : '40px', fontStyle: 'bold', color: '#ffd34d', stroke: '#5a3a00', strokeThickness: 8 })
       .setOrigin(0.5)
       .setDepth(301)
       .setScale(0.3);

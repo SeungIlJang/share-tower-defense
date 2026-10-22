@@ -13,7 +13,8 @@ import { anyDevFlag, devFlags } from '../systems/dev';
 import { UNIT_TIERS, unitTier } from '../systems/evolution';
 import { enemyLevel, hexColor, pickVariant, variantTable } from '../systems/enemyVariants';
 import { STAGES, WORLDS, goldMultFor } from '../systems/worlds';
-import { BOSSES, BOSS_KEYS } from '../systems/bosses';
+import { BOSSES, BOSS_KEYS, bossForStage } from '../systems/bosses';
+import { chestForEndless, chestForStage, rankMult, rollChest, type ChestLoot } from '../systems/chests';
 import { VOLLEY_CD, VOLLEY_MAX, VOLLEY_MULT, VOLLEY_NAMES, castleArchers, ALLY_CASTLE_TIERS, ENEMY_CASTLE_TIERS, allyCastleGun, allyCastleTier, castleHpMult, castleLook, castleTarget, enemyCastleGun, enemyCastleTier, type CastleShot } from '../systems/castle';
 import { HERO_TYPE, HERO_TIERS, HERO_FALLBACK_LOOKS, heroTier, heroBodyScale, HERO_REGEN, HERO_SKILLS, AURA_ATK, AURA_GUARD, AURA_RADIUS, MANA_MAX, MANA_REGEN, MANA_START, MACE_MULT, MACE_RANGE, RALLY_SEC, RALLY_SPEED, HOLY_HEAL, HOLY_HERO_HEAL, HOLY_PUSH, HERO_ENEMY_HP, heroStats, heroLvMult, heroMoveRange, HERO_DRAG_MULT, heroSkillPower, auraRadius, inAura, maceTargets, stepToward } from '../systems/hero';
 import { HERO_PANEL_X, HERO_BTN_R, HERO_BTN_Y } from '../ui/Hud';
@@ -168,6 +169,7 @@ export class BattleScene extends Phaser.Scene {
   private feat: Record<Feature, boolean> = { heroSkill: true, weapon: true, volley: true, levelup: true, perfect: true };
   private reached = 1;
   private tip!: TipPointer;
+  private usedUnits: Record<string, number> = {}; // 🎁 이번 판 유닛별 소환 수(상자 조각 비율)
   private prodTimer = 0; // 적 기지 생산 타이머
   private prodInterval = 4; // 생산 간격(초)
   private prodIdx = 0;
@@ -268,6 +270,7 @@ export class BattleScene extends Phaser.Scene {
     this.run = {};
     this.eventT = EVENT_FIRST;
     this.committed = false;
+    this.usedUnits = {};
     this.reached = reachedStage(this.endless ? 99 : this.stage.id, meta.clearedMax);
     for (const k of Object.keys(this.feat) as Feature[]) this.feat[k] = featureOn(k, this.reached, this.endless);
 
@@ -590,7 +593,10 @@ export class BattleScene extends Phaser.Scene {
       this.hud.deny(type, 'energy'); // 에너지 부족 안내
       return;
     }
-    const m = applyUpgrade(base, meta.level(type)); // 영구 강화 적용
+    const m0 = applyUpgrade(base, meta.level(type)); // 영구 강화 적용
+    const rm = rankMult(meta.rank(type)); // 🃏 카드 랭크
+    const m = { ...m0, hp: Math.round(m0.hp * rm), atk: Math.round(m0.atk * rm) };
+    this.usedUnits[type] = (this.usedUnits[type] ?? 0) + 1;
     const perfect = this.feat.perfect && Math.abs(this.beat - 0.5) <= BattleScene.PERFECT_WIN; // ⏱️ 타이밍 명중(🎓 6관문부터)
     this.tipDone('summon');
     if (this.tip.key === 'perfect') this.tipDone('perfect');
@@ -2225,6 +2231,14 @@ export class BattleScene extends Phaser.Scene {
     this.tweens.add({ targets: t, y: 240, alpha: 0, duration: 1200, onComplete: () => t.destroy() });
   }
 
+  /** 🎁 상자 내용 정하고 바로 지급(결과 화면은 여는 연출만) */
+  private openChest(tier: ChestLoot['tier'], goldMult: number): ChestLoot {
+    const owned = Object.keys(UNITS).filter((k) => meta.ownsUnit(k));
+    const loot = rollChest(tier, owned, this.usedUnits, goldMult, Math.random);
+    meta.grantChest(loot);
+    return loot;
+  }
+
   private end(win: boolean): void {
     this.over = true;
     this.picking = false;
@@ -2235,11 +2249,13 @@ export class BattleScene extends Phaser.Scene {
       const earned = endlessReward(wave) + Math.floor(this.runGold * 0.2);
       meta.addGold(earned);
       const newBest = meta.recordEndless(wave);
+      const ct = chestForEndless(wave);
+      const chest = ct === null ? null : this.openChest(ct, 1);
       this.commitRun();
       bgm(this, null);
       sfx(this, newBest ? 'win' : 'lose');
       this.slowmo = 1;
-      this.time.delayedCall(600, () => this.scene.start('Result', { win: false, stageId: 0, earned, mode: 'endless', wave, newBest }));
+      this.time.delayedCall(600, () => this.scene.start('Result', { win: false, stageId: 0, earned, mode: 'endless', wave, newBest, chest }));
       return;
     }
     // ⭐ 별 평가: 우리 기지 남은 체력(부활했으면 1개), 처음 얻는 별마다 보너스 골드
@@ -2253,6 +2269,10 @@ export class BattleScene extends Phaser.Scene {
       meta.addGold(earned); // 처치 골드 + 승리 보너스 + 새 별 보너스(강화용)
       meta.clearStage(this.stage.id); // 다음 스테이지 해금
     }
+    // 🎁 보물 상자 — 별·보스·첫 클리어로 등급
+    const boss = bossForStage(this.stage.id);
+    const slot = ((this.stage.id - 1) % 10) + 1;
+    const chest = win ? this.openChest(chestForStage(stars, this.stage.id > prevCleared, boss ? (slot === 10 ? 'world' : 'mid') : null), goldMultFor(this.stage.id)) : null;
     // ⏱️ 클리어 시간(게임 시간 기준 — 배속과 무관)
     const time = Math.round(this.clock);
     const timeRec = win ? meta.recordTime(this.stage.id, time) : null;
@@ -2264,7 +2284,7 @@ export class BattleScene extends Phaser.Scene {
     sfx(this, win ? 'win' : 'lose');
     this.slowmo = 1;
     this.time.delayedCall(600, () =>
-      this.scene.start('Result', { win, stageId: this.stage.id, earned, stars, prevStars, starGold, time, timeRec, prevCleared })
+      this.scene.start('Result', { win, stageId: this.stage.id, earned, stars, prevStars, starGold, time, timeRec, prevCleared, chest })
     );
   }
 }

@@ -327,6 +327,18 @@ export class DevScene extends Phaser.Scene {
         m.skinEquipped = {};
       }), 0x8a3a3a],
     ], C);
+    const shardSum = Object.values(meta.shards).reduce((x, y) => x + y, 0);
+    this.row(525, '🃏 카드 조각', `조각 ${shardSum} · 랭크 합 ${Object.values(meta.ranks).reduce((x, y) => x + y, 0)} · 🎁 상자 ${meta.chestsOpened}개`, [
+      ['전 유닛 +50', () => this.edit((m) => Object.keys(UNITS).forEach((k) => (m.shards[k] = (m.shards[k] ?? 0) + 50)), '🃏 조각 +50'), 0x2f7a4d],
+      ['조각·랭크 초기화', () => this.edit((m) => {
+        m.shards = {};
+        m.ranks = {};
+        m.chestsOpened = 0;
+      }), 0x8a3a3a],
+    ], C);
+    this.row(590, '🎓 안내', `본 안내 ${meta.tips.length}개`, [
+      ['처음처럼 다시 보기', () => this.edit((m) => (m.tips = []), '🎓 안내 초기화'), 0x8a3a3a],
+    ], C);
   }
 
   // ───────── ⚔️ 전투 치트(이 기기에만 저장)

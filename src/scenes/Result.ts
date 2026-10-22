@@ -9,6 +9,8 @@ import { formatTime, nextUnitToBuy } from '../systems/pacing';
 import { unitPrice } from '../systems/unlocks';
 import { iconKey } from '../systems/sprites';
 import { unlockedBy } from '../systems/tutorial';
+import type { ChestLoot } from '../systems/chests';
+import { chestCard } from '../ui/Chest';
 
 const UNITS = unitsData as Record<string, UnitStats>;
 
@@ -25,6 +27,7 @@ interface ResultData {
   time?: number; // ⏱️ 클리어 시간(초)
   timeRec?: 'first' | 'best' | null; // 첫 기록 / 신기록
   prevCleared?: number; // 🎓 이번 판 전 클리어 최고 관문
+  chest?: ChestLoot | null; // 🎁 보물 상자(이미 지급됨 — 여는 연출만)
 }
 
 /** 결과 화면 — 별 평가 연출 + 보상 + 광고 2배 */
@@ -68,6 +71,7 @@ export class ResultScene extends Phaser.Scene {
       this.tweens.add({ targets: nb, scale: 1.15, duration: 380, yoyo: true, repeat: -1 });
     }
     this.nextUnitCard();
+    if (this.resultData.chest) chestCard(this, 170, 330, this.resultData.chest, (k) => UNITS[k]?.name ?? k);
 
     // ⭐ 별 3개 — 하나씩 쿵 떨어지며 켜짐
     for (let i = 0; i < 3; i++) {
@@ -218,6 +222,7 @@ export class ResultScene extends Phaser.Scene {
     this.add.text(640, 460, `획득 골드 🪙 ${earned}`, { fontFamily: 'sans-serif', fontSize: '26px', fontStyle: 'bold', color: '#e8a000' }).setOrigin(0.5);
     this.add.text(640, 496, `보유 골드 🪙 ${meta.gold}`, { fontFamily: 'sans-serif', fontSize: '16px', color: '#5a6a9a' }).setOrigin(0.5);
 
+    if (this.resultData.chest) chestCard(this, 170, 330, this.resultData.chest, (k) => UNITS[k]?.name ?? k);
     cuteButton(this, 480, 640, 220, 60, '🔄 다시', 0xa07aff, 0x7a4ad8, '24px', () => this.scene.start('Battle', { stageId: 0, mode: 'endless' }));
     cuteButton(this, 800, 640, 260, 60, '🗺️ 스테이지 선택', 0x5cd88a, 0x2fa25a, '22px', () => this.scene.start('StageSelect'));
   }
