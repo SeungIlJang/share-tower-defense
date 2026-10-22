@@ -29,6 +29,7 @@ import { xpToNext, hasteMult, mimicMult, magicMult, supplyBonus, anyUpgradable, 
 import { Hud } from '../ui/Hud';
 import { LevelUpOverlay } from '../ui/LevelUp';
 import { TipPointer } from '../ui/Tutorial';
+import { fxWarning, playFx, resetFx, type FxKey } from '../systems/fx';
 import { HERO_TIP_STAGE, TIP_TEXT, featureOn, nextTip, reachedStage, type Feature, type TipKey } from '../systems/tutorial';
 import { showRewarded } from '../systems/ads';
 import {
@@ -257,6 +258,7 @@ export class BattleScene extends Phaser.Scene {
 
   create(): void {
     this.over = false;
+    resetFx();
     this.paused = false;
     this.pauseLayer = null;
     this.reviving = false;
@@ -993,8 +995,7 @@ export class BattleScene extends Phaser.Scene {
       return true;
     }
     best.heal(Math.round(u.stats.atk * CLERIC_HEAL_MULT * synergyMult(this.synergies, u.type, 'heal')));
-    const fx = this.add.circle(best.x, LANE_Y - 30, 10, 0x5cff9e, 0.6).setDepth(55);
-    this.tweens.add({ targets: fx, y: LANE_Y - 60, scale: 1.8, alpha: 0, duration: 450, onComplete: () => fx.destroy() });
+    playFx(this, 'heal', best.x, LANE_Y + 6, { scale: 0.6, volume: 0.6, depth: 55 }); // 💚 회복(발밑)
     u.lunge();
     u.cooldown = attackCooldown(u.stats.atkSpeed) * hasteMult(this.skills.haste ?? 0);
     return true;
@@ -1050,21 +1051,23 @@ export class BattleScene extends Phaser.Scene {
       // 원거리: 궁수=화살(직선·빠름), 마법사=마법 구슬(느림·명중 시 광역)
       const p = this.projPool.acquire();
       const splashMul = SPLASH[att.type];
+      const orb = ORB_UNITS.has(att.type);
       const onHit =
-        splashMul || chain
+        splashMul || chain || ally
           ? (x: number, d: number) => {
+              if (ally) playFx(this, crit ? 'critical' : orb ? 'magic' : 'arrow', x, LANE_Y - 36, { scale: crit ? 1 : orb ? 1 : 0.9 }); // 💥 명중 효과 + 소리
               if (splashMul) this.splash(x, Math.round(d * splashMul), att.side);
               chain?.(x);
             }
           : undefined;
       p.spawn(att.x + (att.side === 'ally' ? 14 : -14), LANE_Y - 24, def, dmg, ORB_UNITS.has(att.type) ? 'orb' : 'arrow', onHit, ORB_COLOR[att.type], crit);
-      if (att.side === 'ally') sfx(this, ORB_UNITS.has(att.type) ? 'magic' : 'arrow');
       this.projectiles.push(p);
     } else {
       // 근접: 즉시 — 🛡️ 수호 중인 아군은 피해 없음
       if (!(def.side === 'ally' && this.clock < this.guardUntil)) def.takeDamage(dmg, crit);
       chain?.(def.x);
-      sfx(this, att.side === 'ally' ? 'slash' : 'hit');
+      if (ally) playFx(this, crit ? 'critical' : 'slash', def.x - 6, LANE_Y - 36, { scale: crit ? 1 : 0.9 }); // ⚔️ 베기 · 💥 치명타(소리 포함)
+      else sfx(this, 'hit');
     }
     att.lunge(); // 공격 찌르기 모션
     let cd = attackCooldown(att.stats.atkSpeed);
@@ -1748,7 +1751,7 @@ export class BattleScene extends Phaser.Scene {
       e.moveBy(Math.min(HOLY_PUSH, Math.max(0, this.enemyBase.x - BASE_FRONT - e.x)));
     }
     this.banner('✨ 성스러운 빛!', 0xfff0a0);
-    sfx(this, 'heal');
+    if (!playFx(this, 'heal', h.x, LANE_Y + 6, { scale: 1.1 })) sfx(this, 'heal');
     const r = this.auraR();
     const pillar = this.add.rectangle(h.x, LANE_Y - 140, r * 2, 300, 0xfff6c0, 0.45).setDepth(84);
     this.tweens.add({ targets: pillar, alpha: 0, scaleX: 1.2, duration: 700, onComplete: () => pillar.destroy() });
@@ -1999,6 +2002,7 @@ export class BattleScene extends Phaser.Scene {
     const x0 = e.x - def.reach[0]; // 영향 범위(왼쪽 = 우리 쪽)
     const x1 = e.x + def.reach[1];
     const warn = this.dangerZone(x0, x1, def.color, def.icon, 800);
+    fxWarning(this); // ⚠️ 예고음
     e.skillMotion(); // 👑 보스 스킬 동작
     this.time.delayedCall(800, () => {
       warn.destroy();
@@ -2034,6 +2038,19 @@ export class BattleScene extends Phaser.Scene {
       const glow = this.add.ellipse((x0 + x1) / 2, LANE_Y + 30, x1 - x0, 50, color, 0.5).setDepth(-2);
       this.tweens.add({ targets: glow, alpha: 0, duration: 600, onComplete: () => glow.destroy() });
     };
+    // 💥 효과 팩 그림이 있는 기술 — 시전자 발밑에서 왼쪽(우리 쪽)으로 펼쳐짐, 범위에 맞춰 늘림(소리 포함)
+    const PACK: Partial<Record<string, FxKey>> = { slam: 'slam', frost: 'frost', breath: 'breath', hellfire: 'hellfire', eruption: 'eruption', charge: 'charge' };
+    const packKey = PACK[def.skill];
+    if (packKey) {
+      const sx = Phaser.Math.Clamp(def.reach[0] / 300, 1.15, 1.8); // 게임 속 보스는 크게 그려져서 최소 1.15배
+      if (playFx(this, packKey, e.x, LANE_Y + 26, { scale: sx, scaleY: Math.min(sx, 1.5), depth: 56 })) {
+        if (def.skill === 'slam') this.cameras.main.shake(300, 0.012);
+        else if (def.skill === 'hellfire') this.cameras.main.shake(400, 0.014);
+        else if (def.skill !== 'breath' && def.skill !== 'charge') this.cameras.main.shake(300, 0.01);
+        if (def.skill === 'charge') e.moveBy(-Math.min(def.reach[0] * 0.6, Math.max(0, e.x - (this.playerBase.x + BASE_FRONT + 40)))); // ⚡ 돌진
+        return;
+      }
+    }
     switch (def.skill) {
       case 'roots':
         fx(0x6ad84a, '🌿');

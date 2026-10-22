@@ -1,0 +1,174 @@
+{
+ "warning": {
+  "audio": "audio/Sfx_warning.wav",
+  "duration": 0.45,
+  "volume": 0.25
+ },
+ "effects": {
+  "slash": {
+   "texture": "sprites/Fx_slash.png",
+   "audio": "audio/Sfx_slash.wav",
+   "frameWidth": 192,
+   "frameHeight": 192,
+   "frames": 12,
+   "fps": 37.5,
+   "pivot": {
+    "x": 96,
+    "y": 96
+   },
+   "volume": 0.42,
+   "concurrency": 5,
+   "cooldownMs": 65
+  },
+  "critical": {
+   "texture": "sprites/Fx_critical.png",
+   "audio": "audio/Sfx_critical.wav",
+   "frameWidth": 192,
+   "frameHeight": 192,
+   "frames": 12,
+   "fps": 26.08695652173913,
+   "pivot": {
+    "x": 96,
+    "y": 96
+   },
+   "volume": 0.5,
+   "concurrency": 5,
+   "cooldownMs": 65
+  },
+  "arrow": {
+   "texture": "sprites/Fx_arrow.png",
+   "audio": "audio/Sfx_arrow.wav",
+   "frameWidth": 192,
+   "frameHeight": 192,
+   "frames": 12,
+   "fps": 40,
+   "pivot": {
+    "x": 96,
+    "y": 96
+   },
+   "volume": 0.34,
+   "concurrency": 5,
+   "cooldownMs": 65
+  },
+  "magic": {
+   "texture": "sprites/Fx_magic.png",
+   "audio": "audio/Sfx_magic.wav",
+   "frameWidth": 192,
+   "frameHeight": 192,
+   "frames": 12,
+   "fps": 21.818181818181817,
+   "pivot": {
+    "x": 96,
+    "y": 96
+   },
+   "volume": 0.4,
+   "concurrency": 5,
+   "cooldownMs": 65
+  },
+  "heal": {
+   "texture": "sprites/Fx_heal.png",
+   "audio": "audio/Sfx_heal.wav",
+   "frameWidth": 192,
+   "frameHeight": 192,
+   "frames": 12,
+   "fps": 15,
+   "pivot": {
+    "x": 96,
+    "y": 160
+   },
+   "volume": 0.35,
+   "concurrency": 5,
+   "cooldownMs": 65
+  },
+  "slam": {
+   "texture": "sprites/Fx_slam.png",
+   "audio": "audio/Sfx_slam.wav",
+   "frameWidth": 384,
+   "frameHeight": 192,
+   "frames": 12,
+   "fps": 12.631578947368421,
+   "pivot": {
+    "x": 340,
+    "y": 160
+   },
+   "volume": 0.52,
+   "concurrency": 2,
+   "cooldownMs": 180
+  },
+  "breath": {
+   "texture": "sprites/Fx_breath.png",
+   "audio": "audio/Sfx_breath.wav",
+   "frameWidth": 384,
+   "frameHeight": 192,
+   "frames": 12,
+   "fps": 9.6,
+   "pivot": {
+    "x": 340,
+    "y": 160
+   },
+   "volume": 0.48,
+   "concurrency": 2,
+   "cooldownMs": 180
+  },
+  "frost": {
+   "texture": "sprites/Fx_frost.png",
+   "audio": "audio/Sfx_frost.wav",
+   "frameWidth": 384,
+   "frameHeight": 192,
+   "frames": 12,
+   "fps": 11.428571428571429,
+   "pivot": {
+    "x": 340,
+    "y": 160
+   },
+   "volume": 0.45,
+   "concurrency": 2,
+   "cooldownMs": 180
+  },
+  "eruption": {
+   "texture": "sprites/Fx_eruption.png",
+   "audio": "audio/Sfx_eruption.wav",
+   "frameWidth": 384,
+   "frameHeight": 192,
+   "frames": 12,
+   "fps": 9.23076923076923,
+   "pivot": {
+    "x": 340,
+    "y": 160
+   },
+   "volume": 0.5,
+   "concurrency": 2,
+   "cooldownMs": 180
+  },
+  "charge": {
+   "texture": "sprites/Fx_charge.png",
+   "audio": "audio/Sfx_charge.wav",
+   "frameWidth": 384,
+   "frameHeight": 192,
+   "frames": 12,
+   "fps": 15,
+   "pivot": {
+    "x": 340,
+    "y": 160
+   },
+   "volume": 0.48,
+   "concurrency": 2,
+   "cooldownMs": 180
+  },
+  "hellfire": {
+   "texture": "sprites/Fx_hellfire.png",
+   "audio": "audio/Sfx_hellfire.wav",
+   "frameWidth": 384,
+   "frameHeight": 192,
+   "frames": 12,
+   "fps": 8,
+   "pivot": {
+    "x": 340,
+    "y": 160
+   },
+   "volume": 0.5,
+   "concurrency": 2,
+   "cooldownMs": 180
+  }
+ }
+}

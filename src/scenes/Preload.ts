@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { loadAudio } from '../systems/sound';
+import { loadFx, registerFx } from '../systems/fx';
 import { meta } from '../systems/upgrades';
 import { registerSpriteAnims } from '../systems/skinTextures';
 import { MANIFEST_URL, iconKey, parseManifest, sprites, textureKey } from '../systems/sprites';
@@ -28,12 +29,14 @@ export class PreloadScene extends Phaser.Scene {
     });
     this.load.json('spriteManifest', MANIFEST_URL);
     loadAudio(this); // 🔊 효과음·배경음
+    loadFx(this); // 💥 전투 효과 팩
   }
 
   create(): void {
     const { manifest, warnings } = parseManifest(this.cache.json.get('spriteManifest'));
     for (const w of warnings) console.warn(`[sprites] ${w}`);
     sprites.manifest = manifest;
+    registerFx(this);
 
     const types = Object.keys(manifest);
     if (types.length === 0) {
