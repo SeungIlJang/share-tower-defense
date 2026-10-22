@@ -5,6 +5,7 @@
 import baseStages from '../data/stages.json';
 import type { StageData, Wave } from '../types';
 import { statMult } from './upgrades';
+import { bossForStage, isBoss } from './bosses';
 
 export interface WorldDef {
   id: number;
@@ -61,7 +62,13 @@ export function makeStage(id: number, base: StageData[]): StageData {
   const more = 1 + 0.08 * (w - 1); // 적 수 증가
   const themed = WORLDS[w - 1].themed;
   const waves: Wave[] = tpl.waves.map((wv, i) => {
-    const enemies = wv.enemies.map((e) => ({ ...e, count: e.type === 'dragon' || e.type === 'ogre' ? e.count : Math.max(1, Math.round(e.count * more)) }));
+    // 👑 보스(골렘·드래곤)는 그 관문의 월드 보스로 교체(5번째 = 앞 월드 보스, 10번째 = 이 월드 보스), 다른 자리는 골렘 그대로
+    const boss = bossForStage(id);
+    const enemies = wv.enemies.map((e) => {
+      if (!isBoss(e.type)) return { ...e, count: Math.max(1, Math.round(e.count * more)) };
+      const big = e.type === 'dragon' || (slot === 4 && e.type === 'ogre');
+      return { ...e, type: big && boss ? boss : e.type };
+    });
     // 🎭 월드 테마 적 — 두 번째 웨이브부터 관문이 깊어질수록 많이
     if (i >= 1 && themed.length) enemies.push({ type: themed[(slot + i) % themed.length], count: 1 + Math.floor(slot / 3), interval: 1.6 });
     return { ...wv, enemies };
@@ -87,7 +94,7 @@ export function buildStages(base: StageData[]): StageData[] {
 
 export const STAGES: StageData[] = buildStages(baseStages as StageData[]);
 
-/** 스테이지 선택 화면 보스 표시 — 5번째 골렘 두목, 10번째 레드 드래곤 */
+/** 스테이지 선택 화면 보스 표시 — 그 관문의 보스 */
 export function bossOf(id: number): string | null {
-  return id % 10 === 0 ? 'dragon' : id % 10 === 5 ? 'ogre' : null;
+  return bossForStage(id);
 }

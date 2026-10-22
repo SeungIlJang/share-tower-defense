@@ -13,6 +13,7 @@ import { anyDevFlag, devFlags } from '../systems/dev';
 import { UNIT_TIERS, unitTier } from '../systems/evolution';
 import { enemyLevel, hexColor, pickVariant, variantTable } from '../systems/enemyVariants';
 import { STAGES, WORLDS, goldMultFor } from '../systems/worlds';
+import { BOSSES, BOSS_KEYS } from '../systems/bosses';
 import { VOLLEY_CD, VOLLEY_MAX, VOLLEY_MULT, VOLLEY_NAMES, castleArchers, ALLY_CASTLE_TIERS, ENEMY_CASTLE_TIERS, allyCastleGun, allyCastleTier, castleHpMult, castleLook, castleTarget, enemyCastleGun, enemyCastleTier, type CastleShot } from '../systems/castle';
 import { HERO_TYPE, HERO_TIERS, HERO_FALLBACK_LOOKS, heroTier, heroBodyScale, HERO_REGEN, HERO_SKILLS, AURA_ATK, AURA_GUARD, AURA_RADIUS, MANA_MAX, MANA_REGEN, MANA_START, MACE_MULT, MACE_RANGE, RALLY_SEC, RALLY_SPEED, HOLY_HEAL, HOLY_HERO_HEAL, HOLY_PUSH, HERO_ENEMY_HP, heroStats, heroLvMult, heroMoveRange, HERO_DRAG_MULT, heroSkillPower, auraRadius, inAura, maceTargets, stepToward } from '../systems/hero';
 import { HERO_PANEL_X, HERO_BTN_R, HERO_BTN_Y } from '../ui/Hud';
@@ -96,7 +97,7 @@ const GUARD_TINT = 0xb0c4ff;
 const BERSERK_TINT = 0xff9a9a;
 
 const PROD_TYPES = ['goblin', 'wolf', 'slime', 'bat']; // 적 기지가 계속 생산하는 병력
-const BOSS = new Set(['ogre', 'dragon']); // 보스 타입
+const BOSS = BOSS_KEYS; // 👑 보스 타입(골렘·드래곤 + 월드 보스 8종)
 
 const UNITS = unitsData as Record<string, UnitStats>;
 const ENEMIES = enemiesData as Record<string, EnemyStats>;
@@ -719,7 +720,7 @@ export class BattleScene extends Phaser.Scene {
       this.cameras.main.shake(300, 0.012);
       sfx(this, 'alert');
       const t = this.add
-        .text(640, 210, '👑 보스 등장!', { fontFamily: 'sans-serif', fontSize: '44px', fontStyle: 'bold', color: '#ff5a6e' })
+        .text(640, 210, `👑 ${BOSSES[type]?.name ?? '보스'} 등장!`, { fontFamily: 'sans-serif', fontSize: '44px', fontStyle: 'bold', color: '#ff5a6e' })
         .setOrigin(0.5)
         .setDepth(95);
       this.tweens.add({ targets: t, y: 170, alpha: 0, duration: 1600, onComplete: () => t.destroy() });
@@ -1886,55 +1887,108 @@ export class BattleScene extends Phaser.Scene {
 
   /** 👑 보스 패턴 — 골렘: 땅 내려치기(주변 기절) / 드래곤: 화염 숨결 + 박쥐 소환. 0.8초 전 경고 */
   private bossPattern(e: Enemy, dt: number): void {
+    const def = BOSSES[e.type];
+    if (!def) return;
     e.patternT += dt;
     e.summonT += dt;
-    if (e.type === 'dragon' && e.summonT >= 14) {
+    // 📣 주기 소환(드래곤 박쥐 · 마왕 오크 족장)
+    if (def.summon && def.summon.every > 0 && e.summonT >= def.summon.every) {
       e.summonT = 0;
-      for (let i = 0; i < 2; i++) this.time.delayedCall(i * 300, () => !this.over && this.spawnEnemy('bat'));
+      for (let i = 0; i < def.summon.n; i++) this.time.delayedCall(i * 300, () => !this.over && e.active && this.spawnEnemy(def.summon!.type, false, e.x + 30, true));
     }
-    const every = e.type === 'dragon' ? 7 : 6;
-    if (e.patternT < every) return;
+    if (e.patternT < def.every) return;
     e.patternT = 0;
-    const slam = e.type !== 'dragon';
-    const x0 = slam ? e.x - 120 : e.x - 260; // 영향 범위(왼쪽 = 우리 쪽)
-    const x1 = slam ? e.x + 120 : e.x;
-    const warn = this.dangerZone(x0, x1, slam ? 0xff8a3a : 0xff3b3b, slam ? '💥' : '🔥', 800);
-    e.skillMotion(); // 👑 보스 스킬 동작(골렘 땅 내려치기 · 드래곤 화염 숨결)
+    const x0 = e.x - def.reach[0]; // 영향 범위(왼쪽 = 우리 쪽)
+    const x1 = e.x + def.reach[1];
+    const warn = this.dangerZone(x0, x1, def.color, def.icon, 800);
+    e.skillMotion(); // 👑 보스 스킬 동작
     this.time.delayedCall(800, () => {
       warn.destroy();
       if (!e.active || this.over) return;
-      const now = this.time.now;
-      for (const u of this.units) {
-        if (!u.active || u.x < x0 || u.x > x1) continue;
-        const dmg = computeDamage(e.stats.atk * (slam ? 1.2 : 1.4), u.stats.def) * synergyMult(this.synergies, u.type, 'guard');
-        if (this.clock >= this.guardUntil) u.takeDamage(Math.max(1, Math.round(dmg)));
-        if (slam) u.stunUntil = now + 1500;
+      this.bossSkill(e, def, x0, x1);
+    });
+  }
+
+  /** 👑 보스 스킬 효과 — 구역 안 아군·영웅에게 피해 + 스킬별 추가 효과 */
+  private bossSkill(e: Enemy, def: (typeof BOSSES)[string], x0: number, x1: number): void {
+    const now = this.time.now;
+    const mul: Record<string, number> = { slam: 1.2, breath: 1.4, frost: 1.1, poison: 0.9, eruption: 1.5, raise: 0.6, shards: 1.6, charge: 1.3, shadow: 1.0, hellfire: 1.5 };
+    const victims: Unit[] = this.hero?.active ? [...this.units, this.hero] : this.units;
+    for (const u of victims) {
+      if (!u.active || u.x < x0 || u.x > x1) continue;
+      const guard = u === this.hero ? 1 : synergyMult(this.synergies, u.type, 'guard');
+      const dmg = computeDamage(e.stats.atk * (mul[def.skill] ?? 1.2), u.stats.def) * guard;
+      if (this.clock >= this.guardUntil) u.takeDamage(Math.max(1, Math.round(dmg)));
+      if (def.skill === 'slam') u.stunUntil = now + 1500; // 💫 기절
+      if (def.skill === 'frost') u.stunUntil = now + 2000; // ❄️ 빙결
+      if (def.skill === 'poison') this.poisonTick(u, Math.round(dmg * 0.25), 4); // 🧪 독(4초)
+      if (def.skill === 'shadow') u.stats = { ...u.stats, atk: Math.round(u.stats.atk * 0.97) }; // 🌑 공격력 조금씩 약화
+    }
+    const fx = (color: number, emoji: string): void => {
+      const n = Math.max(4, Math.round((x1 - x0) / 40));
+      for (let i = 0; i < n; i++) {
+        const fxX = x0 + ((i + 0.5) * (x1 - x0)) / n;
+        const f = this.add.text(fxX, LANE_Y + 10, emoji, { fontSize: `${28 + Math.random() * 14}px`, padding: { top: 10, bottom: 4 } }).setOrigin(0.5, 1).setDepth(56).setScale(0.2);
+        this.tweens.add({ targets: f, scale: 1, y: LANE_Y - 10 - Math.random() * 20, delay: i * 25, duration: 180, ease: 'Back.easeOut' });
+        this.tweens.add({ targets: f, alpha: 0, y: f.y - 50, delay: 260 + i * 25, duration: 320, onComplete: () => f.destroy() });
       }
-      // 👑 영웅도 보스 공격을 맞음(땅 내려치기면 기절)
-      const h = this.hero;
-      if (h?.active && h.x >= x0 && h.x <= x1) {
-        const dmg = computeDamage(e.stats.atk * (slam ? 1.2 : 1.4), h.stats.def);
-        if (this.clock >= this.guardUntil) h.takeDamage(Math.max(1, Math.round(dmg)));
-        if (slam) h.stunUntil = now + 1500;
-      }
-      if (slam) {
+      const glow = this.add.ellipse((x0 + x1) / 2, LANE_Y + 30, x1 - x0, 50, color, 0.5).setDepth(-2);
+      this.tweens.add({ targets: glow, alpha: 0, duration: 600, onComplete: () => glow.destroy() });
+    };
+    switch (def.skill) {
+      case 'slam':
         this.cameras.main.shake(300, 0.012);
         this.burst(e.x, 0xb08a5a, 120);
         sfx(this, 'boom');
-      } else {
-        // 🔥 불길 — 구역을 따라 불꽃이 차례로 솟음
-        const n = Math.max(4, Math.round((x1 - x0) / 34));
-        for (let i = 0; i < n; i++) {
-          const fx = x0 + ((i + 0.5) * (x1 - x0)) / n;
-          const f = this.add.text(fx, LANE_Y + 10, '🔥', { fontSize: `${30 + Math.random() * 14}px` }).setOrigin(0.5, 1).setDepth(56).setScale(0.2);
-          this.tweens.add({ targets: f, scale: 1, y: LANE_Y - 10 - Math.random() * 20, delay: i * 25, duration: 180, ease: 'Back.easeOut' });
-          this.tweens.add({ targets: f, alpha: 0, y: f.y - 50, delay: 260 + i * 25, duration: 320, onComplete: () => f.destroy() });
-        }
-        const glow = this.add.ellipse((x0 + x1) / 2, LANE_Y + 30, x1 - x0, 50, 0xff7a2a, 0.55).setDepth(-2);
-        this.tweens.add({ targets: glow, alpha: 0, duration: 600, onComplete: () => glow.destroy() });
+        break;
+      case 'frost':
+        this.cameras.main.shake(300, 0.01);
+        fx(0x7ad8ff, '❄️');
+        sfx(this, 'boom');
+        break;
+      case 'breath':
+      case 'hellfire':
+        fx(def.color, '🔥');
+        if (def.skill === 'hellfire') this.cameras.main.shake(400, 0.014);
         sfx(this, 'boom_big');
+        break;
+      case 'poison':
+        fx(0x8aff5a, '🧪');
+        sfx(this, 'magic');
+        break;
+      case 'eruption':
+        fx(0xff6a2a, '🌋');
+        this.cameras.main.shake(350, 0.012);
+        sfx(this, 'boom_big');
+        break;
+      case 'raise':
+        for (let i = 0; i < (def.summon?.n ?? 3); i++) this.time.delayedCall(i * 200, () => !this.over && this.spawnEnemy(def.summon?.type ?? 'skeleton', false, e.x - 60 - i * 40, true));
+        fx(0x5aff9a, '💀');
+        sfx(this, 'magic');
+        break;
+      case 'shards':
+        fx(0xc08aff, '💎');
+        sfx(this, 'magic');
+        break;
+      case 'charge': {
+        const dash = Math.min(def.reach[0] * 0.6, Math.max(0, e.x - (this.playerBase.x + BASE_FRONT + 40)));
+        e.moveBy(-dash); // ⚡ 앞으로 돌진
+        fx(0xffe14d, '⚡');
+        sfx(this, 'boom');
+        break;
       }
-    });
+      case 'shadow':
+        fx(0x9a5aff, '🌑');
+        sfx(this, 'magic');
+        break;
+    }
+  }
+
+  /** 🧪 독 — 1초마다 n번 피해 */
+  private poisonTick(u: Unit, dmg: number, n: number): void {
+    for (let i = 1; i <= n; i++) this.time.delayedCall(i * 1000, () => u.active && !this.over && u.takeDamage(Math.max(1, dmg)));
+    u.setStatus(0x8aff5a);
+    this.time.delayedCall(n * 1000, () => u.active && u.setStatus(null));
   }
 
   /** ⚠️ 보스 공격 예고 구역 — 바닥에 납작한 원 + 가운데서 차오르는 원(차면 공격) + 위에 아이콘 */

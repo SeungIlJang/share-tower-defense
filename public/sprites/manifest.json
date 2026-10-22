@@ -6304,5 +6304,469 @@
         "fps": 1
       }
     }
+  },
+  "crystal_golem": {
+    "file": "crystal_golem.png",
+    "filter": "linear",
+    "frameWidth": 435,
+    "frameHeight": 206,
+    "scale": 0.608,
+    "footY": 202,
+    "anims": {
+      "idle": {
+        "frames": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "fps": 4
+      },
+      "walk": {
+        "frames": [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "fps": 7
+      },
+      "attack": {
+        "frames": [
+          12,
+          13,
+          14,
+          15,
+          16
+        ],
+        "fps": 8
+      },
+      "death": {
+        "frames": [
+          18,
+          19,
+          20,
+          21
+        ],
+        "fps": 7
+      },
+      "skill": {
+        "frames": [
+          24,
+          25,
+          26,
+          27
+        ],
+        "fps": 8
+      }
+    }
+  },
+  "demon_king": {
+    "file": "demon_king.png",
+    "filter": "linear",
+    "frameWidth": 452,
+    "frameHeight": 226,
+    "scale": 0.68,
+    "footY": 224,
+    "anims": {
+      "idle": {
+        "frames": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "fps": 4
+      },
+      "walk": {
+        "frames": [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "fps": 7
+      },
+      "attack": {
+        "frames": [
+          12,
+          13,
+          14,
+          15,
+          16
+        ],
+        "fps": 8
+      },
+      "death": {
+        "frames": [
+          18,
+          19,
+          20,
+          21
+        ],
+        "fps": 7
+      },
+      "skill": {
+        "frames": [
+          24,
+          25,
+          26,
+          27
+        ],
+        "fps": 8
+      }
+    }
+  },
+  "frost_giant": {
+    "file": "frost_giant.png",
+    "filter": "linear",
+    "frameWidth": 425,
+    "frameHeight": 257,
+    "scale": 0.637,
+    "footY": 237,
+    "anims": {
+      "idle": {
+        "frames": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "fps": 4
+      },
+      "walk": {
+        "frames": [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "fps": 7
+      },
+      "attack": {
+        "frames": [
+          12,
+          13,
+          14,
+          15,
+          16
+        ],
+        "fps": 8
+      },
+      "death": {
+        "frames": [
+          18,
+          19,
+          20,
+          21
+        ],
+        "fps": 7
+      },
+      "skill": {
+        "frames": [
+          24,
+          25,
+          26,
+          27
+        ],
+        "fps": 8
+      }
+    }
+  },
+  "lich_king": {
+    "file": "lich_king.png",
+    "filter": "linear",
+    "frameWidth": 445,
+    "frameHeight": 233,
+    "scale": 0.556,
+    "footY": 218,
+    "anims": {
+      "idle": {
+        "frames": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "fps": 4
+      },
+      "walk": {
+        "frames": [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "fps": 7
+      },
+      "attack": {
+        "frames": [
+          12,
+          13,
+          14,
+          15,
+          16
+        ],
+        "fps": 8
+      },
+      "death": {
+        "frames": [
+          18,
+          19,
+          20,
+          21
+        ],
+        "fps": 7
+      },
+      "skill": {
+        "frames": [
+          24,
+          25,
+          26,
+          27
+        ],
+        "fps": 8
+      }
+    }
+  },
+  "magma_titan": {
+    "file": "magma_titan.png",
+    "filter": "linear",
+    "frameWidth": 423,
+    "frameHeight": 242,
+    "scale": 0.66,
+    "footY": 231,
+    "anims": {
+      "idle": {
+        "frames": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "fps": 4
+      },
+      "walk": {
+        "frames": [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "fps": 7
+      },
+      "attack": {
+        "frames": [
+          12,
+          13,
+          14,
+          15,
+          16
+        ],
+        "fps": 8
+      },
+      "death": {
+        "frames": [
+          18,
+          19,
+          20,
+          21
+        ],
+        "fps": 7
+      },
+      "skill": {
+        "frames": [
+          24,
+          25,
+          26,
+          27
+        ],
+        "fps": 8
+      }
+    }
+  },
+  "shadow_lord": {
+    "file": "shadow_lord.png",
+    "filter": "linear",
+    "frameWidth": 494,
+    "frameHeight": 238,
+    "scale": 0.628,
+    "footY": 236,
+    "anims": {
+      "idle": {
+        "frames": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "fps": 4
+      },
+      "walk": {
+        "frames": [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "fps": 7
+      },
+      "attack": {
+        "frames": [
+          12,
+          13,
+          14,
+          15,
+          16
+        ],
+        "fps": 8
+      },
+      "death": {
+        "frames": [
+          18,
+          19,
+          20,
+          21
+        ],
+        "fps": 7
+      },
+      "skill": {
+        "frames": [
+          24,
+          25,
+          26,
+          27
+        ],
+        "fps": 8
+      }
+    }
+  },
+  "storm_griffin": {
+    "file": "storm_griffin.png",
+    "filter": "linear",
+    "frameWidth": 441,
+    "frameHeight": 209,
+    "scale": 0.587,
+    "footY": 201,
+    "anims": {
+      "idle": {
+        "frames": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "fps": 4
+      },
+      "walk": {
+        "frames": [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "fps": 7
+      },
+      "attack": {
+        "frames": [
+          12,
+          13,
+          14,
+          15,
+          16
+        ],
+        "fps": 8
+      },
+      "death": {
+        "frames": [
+          18,
+          19,
+          20,
+          21
+        ],
+        "fps": 7
+      },
+      "skill": {
+        "frames": [
+          24,
+          25,
+          26,
+          27
+        ],
+        "fps": 8
+      }
+    }
+  },
+  "swamp_hydra": {
+    "file": "swamp_hydra.png",
+    "filter": "linear",
+    "frameWidth": 437,
+    "frameHeight": 202,
+    "scale": 0.594,
+    "footY": 199,
+    "anims": {
+      "idle": {
+        "frames": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "fps": 4
+      },
+      "walk": {
+        "frames": [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "fps": 7
+      },
+      "attack": {
+        "frames": [
+          12,
+          13,
+          14,
+          15,
+          16
+        ],
+        "fps": 8
+      },
+      "death": {
+        "frames": [
+          18,
+          19,
+          20,
+          21
+        ],
+        "fps": 7
+      },
+      "skill": {
+        "frames": [
+          24,
+          25,
+          26,
+          27
+        ],
+        "fps": 8
+      }
+    }
   }
 }

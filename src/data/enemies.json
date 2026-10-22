@@ -29,5 +29,13 @@
   "stone_golem": {"name": "돌 골렘", "hp": 520, "atk": 26, "def": 18, "atkSpeed": 0.6, "range": 50, "speed": 26, "reward": 50, "look": "ogre", "tint": "#b8b8c0", "scale": 0.6, "variantOf": "orc", "minStage": 9, "chance": 0.1},
   "lava_golem": {"name": "용암 골렘", "hp": 480, "atk": 30, "def": 12, "atkSpeed": 0.7, "range": 50, "speed": 28, "reward": 60, "look": "ogre", "tint": "#ff8a4a", "scale": 0.65, "variantOf": "orc", "minStage": 12, "chance": 0.08, "ability": "explode", "power": 90},
   "ice_golem": {"name": "얼음 골렘", "hp": 600, "atk": 24, "def": 20, "atkSpeed": 0.6, "range": 50, "speed": 22, "reward": 55, "look": "ogre", "tint": "#a8e8ff", "scale": 0.65, "variantOf": "orc", "minStage": 14, "chance": 0.08},
-  "baby_dragon": {"name": "새끼 드래곤", "hp": 260, "atk": 24, "def": 6, "atkSpeed": 0.8, "range": 170, "speed": 46, "reward": 40, "look": "dragon", "scale": 0.4, "variantOf": "bat", "minStage": 9, "chance": 0.12}
+  "baby_dragon": {"name": "새끼 드래곤", "hp": 260, "atk": 24, "def": 6, "atkSpeed": 0.8, "range": 170, "speed": 46, "reward": 40, "look": "dragon", "scale": 0.4, "variantOf": "bat", "minStage": 9, "chance": 0.12},
+  "frost_giant": {"name": "서리 거인", "hp": 2200, "atk": 50, "def": 14, "atkSpeed": 0.6, "range": 58, "speed": 24, "reward": 220},
+  "swamp_hydra": {"name": "늪 히드라", "hp": 2000, "atk": 46, "def": 10, "atkSpeed": 0.8, "range": 64, "speed": 26, "reward": 230},
+  "magma_titan": {"name": "용암 거인", "hp": 2500, "atk": 56, "def": 16, "atkSpeed": 0.6, "range": 58, "speed": 22, "reward": 250},
+  "lich_king": {"name": "리치 왕", "hp": 1900, "atk": 48, "def": 10, "atkSpeed": 0.7, "range": 170, "speed": 26, "reward": 260},
+  "crystal_golem": {"name": "수정 골렘", "hp": 2800, "atk": 52, "def": 22, "atkSpeed": 0.6, "range": 58, "speed": 20, "reward": 270},
+  "storm_griffin": {"name": "폭풍 그리폰", "hp": 2300, "atk": 58, "def": 12, "atkSpeed": 0.9, "range": 56, "speed": 40, "reward": 280},
+  "shadow_lord": {"name": "그림자 군주", "hp": 2600, "atk": 62, "def": 16, "atkSpeed": 0.8, "range": 60, "speed": 28, "reward": 300},
+  "demon_king": {"name": "마왕", "hp": 3600, "atk": 72, "def": 20, "atkSpeed": 0.7, "range": 64, "speed": 22, "reward": 500}
 }

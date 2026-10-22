@@ -27,8 +27,13 @@ describe('🗺️ 관문 100개 · 월드 10개', () => {
   });
 
   it('보스 표시', () => {
-    expect(bossOf(30)).toBe('dragon');
-    expect(bossOf(45)).toBe('ogre');
+    expect(bossOf(10)).toBe('dragon');
+    expect(bossOf(5)).toBe('ogre');
+    expect(bossOf(30)).toBe('frost_giant');
+    expect(bossOf(45)).toBe('swamp_hydra'); // 5번째 = 앞 월드 보스
+    expect(bossOf(100)).toBe('demon_king');
+    expect(STAGES[99].waves.some((w) => w.enemies.some((e) => e.type === 'demon_king'))).toBe(true);
+    expect(STAGES[29].waves.some((w) => w.enemies.some((e) => e.type === 'dragon'))).toBe(false);
     expect(bossOf(47)).toBeNull();
   });
 });
