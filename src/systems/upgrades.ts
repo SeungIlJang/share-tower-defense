@@ -86,6 +86,7 @@ export class MetaProgress {
   kills: Record<string, number> = {}; // 📖 적별 처치 수(도감)
   codexClaimed: string[] = []; // 📖 발견 보상 받은 적
   codexSteps: number[] = []; // 📖 받은 수집 단계
+  dailyWon = -1; // 📅 오늘의 도전 첫 승리 보상 받은 날
   lastDaily = -1; // 마지막 일일보상 수령 day index
   streak = 0; // 연속 출석
   lastSeen = 0; // 마지막 접속(ms) — 방치 보상 기준
@@ -99,6 +100,19 @@ export class MetaProgress {
     if (this.lastSeen === 0) this.lastSeen = Date.now();
     this.ready = true;
     this.save();
+  }
+
+  /** 📅 오늘(현지 자정 기준 날짜 index) */
+  today(): number {
+    return this.dayIndex();
+  }
+
+  /** 📅 오늘의 도전 첫 승리 → true(보너스 지급 대상) */
+  winDaily(): boolean {
+    if (this.dailyWon === this.dayIndex()) return false;
+    this.dailyWon = this.dayIndex();
+    this.save();
+    return true;
   }
 
   private dayIndex(): number {
@@ -504,6 +518,7 @@ export class MetaProgress {
         kills?: Record<string, number>;
         codexClaimed?: string[];
         codexSteps?: number[];
+        dailyWon?: number;
         lastDaily?: number;
         streak?: number;
         lastSeen?: number;
@@ -532,6 +547,7 @@ export class MetaProgress {
       this.kills = obj.kills ?? {};
       this.codexClaimed = obj.codexClaimed ?? [];
       this.codexSteps = obj.codexSteps ?? [];
+      this.dailyWon = obj.dailyWon ?? -1;
       this.tips = obj.tips ?? (this.clearedMax > 0 ? ['summon', 'hero'] : []); // 예전 저장 = 기본 안내는 본 것으로
       this.lastDaily = obj.lastDaily ?? -1;
       this.streak = obj.streak ?? 0;
@@ -585,6 +601,7 @@ export class MetaProgress {
         kills: this.kills,
         codexClaimed: this.codexClaimed,
         codexSteps: this.codexSteps,
+        dailyWon: this.dailyWon,
         lastDaily: this.lastDaily,
         streak: this.streak,
         lastSeen: this.lastSeen,

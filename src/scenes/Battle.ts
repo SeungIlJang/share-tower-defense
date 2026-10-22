@@ -15,6 +15,7 @@ import { enemyLevel, hexColor, pickVariant, variantTable } from '../systems/enem
 import { STAGES, WORLDS, goldMultFor } from '../systems/worlds';
 import { BOSSES, BOSS_KEYS, bossForStage } from '../systems/bosses';
 import { COUNTER_MULT, counterMult, enemyKind, UNIT_COUNTER, type EnemyKind } from '../systems/counters';
+import { dailyBonus, dailyRule, dailyStage, dailyStageId, dailyUnits, type DailyRule } from '../systems/daily';
 import { chestForEndless, chestForStage, rankMult, rollChest, type ChestLoot } from '../systems/chests';
 import { VOLLEY_CD, VOLLEY_MAX, VOLLEY_MULT, VOLLEY_NAMES, castleArchers, ALLY_CASTLE_TIERS, ENEMY_CASTLE_TIERS, allyCastleGun, allyCastleTier, castleHpMult, castleLook, castleTarget, enemyCastleGun, enemyCastleTier, type CastleShot } from '../systems/castle';
 import { HERO_TYPE, HERO_TIERS, HERO_FALLBACK_LOOKS, heroTier, heroBodyScale, HERO_REGEN, HERO_SKILLS, AURA_ATK, AURA_GUARD, AURA_RADIUS, MANA_MAX, MANA_REGEN, MANA_START, MACE_MULT, MACE_RANGE, RALLY_SEC, RALLY_SPEED, HOLY_HEAL, HOLY_HERO_HEAL, HOLY_PUSH, HERO_ENEMY_HP, heroStats, heroLvMult, heroMoveRange, HERO_DRAG_MULT, heroSkillPower, auraRadius, inAura, maceTargets, stepToward } from '../systems/hero';
@@ -172,6 +173,7 @@ export class BattleScene extends Phaser.Scene {
   private tip!: TipPointer;
   private usedUnits: Record<string, number> = {}; // 🎁 이번 판 유닛별 소환 수(상자 조각 비율)
   private deck: string[] = []; // ⚔️ 출전 덱
+  private rule: DailyRule | null = null; // 📅 오늘의 도전 규칙
   private counterFxT = 0; // '효과적!' 표시 간격
   private kills: Record<string, number> = {}; // 📖 이번 판 적별 처치
   private metNew = new Set<string>(); // 📖 이번 판에 '새 몬스터!' 알린 적
@@ -210,9 +212,12 @@ export class BattleScene extends Phaser.Scene {
     super('Battle');
   }
 
-  init(data: { stageId: number; mode?: 'endless' }): void {
+  init(data: { stageId: number; mode?: 'endless' | 'daily' }): void {
     this.endless = data.mode === 'endless';
     this.stage = this.endless ? endlessStage() : STAGES.find((s) => s.id === data.stageId) ?? STAGES[0];
+    // 📅 오늘의 도전 — 오늘 규칙 + 깬 관문 근처
+    this.rule = data.mode === 'daily' ? dailyRule(meta.today()) : null;
+    if (this.rule) this.stage = dailyStage(STAGES.find((s) => s.id === dailyStageId(meta.today(), meta.clearedMax)) ?? STAGES[2], this.rule);
   }
 
   /** 🌄 전장 배경 — 하늘 그라데이션 · 달 · 별 · 먼 언덕 2겹(위쪽 빈 공간 채우기) */
@@ -276,12 +281,12 @@ export class BattleScene extends Phaser.Scene {
     this.eventT = EVENT_FIRST;
     this.committed = false;
     this.usedUnits = {};
-    this.deck = meta.activeDeck(Object.keys(UNITS));
+    this.deck = this.rule ? dailyUnits(this.rule, Object.keys(UNITS).filter((k) => meta.ownsUnit(k))).slice(0, 6) : meta.activeDeck(Object.keys(UNITS));
     this.counterFxT = 0;
     this.kills = {};
     this.metNew = new Set();
     this.reached = reachedStage(this.endless ? 99 : this.stage.id, meta.clearedMax);
-    for (const k of Object.keys(this.feat) as Feature[]) this.feat[k] = featureOn(k, this.reached, this.endless);
+    for (const k of Object.keys(this.feat) as Feature[]) this.feat[k] = featureOn(k, this.reached, this.endless || !!this.rule);
 
     // 배경 + 레인
     const [sky, lane, line] = this.endless ? THEMES.endless : WORLDS[(this.stage.world ?? 1) - 1].battle; // 🗺️ 월드별 배경색
@@ -318,7 +323,7 @@ export class BattleScene extends Phaser.Scene {
         .setDepth(101);
     }
 
-    this.energy = new ResourceSystem(40, energyRate(meta.baseLevel('energy')), energyMax(meta.baseLevel('energy'))); // 소환 에너지(기본 초당 9·상한 100, 🏰 기지 강화로 증가)
+    this.energy = new ResourceSystem(40, energyRate(meta.baseLevel('energy')) * (this.rule?.energy ?? 1), energyMax(meta.baseLevel('energy'))); // 소환 에너지(기본 초당 9·상한 100, 🏰 기지 강화로 증가 · 📅 에너지 폭주)
     this.runGold = 0;
     this.battleUpg = {};
     this.waves = new WaveSystem(this.stage);
@@ -494,7 +499,7 @@ export class BattleScene extends Phaser.Scene {
       close();
       this.paused = false;
       this.commitRun();
-      this.scene.restart({ stageId: this.endless ? 0 : this.stage.id, mode: this.endless ? 'endless' : undefined });
+      this.scene.restart({ stageId: this.endless ? 0 : this.stage.id, mode: this.endless ? 'endless' : this.rule ? 'daily' : undefined });
     });
     const mute = item(450, this.sound.mute ? '🔇 소리 꺼짐' : '🔊 소리 켜짐', '#20304e', () => {
       setMute(this, !this.sound.mute);
@@ -536,7 +541,7 @@ export class BattleScene extends Phaser.Scene {
   private afterShop(snap: string): void {
     this.paused = false;
     // 🏰 기지 강화(소환 에너지 충전·상한) · 인구는 매번 계산
-    this.energy.setRate(energyRate(meta.baseLevel('energy')));
+    this.energy.setRate(energyRate(meta.baseLevel('energy')) * (this.rule?.energy ?? 1));
     this.energy.setCap(energyMax(meta.baseLevel('energy')) + (awakened(this.skills, 'recharge') ? 50 : 0));
     // 🏰 성 강화(체력 비율 유지 · 단계 그림)
     const clv = meta.castleLevel('castle');
@@ -744,7 +749,7 @@ export class BattleScene extends Phaser.Scene {
     e.setVariant(own ? null : hexColor(stats.tint), stats.scale ?? 1);
     e.abilityT = 0;
     e.raged = false;
-    e.reward = stats.reward;
+    e.reward = Math.round(stats.reward * (this.rule?.reward ?? 1)); // 📅 도전 보상 배수
     e.maxHp = Math.round(e.maxHp * HERO_ENEMY_HP); // ⚖️ 영웅이 생긴 만큼 적 체력 +15%
     e.hp = e.maxHp;
     const mult = this.endless ? endlessMult(endlessWaveAt(this.clock)) : this.stage.enemyMult ?? 1;
@@ -811,14 +816,14 @@ export class BattleScene extends Phaser.Scene {
     this.clock += dt;
     this.tutorialTick();
     const wc = chargeMult(this.skills.charge ?? 0); // 🔥 무기 충전
-    for (const w of this.weapons) w?.update(dt * wc);
+    for (const w of this.weapons) w?.update(dt * wc * (this.rule?.charge ?? 1)); // 📅 무기 대잔치
     const frozen = this.clock < this.frozenUntil;
     const guard = this.clock < this.guardUntil;
     const berserk = this.clock < this.berserkUntil;
 
     this.energy.update(dt * rechargeMult(this.skills.recharge ?? 0)); // 🔋 에너지 충전
     for (const k in this.summonCd) this.summonCd[k] = Math.max(0, this.summonCd[k] - dt);
-    this.mana.update(dt * (1 + 0.2 * (this.skills.prayer ?? 0))); // 🙏 기도
+    this.mana.update(dt * (1 + 0.2 * (this.skills.prayer ?? 0)) * (this.rule?.mana ?? 1)); // 🙏 기도 · 📅 마법 축제
     this.applyDevCheats();
     this.heroCd = this.heroCd.map((c) => Math.max(0, c - dt));
     this.updateHero(dt);
@@ -2298,6 +2303,21 @@ export class BattleScene extends Phaser.Scene {
       sfx(this, newBest ? 'win' : 'lose');
       this.slowmo = 1;
       this.time.delayedCall(600, () => this.scene.start('Result', { win: false, stageId: 0, earned, mode: 'endless', wave, newBest, chest }));
+      return;
+    }
+    if (this.rule) {
+      // 📅 오늘의 도전 — 별·관문 기록 없음, 하루 첫 승리에 보너스 + 금 상자
+      const first = win && meta.winDaily();
+      const bonus = first ? dailyBonus(this.stage.id) : 0;
+      const earned = this.runGold + bonus;
+      meta.addGold(earned);
+      const chest = first ? this.openChest(2, goldMultFor(this.stage.id)) : null;
+      if (win) this.track('clears');
+      this.commitRun();
+      bgm(this, null);
+      sfx(this, win ? 'win' : 'lose');
+      this.slowmo = 1;
+      this.time.delayedCall(600, () => this.scene.start('Result', { win, stageId: this.stage.id, earned, mode: 'daily', dailyBonus: bonus, ruleName: this.stage.name, chest }));
       return;
     }
     // ⭐ 별 평가: 우리 기지 남은 체력(부활했으면 1개), 처음 얻는 별마다 보너스 골드

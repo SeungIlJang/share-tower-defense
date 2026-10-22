@@ -21,7 +21,9 @@ interface ResultData {
   stars?: number; // 이번 판 별(0~3)
   prevStars?: number; // 이전 최고 별
   starGold?: number; // 새 별 보너스 골드
-  mode?: 'endless'; // ♾️ 무한 모드 결과
+  mode?: 'endless' | 'daily'; // ♾️ 무한 모드 · 📅 오늘의 도전 결과
+  dailyBonus?: number; // 📅 하루 첫 승리 보너스(0 = 이미 받음)
+  ruleName?: string;
   wave?: number;
   newBest?: boolean;
   time?: number; // ⏱️ 클리어 시간(초)
@@ -45,6 +47,7 @@ export class ResultScene extends Phaser.Scene {
       return;
     }
     const { win, earned, stars = 0, prevStars = 0, starGold = 0, stageId } = this.resultData;
+    const daily = this.resultData.mode === 'daily';
     drawSky(this, { stars: win ? 18 : 4 });
 
     // 카드 패널
@@ -61,7 +64,7 @@ export class ResultScene extends Phaser.Scene {
     const best = meta.bestTimes[stageId];
     const timeTxt = win && time !== undefined ? `   ·   ⏱️ ${formatTime(time)}${timeRec ? '' : `  (최고 ${formatTime(best ?? time)})`}` : '';
     this.add
-      .text(640, 210, `관문 ${stageId}${timeTxt}`, { fontFamily: 'sans-serif', fontSize: '20px', fontStyle: 'bold', color: '#5a6a9a' })
+      .text(640, 210, daily ? `📅 오늘의 도전 · ${this.resultData.ruleName ?? ''}` : `관문 ${stageId}${timeTxt}`, { fontFamily: 'sans-serif', fontSize: '20px', fontStyle: 'bold', color: '#5a6a9a' })
       .setOrigin(0.5);
     if (timeRec === 'best') {
       const nb = this.add
@@ -74,7 +77,7 @@ export class ResultScene extends Phaser.Scene {
     if (this.resultData.chest) chestCard(this, 170, 330, this.resultData.chest, (k) => UNITS[k]?.name ?? k);
 
     // ⭐ 별 3개 — 하나씩 쿵 떨어지며 켜짐
-    for (let i = 0; i < 3; i++) {
+    for (let i = 0; i < (daily ? 0 : 3); i++) {
       const x = 640 + (i - 1) * 96;
       const y = 280 - (i === 1 ? 14 : 0);
       const on = i < stars;
@@ -105,7 +108,12 @@ export class ResultScene extends Phaser.Scene {
       }
     }
     const unlock = win ? unlockedBy(stageId, this.resultData.prevCleared ?? stageId) : null;
-    if (unlock) {
+    if (daily) {
+      const b = this.resultData.dailyBonus ?? 0;
+      this.add
+        .text(640, 300, !win ? '내일 규칙이 바뀌기 전에 다시 도전!' : b > 0 ? `🎉 오늘의 첫 승리 보너스 🪙 +${b}` : '오늘 보너스는 이미 받았어요 · 내일 새 도전!', { fontFamily: 'sans-serif', fontSize: '22px', fontStyle: 'bold', color: b > 0 ? '#ff7a2a' : '#7a86a8' })
+        .setOrigin(0.5);
+    } else if (unlock) {
       // 🎓 다음 관문에서 열리는 기능 — "조금만 더" 하게
       const u = this.add
         .text(640, 350, `🔓 다음 관문에서 ${unlock.name} 해금!`, { fontFamily: 'sans-serif', fontSize: '22px', fontStyle: 'bold', color: '#ff7a2a', stroke: '#ffffff', strokeThickness: 4 })
@@ -154,7 +162,7 @@ export class ResultScene extends Phaser.Scene {
       const label = dbl.list[1] as Phaser.GameObjects.Text;
     }
 
-    cuteButton(this, 480, 640, 220, 60, '🔄 다시', 0x4a8bff, 0x2a5fd0, '24px', () => this.scene.start('Battle', { stageId }));
+    cuteButton(this, 480, 640, 220, 60, '🔄 다시', 0x4a8bff, 0x2a5fd0, '24px', () => this.scene.start('Battle', { stageId, mode: daily ? 'daily' : undefined }));
     cuteButton(this, 800, 640, 260, 60, '🗺️ 스테이지 선택', 0x5cd88a, 0x2fa25a, '22px', () => this.scene.start('StageSelect'));
   }
 

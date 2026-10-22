@@ -16,7 +16,7 @@ describe('📖 몬스터 도감', () => {
     expect(claimableMilestone(10, [])).toBe(0);
     expect(claimableMilestone(25, [0])).toBe(1);
     expect(claimableMilestone(25, [0, 1])).toBe(-1);
-    expect(CODEX_MILESTONES.at(-1)!.need).toBeLessThanOrEqual(40);
+    expect(CODEX_MILESTONES[CODEX_MILESTONES.length - 1].need).toBeLessThanOrEqual(40);
   });
 
   it('처치 기록 합치기', () => {

@@ -6,6 +6,7 @@ import { meta } from '../systems/upgrades';
 import { iconKey, spriteOf, textureKey } from '../systems/sprites';
 import { bgm } from '../systems/sound';
 import { featureOn, reachedStage } from '../systems/tutorial';
+import { DAILY_UNLOCK, dailyRule, dailyStageId } from '../systems/daily';
 import { cuteButton, cuteTitle, drawSky } from '../ui/cute';
 
 const stages = STAGES;
@@ -77,6 +78,18 @@ export class StageSelectScene extends Phaser.Scene {
     this.add
       .text(640, 618, meta.endlessBest > 0 ? `최고 기록 🌊 웨이브 ${meta.endlessBest}` : '끝없는 웨이브에 도전!', { fontFamily: 'sans-serif', fontSize: '15px', fontStyle: 'bold', color: '#5a3aa8', backgroundColor: '#f0e8ffd0', padding: { x: 10, y: 4 } })
       .setOrigin(0.5);
+
+    // 📅 오늘의 도전 — 날마다 바뀌는 규칙(3관문을 깨면 열림)
+    const open = meta.clearedMax >= DAILY_UNLOCK;
+    const rule = dailyRule(meta.today());
+    const done = meta.dailyWon === meta.today();
+    const daily = cuteButton(this, 905, 668, 230, 54, open ? '📅 오늘의 도전' : '🔒 오늘의 도전', open ? 0xff9a4a : 0xb0b8c8, open ? 0xd8662a : 0x8890a0, '21px', () => {
+      if (open) this.scene.start('Battle', { stageId: 0, mode: 'daily' });
+    });
+    this.add
+      .text(905, 618, open ? `${rule.icon} ${rule.name} · 관문 ${dailyStageId(meta.today(), meta.clearedMax)}${done ? ' ✅' : ''}` : `${DAILY_UNLOCK}관문을 깨면 열려요`, { fontFamily: 'sans-serif', fontSize: '15px', fontStyle: 'bold', color: '#a8461a', backgroundColor: '#fff0e0d0', padding: { x: 10, y: 4 } })
+      .setOrigin(0.5);
+    if (open && !done) this.tweens.add({ targets: daily, scale: 1.05, duration: 600, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
 
     // 하단 버튼
     cuteButton(this, 150, 668, 180, 54, '🏠 홈', 0x4a8bff, 0x2a5fd0, '22px', () => this.scene.start('Menu'));
