@@ -21,6 +21,14 @@ export interface HudState {
   weapons: ({ ratio: number; ready: boolean } | null)[]; // 특수 무기 게이지(구매 안 한 것 = null)
 }
 
+/** 🎓 처음 하는 사람에게 단계적으로 보여 줄 HUD 기능(systems/tutorial.ts) */
+export interface HudFeatures {
+  heroSkill: boolean;
+  weapon: boolean;
+  perfect: boolean;
+}
+const ALL_ON: HudFeatures = { heroSkill: true, weapon: true, perfect: true };
+
 const UNIT_COLORS: Record<string, number> = {
   soldier: 0x4a9eff,
   archer: 0x5cff9e,
@@ -100,12 +108,12 @@ export class Hud {
   private offs: (() => void)[] = []; // 입력·업데이트 리스너 해제
   private weaponBtns: WeaponButton[] = [];
   private heroBtns: { bg: Phaser.GameObjects.Arc; shade: Phaser.GameObjects.Graphics; cx: number; cy: number; glow: Phaser.GameObjects.Arc; cost: Phaser.GameObjects.Text; owned: boolean }[] = [];
-  private manaFill!: Phaser.GameObjects.Rectangle;
-  private manaText!: Phaser.GameObjects.Text;
+  private manaFill: Phaser.GameObjects.Rectangle | null = null;
+  private manaText: Phaser.GameObjects.Text | null = null;
   private heroHpFill!: Phaser.GameObjects.Rectangle;
   private heroHpText!: Phaser.GameObjects.Text;
   private synergyText!: Phaser.GameObjects.Text;
-  private beatMark: Phaser.GameObjects.Triangle;
+  private beatMark: Phaser.GameObjects.Triangle | null = null;
   private readonly beatX = 470; // 인구 바(~440)와 에너지 바(840~) 사이
   private readonly beatW = 340;
 
@@ -119,12 +127,13 @@ export class Hud {
     unitOwned: Record<string, boolean>, // 유닛별 보유 여부
     looks: Record<string, string> = {}, // 👗 스킨 적용 얼굴(유닛@스킨)
     onHeroSkill: (index: number) => void = () => {}, // 👑 영웅 스킬
-    heroOwned: boolean[] = [true] // 👑 해금한 영웅 스킬
+    heroOwned: boolean[] = [true], // 👑 해금한 영웅 스킬
+    features: HudFeatures = ALL_ON // 🎓 아직 안 열린 기능은 숨김
   ) {
     this.scene = scene;
     const before = new Set(scene.children.list); // destroy()용 — 이 HUD가 만든 것만 기억
     const d = 100;
-    this.buildHeroPanel(onHeroSkill, heroOwned, d);
+    this.buildHeroPanel(onHeroSkill, heroOwned, d, features.heroSkill);
     scene.add.rectangle(640, 22, 1280, 44, 0x0d1424, 0.8).setDepth(d);
     this.synergyText = scene.add
       .text(12, 52, '', { fontFamily: 'sans-serif', fontSize: '14px', fontStyle: 'bold', color: '#aef5ff', backgroundColor: '#0d1424cc', padding: { x: 8, y: 4 } })
@@ -153,11 +162,13 @@ export class Hud {
 
     // ⏱️ 리듬 소환 바 (초록 중앙 = PERFECT) — 하단 HUD, 인구/에너지 바 사이
     const beatY = by + 4;
-    scene.add.text(this.beatX + this.beatW / 2, by - 15, '⏱️ 초록에 맞춰 소환 = PERFECT 강화!', { fontFamily: 'sans-serif', fontSize: '12px', fontStyle: 'bold', color: '#ffe14d' }).setOrigin(0.5).setDepth(d + 1);
-    scene.add.rectangle(this.beatX + this.beatW / 2, beatY, this.beatW + 4, 16, 0x000000, 0.5).setDepth(d);
-    scene.add.rectangle(this.beatX + this.beatW / 2, beatY, this.beatW, 12, 0x2a3348).setDepth(d + 1);
-    scene.add.rectangle(this.beatX + this.beatW / 2, beatY, this.beatW * 0.16, 12, 0x3fd06a).setDepth(d + 1); // 퍼펙트 존
-    this.beatMark = scene.add.triangle(this.beatX + this.beatW / 2, beatY, 0, -10, 10, -10, 5, 2, 0xffffff).setDepth(d + 2);
+    if (features.perfect) {
+      scene.add.text(this.beatX + this.beatW / 2, by - 15, '⏱️ 초록에 맞춰 소환 = PERFECT 강화!', { fontFamily: 'sans-serif', fontSize: '12px', fontStyle: 'bold', color: '#ffe14d' }).setOrigin(0.5).setDepth(d + 1);
+      scene.add.rectangle(this.beatX + this.beatW / 2, beatY, this.beatW + 4, 16, 0x000000, 0.5).setDepth(d);
+      scene.add.rectangle(this.beatX + this.beatW / 2, beatY, this.beatW, 12, 0x2a3348).setDepth(d + 1);
+      scene.add.rectangle(this.beatX + this.beatW / 2, beatY, this.beatW * 0.16, 12, 0x3fd06a).setDepth(d + 1); // 퍼펙트 존
+      this.beatMark = scene.add.triangle(this.beatX + this.beatW / 2, beatY, 0, -10, 10, -10, 5, 2, 0xffffff).setDepth(d + 2);
+    }
 
     // 하단 1단: 유닛 카드(큰 카드, 가로 스크롤) — 보유 유닛 먼저, 나머지는 잠금
     const keys = Object.keys(units).sort((x, y) => Number(!unitOwned[x]) - Number(!unitOwned[y]));
@@ -214,7 +225,10 @@ export class Hud {
     // 하단 2단: 특수 무기 카드 9장(게이지가 차면 발사, 단축키 1~9) — 가로 스크롤
     const wStrip = scene.add.container(0, 0).setDepth(d);
     const wy = W_CARD_CY;
-    WEAPONS.forEach((w, i) => {
+    if (!features.weapon) {
+      scene.add.text(640, wy, '🔒 특수 무기 — 3관문에서 열려요', { fontFamily: 'sans-serif', fontSize: '20px', fontStyle: 'bold', color: '#7c8aa0' }).setOrigin(0.5).setDepth(d);
+    }
+    if (features.weapon) WEAPONS.forEach((w, i) => {
       const x = ROW_X0 + W_CARD_W / 2 + i * (W_CARD_W + CARD_GAP);
       const cx = x - W_CARD_W / 2 + 8 + WEAPON_R; // 원(아이콘)은 카드 왼쪽
       const tx = cx + WEAPON_R + 8; // 글씨는 오른쪽
@@ -248,7 +262,7 @@ export class Hud {
       });
       this.weaponBtns.push({ index: i, cx, cy: wy, color: w.color, bg, gauge, ring, icon, wasReady: false });
     });
-    this.scroller(wStrip, wy, W_CARD_H, WEAPONS.length * (W_CARD_W + CARD_GAP) - CARD_GAP, d);
+    if (features.weapon) this.scroller(wStrip, wy, W_CARD_H, WEAPONS.length * (W_CARD_W + CARD_GAP) - CARD_GAP, d);
     this.objs = scene.children.list.filter((o) => !before.has(o));
   }
 
@@ -307,13 +321,14 @@ export class Hud {
   }
 
   /** 👑 영웅 스킬 버튼 + 💧 마나 바 — 전장 오른쪽 위(하단 HUD와 겹치지 않게) */
-  private buildHeroPanel(onHeroSkill: (index: number) => void, owned: boolean[], d: number): void {
+  private buildHeroPanel(onHeroSkill: (index: number) => void, owned: boolean[], d: number, skillsOn = true): void {
     const s = this.scene;
     const x = HERO_PANEL_X;
     // 👑 영웅 체력(쓰러지면 패배) — 마나 바 왼쪽
     s.add.rectangle(x - 85, 60, 136, 24, 0x000000, 0.55).setDepth(d);
     this.heroHpFill = s.add.rectangle(x - 149, 60, 128, 16, 0x5cff9e).setOrigin(0, 0.5).setDepth(d + 1);
     this.heroHpText = s.add.text(x - 85, 60, '', { fontFamily: 'sans-serif', fontSize: '16px', fontStyle: 'bold', color: '#fff', stroke: '#000000', strokeThickness: 4 }).setOrigin(0.5).setDepth(d + 2);
+    if (!skillsOn) return; // 🎓 2관문부터 영웅 스킬·마나
     s.add.rectangle(x + 60, 60, 136, 24, 0x000000, 0.55).setDepth(d);
     this.manaFill = s.add.rectangle(x - 4, 60, 128, 16, 0x4a9eff).setOrigin(0, 0.5).setDepth(d + 1);
     this.manaText = s.add.text(x + 60, 60, '', { fontFamily: 'sans-serif', fontSize: '16px', fontStyle: 'bold', color: '#fff', stroke: '#000000', strokeThickness: 4 }).setOrigin(0.5).setDepth(d + 2);
@@ -347,8 +362,8 @@ export class Hud {
     this.heroHpFill.setSize(128 * r, 16).setFillStyle(danger ? 0xff4a4a : r < 0.6 ? 0xffc04a : 0x5cff9e);
     this.heroHpFill.setAlpha(danger && Math.floor(this.scene.time.now / 250) % 2 === 0 ? 0.4 : 1); // 위험하면 깜빡
     this.heroHpText.setText(`👑 ${Math.round(r * 100)}%`);
-    this.manaFill.setSize(128 * Phaser.Math.Clamp(mana / manaMax, 0, 1), 16);
-    this.manaText.setText(`💧 ${Math.floor(mana)} / ${manaMax}`);
+    this.manaFill?.setSize(128 * Phaser.Math.Clamp(mana / manaMax, 0, 1), 16);
+    this.manaText?.setText(`💧 ${Math.floor(mana)} / ${manaMax}`);
     this.heroBtns.forEach((b, i) => {
       const st = skills[i];
       b.shade.clear();
@@ -364,6 +379,26 @@ export class Hud {
       b.glow.setVisible(ready);
       b.cost.setColor(b.owned && !st.enough ? '#ff8a8a' : '#d8f0ff');
     });
+  }
+
+  /** 🎓 👆 안내용 위치 — 유닛 카드 / 특수 무기 카드 / 영웅 스킬 / 리듬 바 */
+  unitCardPos(key: string): { x: number; y: number } | null {
+    const s = this.slots.find((x) => x.key === key) ?? this.slots[0];
+    return s ? { x: s.cx + this.strip.x, y: CARD_CY } : null;
+  }
+
+  weaponPos(index: number): { x: number; y: number } | null {
+    const b = this.weaponBtns.find((w) => w.index === index);
+    return b ? { x: b.cx + (b.bg.parentContainer?.x ?? 0), y: b.cy } : null;
+  }
+
+  heroSkillPos(index: number): { x: number; y: number } | null {
+    const b = this.heroBtns[index];
+    return b ? { x: b.cx, y: b.cy } : null;
+  }
+
+  beatPos(): { x: number; y: number } {
+    return { x: this.beatX + this.beatW / 2, y: 432 };
   }
 
   /** 마나 부족 등 안내(영웅 스킬 버튼 옆) */
@@ -411,7 +446,7 @@ export class Hud {
     this.energyText.setText(`${Math.floor(s.energy)} / ${s.energyMax}`);
     this.foodFill.setSize(396 * Phaser.Math.Clamp(s.food / s.foodMax, 0, 1), 18);
     this.foodText.setText(`${s.food} / ${s.foodMax}`);
-    this.beatMark.setX(this.beatX + this.beatW * Phaser.Math.Clamp(s.beat, 0, 1));
+    this.beatMark?.setX(this.beatX + this.beatW * Phaser.Math.Clamp(s.beat, 0, 1));
     // 특수 무기 게이지(위에서 시계 방향으로 채움) + 발사 가능 깜빡임
     this.weaponBtns.forEach((b) => {
       const st = s.weapons[b.index];

@@ -8,6 +8,7 @@ import type { UnitStats } from '../types';
 import { formatTime, nextUnitToBuy } from '../systems/pacing';
 import { unitPrice } from '../systems/unlocks';
 import { iconKey } from '../systems/sprites';
+import { unlockedBy } from '../systems/tutorial';
 
 const UNITS = unitsData as Record<string, UnitStats>;
 
@@ -23,6 +24,7 @@ interface ResultData {
   newBest?: boolean;
   time?: number; // ⏱️ 클리어 시간(초)
   timeRec?: 'first' | 'best' | null; // 첫 기록 / 신기록
+  prevCleared?: number; // 🎓 이번 판 전 클리어 최고 관문
 }
 
 /** 결과 화면 — 별 평가 연출 + 보상 + 광고 2배 */
@@ -98,7 +100,14 @@ export class ResultScene extends Phaser.Scene {
         this.tweens.add({ targets: nw, alpha: 1, delay: 700 + i * 320, duration: 200 });
       }
     }
-    if (win) {
+    const unlock = win ? unlockedBy(stageId, this.resultData.prevCleared ?? stageId) : null;
+    if (unlock) {
+      // 🎓 다음 관문에서 열리는 기능 — "조금만 더" 하게
+      const u = this.add
+        .text(640, 350, `🔓 다음 관문에서 ${unlock.name} 해금!`, { fontFamily: 'sans-serif', fontSize: '22px', fontStyle: 'bold', color: '#ff7a2a', stroke: '#ffffff', strokeThickness: 4 })
+        .setOrigin(0.5);
+      this.tweens.add({ targets: u, scale: 1.08, duration: 500, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
+    } else if (win) {
       const hint = stars >= 3 ? '완벽한 방어! 🎉' : '기지 체력을 더 지키면 별이 늘어요';
       this.add.text(640, 350, hint, { fontFamily: 'sans-serif', fontSize: '16px', color: '#7a86a8' }).setOrigin(0.5);
     }

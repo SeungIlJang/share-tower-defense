@@ -25,6 +25,8 @@ import { meta, applyUpgrade } from '../systems/upgrades';
 import { xpToNext, hasteMult, mimicMult, magicMult, supplyBonus, anyUpgradable, rollChoices, awakened, SKILL_BY_KEY, vigorMult, rechargeMult, powerMult, critChance, chargeMult, type SkillDef } from '../systems/skills';
 import { Hud } from '../ui/Hud';
 import { LevelUpOverlay } from '../ui/LevelUp';
+import { TipPointer } from '../ui/Tutorial';
+import { HERO_TIP_STAGE, TIP_TEXT, featureOn, nextTip, reachedStage, type Feature, type TipKey } from '../systems/tutorial';
 import { showRewarded } from '../systems/ads';
 import {
   UNIT_SKILLS,
@@ -162,6 +164,10 @@ export class BattleScene extends Phaser.Scene {
   private skills: Record<string, number> = {};
   private picking = false;
   private levelUp!: LevelUpOverlay;
+  // 🎓 첫 경험 — 관문마다 하나씩 열리는 기능 + 👆 손가락 안내
+  private feat: Record<Feature, boolean> = { heroSkill: true, weapon: true, volley: true, levelup: true, perfect: true };
+  private reached = 1;
+  private tip!: TipPointer;
   private prodTimer = 0; // 적 기지 생산 타이머
   private prodInterval = 4; // 생산 간격(초)
   private prodIdx = 0;
@@ -262,6 +268,8 @@ export class BattleScene extends Phaser.Scene {
     this.run = {};
     this.eventT = EVENT_FIRST;
     this.committed = false;
+    this.reached = reachedStage(this.endless ? 99 : this.stage.id, meta.clearedMax);
+    for (const k of Object.keys(this.feat) as Feature[]) this.feat[k] = featureOn(k, this.reached, this.endless);
 
     // 배경 + 레인
     const [sky, lane, line] = this.endless ? THEMES.endless : WORLDS[(this.stage.world ?? 1) - 1].battle; // 🗺️ 월드별 배경색
@@ -330,6 +338,7 @@ export class BattleScene extends Phaser.Scene {
     // 👗 착용 스킨 텍스처 미리 준비(HUD 얼굴에도 적용)
     this.looks = Object.fromEntries(Object.keys(UNITS).map((k) => [k, ensureSkin(this, k, meta.equippedSkin(k), meta.level(k))]));
     this.hud = this.makeHud();
+    this.tip = new TipPointer(this);
     // 키보드 1~9 = 특수 무기
     this.input.keyboard?.on('keydown', (ev: KeyboardEvent) => {
       const k = ev.key.toLowerCase();
@@ -356,6 +365,7 @@ export class BattleScene extends Phaser.Scene {
       const dx = p.x - this.heroDrag.px;
       if (Math.abs(dx) < 6) return; // 살짝 누른 건 무시
       this.heroTarget = this.heroDrag.hx + dx * HERO_DRAG_MULT;
+      if (Math.abs(dx) > 40) this.tipDone('hero');
     });
     this.input.on('pointerup', () => {
       this.heroDrag = null;
@@ -425,7 +435,8 @@ export class BattleScene extends Phaser.Scene {
       this.unitOwned,
       this.looks,
       (i) => this.castHeroSkill(i),
-      HERO_SKILLS.map((s) => meta.ownsHeroSkill(s.key))
+      HERO_SKILLS.map((s) => meta.ownsHeroSkill(s.key)),
+      this.feat
     );
   }
 
@@ -580,7 +591,9 @@ export class BattleScene extends Phaser.Scene {
       return;
     }
     const m = applyUpgrade(base, meta.level(type)); // 영구 강화 적용
-    const perfect = Math.abs(this.beat - 0.5) <= BattleScene.PERFECT_WIN; // ⏱️ 타이밍 명중
+    const perfect = this.feat.perfect && Math.abs(this.beat - 0.5) <= BattleScene.PERFECT_WIN; // ⏱️ 타이밍 명중(🎓 6관문부터)
+    this.tipDone('summon');
+    if (this.tip.key === 'perfect') this.tipDone('perfect');
     const pm = perfect ? 1.3 : 1;
     const bm = 1 + (this.battleUpg[type] ?? 0) * 0.2; // 🛠️ 전장 강화
     if (this.freeSummons > 0) this.freeSummons--;
@@ -673,7 +686,7 @@ export class BattleScene extends Phaser.Scene {
       this.level++;
       this.xpNext = xpToNext(this.level);
       this.levelUpBurst();
-      if (anyUpgradable(this.skills)) {
+      if (this.feat.levelup && anyUpgradable(this.skills)) {
         this.picking = true;
         sfx(this, 'levelup');
         this.choices = rollChoices(this.skills, Math.random);
@@ -769,6 +782,7 @@ export class BattleScene extends Phaser.Scene {
     }
 
     this.clock += dt;
+    this.tutorialTick();
     const wc = chargeMult(this.skills.charge ?? 0); // 🔥 무기 충전
     for (const w of this.weapons) w?.update(dt * wc);
     const frozen = this.clock < this.frozenUntil;
@@ -1103,7 +1117,7 @@ export class BattleScene extends Phaser.Scene {
 
   /** 🔥 특수 무기 발사 — 게이지가 가득 찬 해금 무기만 */
   private fireWeapon(i: number): void {
-    if (this.over || this.picking || this.paused || this.reviving) return;
+    if (this.over || this.picking || this.paused || this.reviving || !this.feat.weapon) return;
     const charge = this.weapons[i];
     if (!charge) return;
     if (!charge.ready) {
@@ -1119,6 +1133,7 @@ export class BattleScene extends Phaser.Scene {
       return;
     }
     charge.fire();
+    this.tipDone('weapon');
     if (awakened(this.skills, 'charge')) charge.fill(0.3); // 🔥 무기 달인
     this.track('weapons');
     this.banner(`${def.icon} ${def.name}!`, def.color);
@@ -1237,23 +1252,47 @@ export class BattleScene extends Phaser.Scene {
     const inner = this.add.ellipse(0, 0, AURA_RADIUS * 1.2, 26).setStrokeStyle(2, 0xfff0a0, 0.6);
     this.aura = this.add.container(this.hero.x, LANE_Y + 34, [fill, ring, inner]).setDepth(-3);
     this.tweens.add({ targets: [ring, inner], scaleX: 1.04, scaleY: 1.12, alpha: 0.5, duration: 900, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
-    // 처음 두 관문은 조작 안내
-    if (!this.endless && this.stage.id <= 2) {
-      const tip = this.add
-        .text(470, 150, ['👆 전장을 손가락으로 좌우로 밀면 👑영웅이 움직여요', '⭕ 노란 원 안의 아군이 강해져요 · 🔨 J 철퇴 던지기', '⚠️ 영웅이 쓰러지면 패배!'].join('\n'), {
-          fontFamily: 'sans-serif',
-          fontSize: '20px',
-          fontStyle: 'bold',
-          color: '#ffffff',
-          align: 'center',
-          lineSpacing: 6,
-          backgroundColor: '#0d1424cc',
-          padding: { x: 18, y: 12 },
-        })
-        .setOrigin(0.5)
-        .setDepth(95);
-      this.tweens.add({ targets: tip, alpha: 0, delay: 6000, duration: 600, onComplete: () => tip.destroy() });
+  }
+
+  /** 🎓 👆 안내 — 아직 안 본 것 중 지금 쓸 수 있는 첫 번째를 보여 줌 */
+  private tutorialTick(): void {
+    if (this.endless || this.tip.key) return;
+    const live = this.enemies.filter((e) => e.active);
+    const ahead = live.some((e) => e.x > this.hero.x && e.x - this.hero.x <= MACE_RANGE);
+    const wi = this.weapons.findIndex((w) => !!w?.ready);
+    const ready: Partial<Record<TipKey, boolean>> = {
+      summon: this.clock > 0.3,
+      hero: this.reached >= HERO_TIP_STAGE && this.clock > 2 && !!this.hero?.active,
+      mace: this.feat.heroSkill && this.hero?.active && ahead && this.mana.amount >= HERO_SKILLS[0].mana && (this.heroCd[0] ?? 0) <= 0,
+      weapon: this.feat.weapon && wi >= 0 && live.length > 0,
+      volley: this.feat.volley && this.volleyT <= 0 && live.some((e) => e.x - this.playerBase.x <= 520),
+      perfect: this.feat.perfect && this.clock > 4,
+    };
+    const k = nextTip(meta.tips, ready);
+    if (!k) return;
+    const t = TIP_TEXT[k];
+    if (k === 'summon') {
+      const p = this.hud.unitCardPos(Object.keys(UNITS).find((u) => meta.ownsUnit(u)) ?? '');
+      if (p) this.tip.show(k, p.x, p.y, t, { ring: 74, bubbleY: 300 });
+    } else if (k === 'hero') this.tip.show(k, this.hero.x - 40, LANE_Y - 40, t, { drag: true, ring: 0, bubbleY: 180 });
+    else if (k === 'mace') {
+      const p = this.hud.heroSkillPos(0);
+      if (p) this.tip.show(k, p.x, p.y, t, { ring: 50, bubbleY: 230 });
+    } else if (k === 'weapon') {
+      const p = this.hud.weaponPos(wi);
+      if (p) this.tip.show(k, p.x, p.y, t, { from: 'above', ring: 44, bubbleY: 300 });
+    } else if (k === 'volley') this.tip.show(k, this.playerBase.cx, this.playerBase.top - 34, t, { ring: 40, bubbleY: 160 });
+    else if (k === 'perfect') {
+      const p = this.hud.beatPos();
+      this.tip.show(k, p.x, p.y, t, { from: 'above', ring: 0, bubbleY: 300 });
     }
+  }
+
+  /** 🎓 안내한 행동을 했음 → 숨기고 다시 안 보여 줌 */
+  private tipDone(k: TipKey): void {
+    if (this.endless) return;
+    if (this.tip.key === k) this.tip.hide();
+    meta.markTip(k);
   }
 
   /** ⭕ 지금 오라 반지름(영구 강화 + 레벨업 '오라 확장' + 각성) */
@@ -1459,7 +1498,7 @@ export class BattleScene extends Phaser.Scene {
     const y = this.playerBase.top - 34;
     const r = 20;
     g.clear();
-    if (this.playerBase.destroyed) {
+    if (this.playerBase.destroyed || !this.feat.volley) {
       this.volleyIcon.setVisible(false);
       return;
     }
@@ -1476,7 +1515,7 @@ export class BattleScene extends Phaser.Scene {
 
   /** 🎯 성 특수 공격 — 단계별(화살비·화살 폭풍·일제 포격·번개 폭풍·성광 기둥) */
   private castleVolley(): void {
-    if (this.over || this.paused || this.picking || this.reviving || this.playerBase.destroyed) return;
+    if (this.over || this.paused || this.picking || this.reviving || this.playerBase.destroyed || !this.feat.volley) return;
     if (this.volleyT > 0) {
       this.hud.heroDeny(`🏰 ${Math.ceil(this.volleyT)}초 후 사용 가능`);
       return;
@@ -1493,6 +1532,7 @@ export class BattleScene extends Phaser.Scene {
       return;
     }
     this.volleyT = VOLLEY_CD;
+    this.tipDone('volley');
     const dmg = gun.dmg * VOLLEY_MULT;
     this.banner(VOLLEY_NAMES[tier] + '!', 0xffd34d);
     this.cameras.main.shake(250, 0.006);
@@ -1614,7 +1654,7 @@ export class BattleScene extends Phaser.Scene {
 
   /** 👑 영웅 스킬 사용 — 💧 마나 + 대기시간 */
   private castHeroSkill(i: number): void {
-    if (this.over || this.picking || this.paused || this.reviving || !this.hero?.active) return;
+    if (this.over || this.picking || this.paused || this.reviving || !this.hero?.active || !this.feat.heroSkill) return;
     if (this.hero.stunned) {
       this.hud.heroDeny('💫 기절 중!');
       return;
@@ -1630,6 +1670,7 @@ export class BattleScene extends Phaser.Scene {
       return;
     }
     this.heroCd[i] = sk.cooldown;
+    if (sk.key === 'mace') this.tipDone('mace');
     const pw = heroSkillPower(meta.heroLevel(sk.key)); // 👑 스킬 강화
     this.hero.skillMotion(); // 진화 그림의 스킬 동작
     if (sk.key === 'mace') this.throwMace(pw);
@@ -1692,6 +1733,10 @@ export class BattleScene extends Phaser.Scene {
 
   /** 레벨업 카드 보여 주기(다시 뽑기 포함) */
   private showLevelUp(): void {
+    if (!meta.tips.includes('levelup')) {
+      this.tip.show('levelup', 640, 96, TIP_TEXT.levelup, { depth: 320, ring: 0, bubbleY: 34, finger: false });
+      meta.markTip('levelup');
+    }
     this.levelUp.show(
       this.skills,
       this.choices,
@@ -1709,6 +1754,7 @@ export class BattleScene extends Phaser.Scene {
 
   /** 레벨업 스킬 적용 — 즉시 효과는 바로, 나머지는 레벨 +1(MAX면 ✨ 각성) */
   private pickSkill(key: string): void {
+    if (this.tip.key === 'levelup') this.tip.hide();
     const def = SKILL_BY_KEY[key];
     this.picking = false;
     this.choices = [];
@@ -2202,6 +2248,7 @@ export class BattleScene extends Phaser.Scene {
     const gained = win ? meta.recordStars(this.stage.id, stars) : 0;
     const starGold = gained * STAR_GOLD;
     const earned = win ? Math.round((this.runGold + 60 + this.stage.id * 30) * goldMultFor(this.stage.id)) + starGold : 0; // 💰 깊은 월드일수록 골드 ↑
+    const prevCleared = meta.clearedMax; // 🎓 결과 화면 '다음 관문에서 해금' 안내
     if (win) {
       meta.addGold(earned); // 처치 골드 + 승리 보너스 + 새 별 보너스(강화용)
       meta.clearStage(this.stage.id); // 다음 스테이지 해금
@@ -2217,7 +2264,7 @@ export class BattleScene extends Phaser.Scene {
     sfx(this, win ? 'win' : 'lose');
     this.slowmo = 1;
     this.time.delayedCall(600, () =>
-      this.scene.start('Result', { win, stageId: this.stage.id, earned, stars, prevStars, starGold, time, timeRec })
+      this.scene.start('Result', { win, stageId: this.stage.id, earned, stars, prevStars, starGold, time, timeRec, prevCleared })
     );
   }
 }

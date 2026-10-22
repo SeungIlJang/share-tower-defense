@@ -75,6 +75,7 @@ export class MetaProgress {
   skinsOwned: string[] = []; // 👗 보유 스킨 '유닛:스킨'
   skinEquipped: Record<string, string> = {}; // 유닛별 착용 스킨
   clearedMax = 0; // 클리어한 최고 스테이지 id
+  tips: string[] = []; // 🎓 본 👆 안내
   lastDaily = -1; // 마지막 일일보상 수령 day index
   streak = 0; // 연속 출석
   lastSeen = 0; // 마지막 접속(ms) — 방치 보상 기준
@@ -381,6 +382,13 @@ export class MetaProgress {
     return r;
   }
 
+  /** 🎓 👆 안내를 봤음(다시 안 나옴) */
+  markTip(key: string): void {
+    if (this.tips.includes(key)) return;
+    this.tips.push(key);
+    this.save();
+  }
+
   addGold(amount: number): void {
     this.gold += amount;
     this.save();
@@ -407,6 +415,7 @@ export class MetaProgress {
         skinsOwned?: string[];
         skinEquipped?: Record<string, string>;
         clearedMax?: number;
+        tips?: string[];
         lastDaily?: number;
         streak?: number;
         lastSeen?: number;
@@ -428,6 +437,7 @@ export class MetaProgress {
       this.skinsOwned = obj.skinsOwned ?? [];
       this.skinEquipped = obj.skinEquipped ?? {};
       this.clearedMax = obj.clearedMax ?? 0;
+      this.tips = obj.tips ?? (this.clearedMax > 0 ? ['summon', 'hero'] : []); // 예전 저장 = 기본 안내는 본 것으로
       this.lastDaily = obj.lastDaily ?? -1;
       this.streak = obj.streak ?? 0;
       this.lastSeen = obj.lastSeen ?? 0;
@@ -472,6 +482,7 @@ export class MetaProgress {
         skinsOwned: this.skinsOwned,
         skinEquipped: this.skinEquipped,
         clearedMax: this.clearedMax,
+        tips: this.tips,
         lastDaily: this.lastDaily,
         streak: this.streak,
         lastSeen: this.lastSeen,

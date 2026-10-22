@@ -6,6 +6,7 @@ import baseStages from '../data/stages.json';
 import type { StageData, Wave } from '../types';
 import { statMult } from './upgrades';
 import { bossForStage, isBoss } from './bosses';
+import { EASY_STAGE } from './tutorial';
 
 export interface WorldDef {
   id: number;
@@ -101,8 +102,25 @@ export function buildStages(base: StageData[]): StageData[] {
       })),
     };
   });
-  for (let id = base.length + 1; id <= MAX_STAGE; id++) out.push(makeStage(id, base));
-  return out;
+  for (let id = base.length + 1; id <= MAX_STAGE; id++) out.push(makeStage(id, base)); // 21~ 관문은 원래 구성(쉽게 하기 전)으로
+  return out.map(easeStage);
+}
+
+/** 🐣 1~3관문 쉽게 — 적 수 줄이기, 1관문은 보스 없음 · 2~3관문은 보스 1마리(첫 승리를 2분 안에) */
+export function easeStage(s: StageData): StageData {
+  const k = EASY_STAGE[s.id];
+  if (!k) return s;
+  let bossLeft = s.id === 1 ? 0 : 1;
+  const waves = s.waves.map((w) => ({
+    ...w,
+    enemies: w.enemies.flatMap((e) => {
+      if (!isBoss(e.type)) return [{ ...e, count: Math.max(1, Math.round(e.count * k)) }];
+      if (bossLeft <= 0) return [];
+      bossLeft--;
+      return [{ ...e, count: 1 }];
+    }),
+  }));
+  return { ...s, waves: waves.filter((w) => w.enemies.length) };
 }
 
 export const STAGES: StageData[] = buildStages(baseStages as StageData[]);
