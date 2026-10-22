@@ -24,9 +24,11 @@ export class MenuScene extends Phaser.Scene {
 
     // 버튼
     cuteButton(this, 640, 420, 260, 78, '▶  시작', 0x4a8bff, 0x2a5fd0, '34px', () => this.scene.start('StageSelect'));
-    cuteButton(this, 420, 520, 200, 58, '🔧 강화', 0xffc94a, 0xd8962a, '24px', () => this.scene.start('Upgrade'));
-    const reward = cuteButton(this, 640, 520, 200, 58, '🎁 보상', 0x5cd88a, 0x2fa25a, '24px', () => this.openRewards());
-    const mission = cuteButton(this, 860, 520, 200, 58, '📋 미션', 0xff8ab0, 0xd85a88, '24px', () => this.openMissions('daily'));
+    cuteButton(this, 310, 520, 200, 58, '🔧 강화', 0xffc94a, 0xd8962a, '24px', () => this.scene.start('Upgrade'));
+    const reward = cuteButton(this, 530, 520, 200, 58, '🎁 보상', 0x5cd88a, 0x2fa25a, '24px', () => this.openRewards());
+    const mission = cuteButton(this, 750, 520, 200, 58, '📋 미션', 0xff8ab0, 0xd85a88, '24px', () => this.openMissions('daily'));
+    const codex = cuteButton(this, 970, 520, 200, 58, '📖 도감', 0x7a9aff, 0x4a6ad8, '24px', () => this.scene.start('Codex'));
+    if (meta.hasCodexClaim()) this.badge(codex);
 
     // 받을 게 있으면 뱃지(+ 보상은 자동 오픈)
     if (meta.canClaimDaily() || meta.pendingIdle() > 0) {

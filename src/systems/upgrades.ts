@@ -8,6 +8,7 @@ import { BASE_MAX_LV, baseUpgradeCost, type BaseKey } from './baseUpgrades';
 import { timeRecord } from './pacing';
 import { rankUpCost, type ChestLoot } from './chests';
 import { normalizeDeck } from './counters';
+import { CODEX_MILESTONES, claimableMilestone, discoverReward, mergeKills } from './codex';
 import { CASTLE_MAX_LV, CASTLE_RATE_MAX_LV, castleUpCost } from './castle';
 
 /** 강화 순수 계산 (Vitest 검증) */
@@ -82,6 +83,9 @@ export class MetaProgress {
   ranks: Record<string, number> = {}; // 🃏 유닛별 카드 랭크(0~5)
   chestsOpened = 0; // 🎁 연 상자 수
   deck: string[] = []; // ⚔️ 출전 덱(최대 6)
+  kills: Record<string, number> = {}; // 📖 적별 처치 수(도감)
+  codexClaimed: string[] = []; // 📖 발견 보상 받은 적
+  codexSteps: number[] = []; // 📖 받은 수집 단계
   lastDaily = -1; // 마지막 일일보상 수령 day index
   streak = 0; // 연속 출석
   lastSeen = 0; // 마지막 접속(ms) — 방치 보상 기준
@@ -388,6 +392,44 @@ export class MetaProgress {
     return r;
   }
 
+  /** 📖 도감 — 이번 판 처치 기록 합치기 */
+  addKills(run: Record<string, number>): void {
+    this.kills = mergeKills(this.kills, run);
+    this.save();
+  }
+
+  /** 📖 발견한 적 수 */
+  get codexFound(): number {
+    return Object.values(this.kills).filter((n) => n > 0).length;
+  }
+
+  /** 📖 발견 보상 받기 → 골드(0 = 못 받음) */
+  claimDiscover(type: string): number {
+    if (!(this.kills[type] > 0) || this.codexClaimed.includes(type)) return 0;
+    const g = discoverReward(type);
+    this.codexClaimed.push(type);
+    this.gold += g;
+    this.save();
+    return g;
+  }
+
+  /** 📖 수집 단계 보상 받기(골드 + 보유 유닛 모두에게 조각) */
+  claimCodexStep(owned: string[]): { gold: number; shards: number } | null {
+    const i = claimableMilestone(this.codexFound, this.codexSteps);
+    if (i < 0) return null;
+    const m = CODEX_MILESTONES[i];
+    this.codexSteps.push(i);
+    this.gold += m.gold;
+    for (const k of owned) this.shards[k] = (this.shards[k] ?? 0) + m.shards;
+    this.save();
+    return { gold: m.gold, shards: m.shards };
+  }
+
+  /** 📖 받을 보상이 있나(메뉴 뱃지) */
+  hasCodexClaim(): boolean {
+    return Object.entries(this.kills).some(([k, n]) => n > 0 && !this.codexClaimed.includes(k)) || claimableMilestone(this.codexFound, this.codexSteps) >= 0;
+  }
+
   /** ⚔️ 출전 덱 — 보유 유닛 중 최대 6(빈칸은 보유 순서대로 채움) */
   activeDeck(allUnits: string[]): string[] {
     return normalizeDeck(this.deck, allUnits.filter((k) => this.ownsUnit(k)));
@@ -459,6 +501,9 @@ export class MetaProgress {
         ranks?: Record<string, number>;
         chestsOpened?: number;
         deck?: string[];
+        kills?: Record<string, number>;
+        codexClaimed?: string[];
+        codexSteps?: number[];
         lastDaily?: number;
         streak?: number;
         lastSeen?: number;
@@ -484,6 +529,9 @@ export class MetaProgress {
       this.ranks = obj.ranks ?? {};
       this.chestsOpened = obj.chestsOpened ?? 0;
       this.deck = obj.deck ?? [];
+      this.kills = obj.kills ?? {};
+      this.codexClaimed = obj.codexClaimed ?? [];
+      this.codexSteps = obj.codexSteps ?? [];
       this.tips = obj.tips ?? (this.clearedMax > 0 ? ['summon', 'hero'] : []); // 예전 저장 = 기본 안내는 본 것으로
       this.lastDaily = obj.lastDaily ?? -1;
       this.streak = obj.streak ?? 0;
@@ -534,6 +582,9 @@ export class MetaProgress {
         ranks: this.ranks,
         chestsOpened: this.chestsOpened,
         deck: this.deck,
+        kills: this.kills,
+        codexClaimed: this.codexClaimed,
+        codexSteps: this.codexSteps,
         lastDaily: this.lastDaily,
         streak: this.streak,
         lastSeen: this.lastSeen,

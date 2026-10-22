@@ -173,6 +173,8 @@ export class BattleScene extends Phaser.Scene {
   private usedUnits: Record<string, number> = {}; // 🎁 이번 판 유닛별 소환 수(상자 조각 비율)
   private deck: string[] = []; // ⚔️ 출전 덱
   private counterFxT = 0; // '효과적!' 표시 간격
+  private kills: Record<string, number> = {}; // 📖 이번 판 적별 처치
+  private metNew = new Set<string>(); // 📖 이번 판에 '새 몬스터!' 알린 적
   private prodTimer = 0; // 적 기지 생산 타이머
   private prodInterval = 4; // 생산 간격(초)
   private prodIdx = 0;
@@ -276,6 +278,8 @@ export class BattleScene extends Phaser.Scene {
     this.usedUnits = {};
     this.deck = meta.activeDeck(Object.keys(UNITS));
     this.counterFxT = 0;
+    this.kills = {};
+    this.metNew = new Set();
     this.reached = reachedStage(this.endless ? 99 : this.stage.id, meta.clearedMax);
     for (const k of Object.keys(this.feat) as Feature[]) this.feat[k] = featureOn(k, this.reached, this.endless);
 
@@ -728,6 +732,15 @@ export class BattleScene extends Phaser.Scene {
     const own = !!spriteOf(type);
     const look = own ? type : stats.hue !== undefined && stats.look ? ensureHue(this, stats.look, stats.hue) : stats.look ?? type;
     e.spawn(x, LANE_Y, stats, type, 'enemy', look);
+    if (!(meta.kills[type] > 0) && !this.metNew.has(type)) {
+      // 📖 처음 만나는 적 — 잡으면 도감에 등록
+      this.metNew.add(type);
+      const t = this.add
+        .text(this.enemyBase.x - 160, LANE_Y - 150, `📖 새 몬스터! ${stats.name}`, { fontFamily: 'sans-serif', fontSize: '20px', fontStyle: 'bold', color: '#ffe14d', backgroundColor: '#0d1424cc', padding: { x: 10, y: 5 } })
+        .setOrigin(0.5)
+        .setDepth(95);
+      this.tweens.add({ targets: t, y: t.y - 24, alpha: 0, delay: 1400, duration: 500, onComplete: () => t.destroy() });
+    }
     e.setVariant(own ? null : hexColor(stats.tint), stats.scale ?? 1);
     e.abilityT = 0;
     e.raged = false;
@@ -1849,6 +1862,7 @@ export class BattleScene extends Phaser.Scene {
     if (this.committed) return;
     this.committed = true;
     meta.addRunStats(this.run);
+    meta.addKills(this.kills);
   }
 
   /** 🤝 전장 유닛 조합 갱신 — 새로 켜지면 배너 */
@@ -2164,6 +2178,7 @@ export class BattleScene extends Phaser.Scene {
           this.track('bosses');
           this.bossDown(e.x);
         }
+        this.kills[e.type] = (this.kills[e.type] ?? 0) + 1; // 📖 도감
         this.onEnemyDeath(e); // 💥 폭발 · 🟢 분열
         e.playDeath();
         this.puff(e.x, 0xff8a6a);

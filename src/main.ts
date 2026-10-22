@@ -8,6 +8,7 @@ import { UpgradeScene } from './scenes/Upgrade';
 import { ResultScene } from './scenes/Result';
 import { DevScene } from './scenes/Dev';
 import { PrepareScene } from './scenes/Prepare';
+import { CodexScene } from './scenes/Codex';
 
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
@@ -33,6 +34,7 @@ const config: Phaser.Types.Core.GameConfig = {
     UpgradeScene,
     ResultScene,
     DevScene,
+    CodexScene,
   ],
 };
 

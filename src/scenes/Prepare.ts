@@ -6,8 +6,8 @@ import { meta } from '../systems/upgrades';
 import { STAGES, WORLDS, recommendedLevel } from '../systems/worlds';
 import { DECK_SIZE, KIND_INFO, UNIT_COUNTER, enemyKind, goodUnits, stageEnemies, stageKinds } from '../systems/counters';
 import { isBoss } from '../systems/bosses';
-import { hexColor } from '../systems/enemyVariants';
-import { iconKey, spriteOf, textureKey } from '../systems/sprites';
+import { enemyPortrait } from '../ui/enemyArt';
+import { iconKey } from '../systems/sprites';
 import { cuteButton, cuteTitle, drawSky, type SkyTheme } from '../ui/cute';
 import { sfx } from '../systems/sound';
 
@@ -49,15 +49,8 @@ export class PrepareScene extends Phaser.Scene {
       const x = 92 + (i % 5) * 109;
       const y = 200 + Math.floor(i / 5) * 140;
       const boss = isBoss(e.type);
-      const look = this.textures.exists(textureKey(e.type)) ? e.type : ENEMIES[e.type]?.look ?? e.type;
-      const d = spriteOf(look);
       if (boss) this.add.circle(x, y, 46, 0xff4a4a, 0.18).setStrokeStyle(3, 0xff4a4a);
-      if (d && this.textures.exists(textureKey(look))) {
-        const s = this.add.sprite(x, y, textureKey(look), d.anims.idle?.frames[0] ?? 0).setFlipX(true);
-        s.setScale(Math.min(80 / s.height, 92 / s.width));
-        const tint = look !== e.type ? hexColor(ENEMIES[e.type]?.tint) : null; // 그림을 빌린 변종 = 색
-        if (tint !== null) s.setTint(tint);
-      } else this.add.text(x, y, '👾', { fontSize: '44px', padding: { top: 10, bottom: 4 } }).setOrigin(0.5);
+      if (!enemyPortrait(this, e.type, x, y, 92, 80)) this.add.text(x, y, '👾', { fontSize: '44px', padding: { top: 10, bottom: 4 } }).setOrigin(0.5);
       const k = enemyKind(e.type);
       if (k) this.add.text(x + 34, y - 36, KIND_INFO[k].icon, { fontSize: '20px', padding: { top: 6, bottom: 2 } }).setOrigin(0.5);
       this.add.text(x, y + 50, ENEMIES[e.type]?.name ?? e.type, { fontFamily: 'sans-serif', fontSize: '15px', fontStyle: 'bold', color: boss ? '#d8323a' : '#3a3a5a' }).setOrigin(0.5);
