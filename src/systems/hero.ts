@@ -39,7 +39,7 @@ export function heroBodyScale(tier: number): number {
 
 /** 영웅 능력치 — 스테이지·적 배율에 맞춰 성장(늦은 스테이지에서도 버티게) */
 export function heroStats(stageId: number, enemyMult = 1): UnitStats {
-  const g = (1 + 0.08 * Math.max(0, stageId - 1)) * enemyMult;
+  const g = (1 + 0.08 * Math.min(19, Math.max(0, stageId - 1))) * enemyMult; // 21관문부터는 적 배율만큼
   return {
     name: '영웅',
     hp: Math.round(1100 * g), // 쓰러지면 패배라 튼튼하게

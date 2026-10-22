@@ -22,13 +22,13 @@ export const ALLY_CASTLE_TIERS: CastleTier[] = [
   { min: 20, name: '천공의 성', shot: 'beam' },
 ];
 
-/** 적 성 5단계(관문 1·5·9·13·17) */
+/** 적 성 5단계(관문 1·11·21·41·71 — 월드 1·2·3~4·5~7·8~10) */
 export const ENEMY_CASTLE_TIERS: CastleTier[] = [
   { min: 1, name: '오크 가시 망루', shot: 'rock' },
-  { min: 5, name: '해골 요새', shot: 'poison' },
-  { min: 9, name: '용암 요새', shot: 'fire' },
-  { min: 13, name: '암흑 성채', shot: 'dark' },
-  { min: 17, name: '마왕성', shot: 'curse' },
+  { min: 11, name: '해골 요새', shot: 'poison' },
+  { min: 21, name: '용암 요새', shot: 'fire' },
+  { min: 41, name: '암흑 성채', shot: 'dark' },
+  { min: 71, name: '마왕성', shot: 'curse' },
 ];
 
 function tierOf(tiers: CastleTier[], v: number): number {

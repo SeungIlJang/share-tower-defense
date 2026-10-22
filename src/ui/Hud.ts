@@ -99,7 +99,7 @@ export class Hud {
   private objs: Phaser.GameObjects.GameObject[] = []; // 이 HUD가 만든 오브젝트
   private offs: (() => void)[] = []; // 입력·업데이트 리스너 해제
   private weaponBtns: WeaponButton[] = [];
-  private heroBtns: { bg: Phaser.GameObjects.Arc; shade: Phaser.GameObjects.Graphics; cx: number; cy: number }[] = [];
+  private heroBtns: { bg: Phaser.GameObjects.Arc; shade: Phaser.GameObjects.Graphics; cx: number; cy: number; glow: Phaser.GameObjects.Arc; cost: Phaser.GameObjects.Text; owned: boolean }[] = [];
   private manaFill!: Phaser.GameObjects.Rectangle;
   private manaText!: Phaser.GameObjects.Text;
   private heroHpFill!: Phaser.GameObjects.Rectangle;
@@ -322,15 +322,21 @@ export class Hud {
       const bx = x - i * (HERO_BTN_R * 2 + 14); // 스킬이 늘면 왼쪽으로
       const bg = s.add.circle(bx, cy, HERO_BTN_R, 0x1a2133, 0.92).setStrokeStyle(4, 0xffd34d).setDepth(d);
       s.add.text(bx, cy - 4, sk.icon, { fontSize: '32px', padding: { top: 12, bottom: 4 } }).setOrigin(0.5).setDepth(d + 2);
-      s.add.text(bx, cy + 27, `💧${sk.mana}`, { fontFamily: 'sans-serif', fontSize: '15px', fontStyle: 'bold', color: '#d8f0ff', stroke: '#000000', strokeThickness: 4 }).setOrigin(0.5).setDepth(d + 2);
+      const cost = s.add.text(bx, cy + 27, `💧${sk.mana}`, { fontFamily: 'sans-serif', fontSize: '15px', fontStyle: 'bold', color: '#d8f0ff', stroke: '#000000', strokeThickness: 4 }).setOrigin(0.5).setDepth(d + 2);
+      // ✨ 쓸 수 있을 때 바깥에서 반짝이는 금빛 고리
+      const glow = s.add.circle(bx, cy, HERO_BTN_R + 6).setStrokeStyle(4, 0xffe14d, 1).setDepth(d - 1).setVisible(false);
+      s.tweens.add({ targets: glow, scale: 1.15, alpha: 0.25, duration: 600, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
       s.add
         .text(bx - HERO_BTN_R + 2, cy - HERO_BTN_R + 2, sk.hotkey, { fontFamily: 'sans-serif', fontSize: '13px', fontStyle: 'bold', color: '#3a2a10', backgroundColor: '#ffd34d', padding: { x: 4, y: 0 } })
         .setDepth(d + 3);
       const shade = s.add.graphics().setDepth(d + 1);
       if (!owned[i]) s.add.text(bx, cy - 4, '🔒', { fontSize: '26px', padding: { top: 12, bottom: 4 } }).setOrigin(0.5).setDepth(d + 4).setAlpha(0.85); // 강화에서 해금
       bg.setInteractive({ useHandCursor: true });
-      bg.on('pointerdown', () => onHeroSkill(i));
-      this.heroBtns.push({ bg, shade, cx: bx, cy });
+      bg.on('pointerdown', () => {
+        s.tweens.add({ targets: bg, scale: 0.88, duration: 70, yoyo: true }); // 눌림
+        onHeroSkill(i);
+      });
+      this.heroBtns.push({ bg, shade, cx: bx, cy, glow, cost, owned: !!owned[i] });
     });
   }
 
@@ -352,7 +358,11 @@ export class Hud {
         b.shade.slice(b.cx, b.cy, HERO_BTN_R - 2, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * st.cd, false);
         b.shade.fillPath();
       }
-      b.bg.setAlpha(st.enough ? 1 : 0.45);
+      // 쓸 수 있음 = 금빛 테두리 + 반짝이는 고리 / 못 씀 = 회색 테두리, 마나가 모자라면 비용이 빨강
+      const ready = b.owned && st.enough && st.cd <= 0;
+      b.bg.setAlpha(ready ? 1 : 0.55).setFillStyle(ready ? 0x2a3f6a : 0x1a2133, 0.92).setStrokeStyle(4, ready ? 0xffd34d : 0x5a6274);
+      b.glow.setVisible(ready);
+      b.cost.setColor(b.owned && !st.enough ? '#ff8a8a' : '#d8f0ff');
     });
   }
 

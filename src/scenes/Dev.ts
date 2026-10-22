@@ -1,7 +1,6 @@
 import Phaser from 'phaser';
 import unitsData from '../data/units.json';
-import stagesData from '../data/stages.json';
-import type { StageData, UnitStats } from '../types';
+import type { UnitStats } from '../types';
 import { meta } from '../systems/upgrades';
 import { WEAPONS } from '../systems/weapons';
 import { SKINS, LEGEND_NAMES } from '../systems/skins';
@@ -13,8 +12,7 @@ import { openKeypad } from '../ui/Keypad';
 import { sfx } from '../systems/sound';
 
 const UNITS = unitsData as Record<string, UnitStats>;
-const STAGES = stagesData as StageData[];
-const MAX_STAGE = STAGES.length;
+import { STAGES, MAX_STAGE } from '../systems/worlds';
 const UNIT_MAX_LV = 30; // 개발자 모드에서 올릴 수 있는 유닛·무기 최대 레벨
 const GOLD_MAX = 999_999_999;
 

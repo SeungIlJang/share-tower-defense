@@ -7,7 +7,7 @@ describe('🏰 성', () => {
   });
 
   it('적 성 단계 — 관문 / 무한 웨이브', () => {
-    expect([1, 4, 5, 9, 13, 17, 20].map((s) => enemyCastleTier(false, s, 0))).toEqual([0, 0, 1, 2, 3, 4, 4]);
+    expect([1, 10, 11, 21, 41, 70, 71, 100].map((s) => enemyCastleTier(false, s, 0))).toEqual([0, 0, 1, 2, 3, 3, 4, 4]);
     expect([1, 3, 4, 8, 16, 40].map((w) => enemyCastleTier(true, 0, w))).toEqual([0, 0, 1, 2, 4, 4]);
   });
 

@@ -1,18 +1,14 @@
 import Phaser from 'phaser';
-import stagesData from '../data/stages.json';
+import type { SkyTheme } from '../ui/cute';
+import { STAGES, WORLDS, bossOf } from '../systems/worlds';
 import type { StageData } from '../types';
 import { meta } from '../systems/upgrades';
 import { iconKey, spriteOf, textureKey } from '../systems/sprites';
 import { bgm } from '../systems/sound';
 import { cuteButton, cuteTitle, drawSky } from '../ui/cute';
 
-const stages = stagesData as StageData[];
-const WORLDS = [
-  { id: 1, name: '🌳 관문의 숲', theme: 'forest', color: 0x3f9a4a, dark: 0x2a6a32 },
-  { id: 2, name: '🏜️ 모래 사막', theme: 'desert', color: 0xd8862a, dark: 0xa05a10 },
-] as const;
-/** 보스 스테이지 → 위에 올려 보여줄 보스 그림 */
-const BOSS_OF: Record<number, string> = { 5: 'ogre', 10: 'dragon', 15: 'ogre', 20: 'dragon' };
+const stages = STAGES;
+// 🗺️ 월드 10개 · 관문 100개 — src/systems/worlds.ts
 
 /** 스테이지 선택 — S자 길 위의 징검다리 지도 */
 export class StageSelectScene extends Phaser.Scene {
@@ -31,7 +27,7 @@ export class StageSelectScene extends Phaser.Scene {
   create(): void {
     const W = WORLDS[this.world - 1];
     const list = stages.filter((st) => (st.world ?? 1) === this.world);
-    drawSky(this, { stars: 10, theme: W.theme });
+    drawSky(this, { stars: 10, theme: W.theme as SkyTheme });
     bgm(this, 'bgm_menu');
 
     const title = cuteTitle(this, 640, 62, '스테이지 선택', 52);
@@ -58,7 +54,7 @@ export class StageSelectScene extends Phaser.Scene {
     this.drawPath(points);
     list.forEach((st, i) => this.drawNode(st, points[i]));
 
-    // 마지막 월드면 '다음 월드 준비 중' 팻말
+    // 마지막 월드면 '최종 관문' 팻말(월드 10)
     if (this.world === WORLDS.length) {
       const last = points[points.length - 1];
       const sign = this.add.container(last.x - 175, last.y + 4);
@@ -66,7 +62,7 @@ export class StageSelectScene extends Phaser.Scene {
       sg.fillStyle(0x8a5a2a, 1).fillRect(-4, 0, 8, 46);
       sg.fillStyle(0xc8925a, 1).fillRoundedRect(-62, -30, 124, 40, 10);
       sg.lineStyle(3, 0x6a4020, 1).strokeRoundedRect(-62, -30, 124, 40, 10);
-      sign.add([sg, this.add.text(0, -10, '다음 월드\n준비 중 🚧', { fontFamily: 'sans-serif', fontSize: '13px', fontStyle: 'bold', color: '#4a2a10', align: 'center' }).setOrigin(0.5)]);
+      sign.add([sg, this.add.text(0, -10, '🏆 최종 관문\n100을 넘어라!', { fontFamily: 'sans-serif', fontSize: '13px', fontStyle: 'bold', color: '#4a2a10', align: 'center' }).setOrigin(0.5)]);
     }
 
     // ♾️ 무한 모드 — 언제든 도전
@@ -116,7 +112,7 @@ export class StageSelectScene extends Phaser.Scene {
     const unlocked = meta.isUnlocked(id);
     const cleared = id <= meta.clearedMax;
     const current = unlocked && !cleared;
-    const boss = BOSS_OF[id];
+    const boss = bossOf(id);
     const r = boss ? 50 : 40;
 
     const fill = cleared ? 0x5cd88a : current ? 0x4a8bff : 0xb8c0cc;

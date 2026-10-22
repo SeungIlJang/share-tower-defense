@@ -1,7 +1,6 @@
 import Phaser from 'phaser';
 import unitsData from '../data/units.json';
 import enemiesData from '../data/enemies.json';
-import stagesData from '../data/stages.json';
 import type { UnitStats, EnemyStats, StageData } from '../types';
 import { Unit } from '../entities/Unit';
 import { Enemy } from '../entities/Enemy';
@@ -13,6 +12,7 @@ import { summonCooldown } from '../systems/pacing';
 import { anyDevFlag, devFlags } from '../systems/dev';
 import { UNIT_TIERS, unitTier } from '../systems/evolution';
 import { enemyLevel, hexColor, pickVariant, variantTable } from '../systems/enemyVariants';
+import { STAGES, WORLDS } from '../systems/worlds';
 import { VOLLEY_CD, VOLLEY_MAX, VOLLEY_MULT, VOLLEY_NAMES, castleArchers, ALLY_CASTLE_TIERS, ENEMY_CASTLE_TIERS, allyCastleGun, allyCastleTier, castleHpMult, castleLook, castleTarget, enemyCastleGun, enemyCastleTier, type CastleShot } from '../systems/castle';
 import { HERO_TYPE, HERO_TIERS, HERO_FALLBACK_LOOKS, heroTier, heroBodyScale, HERO_REGEN, HERO_SKILLS, AURA_ATK, AURA_GUARD, AURA_RADIUS, MANA_MAX, MANA_REGEN, MANA_START, MACE_MULT, MACE_RANGE, RALLY_SEC, RALLY_SPEED, HOLY_HEAL, HOLY_HERO_HEAL, HOLY_PUSH, HERO_ENEMY_HP, heroStats, heroLvMult, heroMoveRange, HERO_DRAG_MULT, heroSkillPower, auraRadius, inAura, maceTargets, stepToward } from '../systems/hero';
 import { HERO_PANEL_X, HERO_BTN_R, HERO_BTN_Y } from '../ui/Hud';
@@ -101,7 +101,7 @@ const BOSS = new Set(['ogre', 'dragon']); // 보스 타입
 const UNITS = unitsData as Record<string, UnitStats>;
 const ENEMIES = enemiesData as Record<string, EnemyStats>;
 const VARIANTS = variantTable(ENEMIES); // 👾 기본 적 → 변종
-const STAGES = stagesData as StageData[];
+// 관문 100개(1~20 직접 만든 관문 + 21~100 자동 생성)
 
 const LANE_Y = 340; // 하단 HUD 2단(유닛 카드 + 특수 무기, 410~) 위 전장 바닥
 const REACH = 14 * (UNIT_SCALE - 1) * 2; // 커진 몸집만큼 사거리 여유(겹침 방지)
@@ -263,7 +263,7 @@ export class BattleScene extends Phaser.Scene {
     this.committed = false;
 
     // 배경 + 레인
-    const [sky, lane, line] = THEMES[this.endless ? 'endless' : this.stage.world === 2 ? 'desert' : 'forest'];
+    const [sky, lane, line] = this.endless ? THEMES.endless : WORLDS[(this.stage.world ?? 1) - 1].battle; // 🗺️ 월드별 배경색
     this.add.rectangle(640, 360, 1280, 720, sky).setDepth(-10);
     this.drawBackdrop(sky, lane, line);
     this.add.rectangle(640, LANE_Y + 40, 1280, 80, lane).setDepth(-5);
