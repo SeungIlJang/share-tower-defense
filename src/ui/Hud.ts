@@ -4,6 +4,7 @@ import { iconKey, textureKey } from '../systems/sprites';
 import { WEAPONS } from '../systems/weapons';
 import type { Synergy } from '../systems/synergy';
 import { HERO_SKILLS } from '../systems/hero';
+import { KIND_INFO, UNIT_COUNTER } from '../systems/counters';
 
 export interface HudState {
   lv: number;
@@ -19,6 +20,7 @@ export interface HudState {
   perfectWin: number; // 퍼펙트 허용 폭(중앙 ±)
   upg: Record<string, { lv: number; cost: number; afford: boolean }>; // 전장 실시간 강화
   weapons: ({ ratio: number; ready: boolean } | null)[]; // 특수 무기 게이지(구매 안 한 것 = null)
+  good?: Record<string, boolean>; // ⚔️ 지금 전장에 상성 적이 있는 유닛
 }
 
 /** 🎓 처음 하는 사람에게 단계적으로 보여 줄 HUD 기능(systems/tutorial.ts) */
@@ -56,6 +58,8 @@ interface Slot {
   upText: Phaser.GameObjects.Text;
   lvText: Phaser.GameObjects.Text;
   cdShade: Phaser.GameObjects.Rectangle; // ⏱️ 소환 대기 — 위에서부터 어둡게 덮음
+  goodTag: Phaser.GameObjects.Text | null; // ⚔️ '유리!' 표시
+  col: number;
 }
 
 interface WeaponButton {
@@ -213,12 +217,16 @@ export class Hud {
       const label = add(scene.add.text(cx, cy + 45, u.name, { fontFamily: 'sans-serif', fontSize: u.name.length >= 5 ? '19px' : '22px', fontStyle: 'bold', color: '#ffffff', stroke: '#000000', strokeThickness: 4 }).setOrigin(0.5));
       const cost = add(scene.add.text(cx, cy + 67, `⚡${u.cost}  🍖${u.pop}`, { fontFamily: 'sans-serif', fontSize: '15px', fontStyle: 'bold', color: '#cfe' }).setOrigin(0.5));
       tap(rect, () => onSpawn(key));
+      // ⚔️ 상성 — 얼굴 오른쪽 아래에 강한 적 종류, 그 적이 전장에 있으면 '유리!'
+      const ck = UNIT_COUNTER[key];
+      if (ck) add(scene.add.text(cx + 30, cy + 22, `▶${KIND_INFO[ck].icon}`, { fontSize: '17px', backgroundColor: '#0d1424dd', padding: { x: 3, y: 1, top: 6 } }).setOrigin(0.5));
+      const goodTag = ck ? add(scene.add.text(cx, cy - 36, '🎯 유리!', { fontFamily: 'sans-serif', fontSize: '17px', fontStyle: 'bold', color: '#ffe14d', stroke: '#000000', strokeThickness: 4 }).setOrigin(0.5).setVisible(false)) : null;
       // 🛠️ 전장 실시간 강화 버튼(카드 우상단) — 소환 탭과 분리
       const upBtn = add(scene.add.rectangle(cx + CARD_W / 2 - 36, cy - 62, 62, 28, 0x2f7a4d).setStrokeStyle(1, 0x5cff9e));
       const upText = add(scene.add.text(cx + CARD_W / 2 - 36, cy - 62, '⬆', { fontFamily: 'sans-serif', fontSize: '15px', fontStyle: 'bold', color: '#fff' }).setOrigin(0.5));
       tap(upBtn, () => onUpgrade(key));
       const cdShade = add(scene.add.rectangle(cx, cy - CARD_H / 2, CARD_W, 0, 0x000000, 0.6).setOrigin(0.5, 0));
-      this.slots.push({ key, cx, rect, label, cost, icon, face, upBtn, upText, lvText, cdShade });
+      this.slots.push({ key, cx, rect, label, cost, icon, face, upBtn, upText, lvText, cdShade, goodTag, col });
     });
     this.scroller(strip, cy, CARD_H, keys.length * (CARD_W + CARD_GAP) - CARD_GAP, d);
 
@@ -477,6 +485,12 @@ export class Hud {
       slot.cost.setAlpha(ok ? 1 : 0.6);
       slot.cost.setColor(ok ? '#aef5b0' : '#ff9a9a');
       slot.cdShade.setSize(CARD_W, CARD_H * Math.min(1, s.cd[slot.key] ?? 0)); // ⏱️ 대기 중이면 어둡게 덮고 아래로 줄어듦
+      const good = !!s.good?.[slot.key];
+      if (slot.goodTag && slot.goodTag.visible !== good) {
+        slot.goodTag.setVisible(good);
+        slot.rect.setStrokeStyle(3, good ? 0xffe14d : slot.col);
+      }
+      if (good && slot.goodTag) slot.goodTag.setScale(1 + 0.08 * Math.sin(this.scene.time.now / 120));
       const up = s.upg[slot.key];
       if (up) {
         slot.lvText.setText(`Lv${up.lv}`);

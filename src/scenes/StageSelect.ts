@@ -5,6 +5,7 @@ import type { StageData } from '../types';
 import { meta } from '../systems/upgrades';
 import { iconKey, spriteOf, textureKey } from '../systems/sprites';
 import { bgm } from '../systems/sound';
+import { featureOn, reachedStage } from '../systems/tutorial';
 import { cuteButton, cuteTitle, drawSky } from '../ui/cute';
 
 const stages = STAGES;
@@ -186,7 +187,7 @@ export class StageSelectScene extends Phaser.Scene {
       hit.on('pointerover', () => this.tweens.add({ targets: node, angle: 6, duration: 100, yoyo: true }));
       hit.on('pointerdown', () => {
         this.tweens.add({ targets: node, scale: 0.9, duration: 80, yoyo: true });
-        this.time.delayedCall(170, () => this.scene.start('Battle', { stageId: id })); // 눌림 연출 후 이동(통통 트윈과 무관하게)
+        this.time.delayedCall(170, () => (featureOn('prepare', reachedStage(id, meta.clearedMax)) ? this.scene.start('Prepare', { stageId: id }) : this.scene.start('Battle', { stageId: id }))); // ⚔️ 3관문부터 출전 준비 // 눌림 연출 후 이동(통통 트윈과 무관하게)
       });
     }
   }

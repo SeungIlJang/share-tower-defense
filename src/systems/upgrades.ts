@@ -7,6 +7,7 @@ import { pushRecord, type EndlessRecord } from './endless';
 import { BASE_MAX_LV, baseUpgradeCost, type BaseKey } from './baseUpgrades';
 import { timeRecord } from './pacing';
 import { rankUpCost, type ChestLoot } from './chests';
+import { normalizeDeck } from './counters';
 import { CASTLE_MAX_LV, CASTLE_RATE_MAX_LV, castleUpCost } from './castle';
 
 /** 강화 순수 계산 (Vitest 검증) */
@@ -80,6 +81,7 @@ export class MetaProgress {
   shards: Record<string, number> = {}; // 🃏 유닛별 카드 조각
   ranks: Record<string, number> = {}; // 🃏 유닛별 카드 랭크(0~5)
   chestsOpened = 0; // 🎁 연 상자 수
+  deck: string[] = []; // ⚔️ 출전 덱(최대 6)
   lastDaily = -1; // 마지막 일일보상 수령 day index
   streak = 0; // 연속 출석
   lastSeen = 0; // 마지막 접속(ms) — 방치 보상 기준
@@ -386,6 +388,16 @@ export class MetaProgress {
     return r;
   }
 
+  /** ⚔️ 출전 덱 — 보유 유닛 중 최대 6(빈칸은 보유 순서대로 채움) */
+  activeDeck(allUnits: string[]): string[] {
+    return normalizeDeck(this.deck, allUnits.filter((k) => this.ownsUnit(k)));
+  }
+
+  setDeck(deck: string[]): void {
+    this.deck = [...deck];
+    this.save();
+  }
+
   /** 🎁 상자 보상 받기(골드 + 조각) */
   grantChest(loot: ChestLoot): void {
     this.gold += loot.gold;
@@ -446,6 +458,7 @@ export class MetaProgress {
         shards?: Record<string, number>;
         ranks?: Record<string, number>;
         chestsOpened?: number;
+        deck?: string[];
         lastDaily?: number;
         streak?: number;
         lastSeen?: number;
@@ -470,6 +483,7 @@ export class MetaProgress {
       this.shards = obj.shards ?? {};
       this.ranks = obj.ranks ?? {};
       this.chestsOpened = obj.chestsOpened ?? 0;
+      this.deck = obj.deck ?? [];
       this.tips = obj.tips ?? (this.clearedMax > 0 ? ['summon', 'hero'] : []); // 예전 저장 = 기본 안내는 본 것으로
       this.lastDaily = obj.lastDaily ?? -1;
       this.streak = obj.streak ?? 0;
@@ -519,6 +533,7 @@ export class MetaProgress {
         shards: this.shards,
         ranks: this.ranks,
         chestsOpened: this.chestsOpened,
+        deck: this.deck,
         lastDaily: this.lastDaily,
         streak: this.streak,
         lastSeen: this.lastSeen,

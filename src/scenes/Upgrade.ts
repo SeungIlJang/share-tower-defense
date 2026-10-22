@@ -196,6 +196,7 @@ export class UpgradeScene extends Phaser.Scene {
             if (meta.buyUnit(key, price)) {
               sfx(this, 'levelup');
               this.render();
+              if (!meta.activeDeck(keys).includes(key)) this.toast(`⚔️ 덱이 가득 찼어요 — 출전 준비 화면에서 ${u.name}을(를) 덱에 넣어요`);
             }
             return;
           }

@@ -4,7 +4,7 @@
  * 이미 더 멀리 간 사람(clearedMax)·무한 모드는 전부 열림.
  */
 
-export type Feature = 'heroSkill' | 'weapon' | 'volley' | 'levelup' | 'perfect';
+export type Feature = 'heroSkill' | 'weapon' | 'prepare' | 'volley' | 'levelup' | 'perfect';
 
 export interface FeatureDef {
   key: Feature;
@@ -15,6 +15,7 @@ export interface FeatureDef {
 export const FEATURES: FeatureDef[] = [
   { key: 'heroSkill', stage: 2, name: '👑 영웅 스킬' },
   { key: 'weapon', stage: 3, name: '🔥 특수 무기' },
+  { key: 'prepare', stage: 3, name: '⚔️ 출전 준비(적 미리보기·덱)' },
   { key: 'volley', stage: 4, name: '🏰 성 특수 공격' },
   { key: 'levelup', stage: 5, name: '🃏 레벨업 카드' },
   { key: 'perfect', stage: 6, name: '⏱️ PERFECT 소환' },

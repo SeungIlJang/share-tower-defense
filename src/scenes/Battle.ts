@@ -14,6 +14,7 @@ import { UNIT_TIERS, unitTier } from '../systems/evolution';
 import { enemyLevel, hexColor, pickVariant, variantTable } from '../systems/enemyVariants';
 import { STAGES, WORLDS, goldMultFor } from '../systems/worlds';
 import { BOSSES, BOSS_KEYS, bossForStage } from '../systems/bosses';
+import { COUNTER_MULT, counterMult, enemyKind, UNIT_COUNTER, type EnemyKind } from '../systems/counters';
 import { chestForEndless, chestForStage, rankMult, rollChest, type ChestLoot } from '../systems/chests';
 import { VOLLEY_CD, VOLLEY_MAX, VOLLEY_MULT, VOLLEY_NAMES, castleArchers, ALLY_CASTLE_TIERS, ENEMY_CASTLE_TIERS, allyCastleGun, allyCastleTier, castleHpMult, castleLook, castleTarget, enemyCastleGun, enemyCastleTier, type CastleShot } from '../systems/castle';
 import { HERO_TYPE, HERO_TIERS, HERO_FALLBACK_LOOKS, heroTier, heroBodyScale, HERO_REGEN, HERO_SKILLS, AURA_ATK, AURA_GUARD, AURA_RADIUS, MANA_MAX, MANA_REGEN, MANA_START, MACE_MULT, MACE_RANGE, RALLY_SEC, RALLY_SPEED, HOLY_HEAL, HOLY_HERO_HEAL, HOLY_PUSH, HERO_ENEMY_HP, heroStats, heroLvMult, heroMoveRange, HERO_DRAG_MULT, heroSkillPower, auraRadius, inAura, maceTargets, stepToward } from '../systems/hero';
@@ -166,10 +167,12 @@ export class BattleScene extends Phaser.Scene {
   private picking = false;
   private levelUp!: LevelUpOverlay;
   // 🎓 첫 경험 — 관문마다 하나씩 열리는 기능 + 👆 손가락 안내
-  private feat: Record<Feature, boolean> = { heroSkill: true, weapon: true, volley: true, levelup: true, perfect: true };
+  private feat: Record<Feature, boolean> = { heroSkill: true, weapon: true, prepare: true, volley: true, levelup: true, perfect: true };
   private reached = 1;
   private tip!: TipPointer;
   private usedUnits: Record<string, number> = {}; // 🎁 이번 판 유닛별 소환 수(상자 조각 비율)
+  private deck: string[] = []; // ⚔️ 출전 덱
+  private counterFxT = 0; // '효과적!' 표시 간격
   private prodTimer = 0; // 적 기지 생산 타이머
   private prodInterval = 4; // 생산 간격(초)
   private prodIdx = 0;
@@ -271,6 +274,8 @@ export class BattleScene extends Phaser.Scene {
     this.eventT = EVENT_FIRST;
     this.committed = false;
     this.usedUnits = {};
+    this.deck = meta.activeDeck(Object.keys(UNITS));
+    this.counterFxT = 0;
     this.reached = reachedStage(this.endless ? 99 : this.stage.id, meta.clearedMax);
     for (const k of Object.keys(this.feat) as Feature[]) this.feat[k] = featureOn(k, this.reached, this.endless);
 
@@ -428,9 +433,12 @@ export class BattleScene extends Phaser.Scene {
 
   /** HUD 만들기(전투 중 상점에서 산 것이 생기면 다시 만듦) */
   private makeHud(): Hud {
+    // ⚔️ 출전 덱 유닛 + (아직 안 산 유닛은 '구매' 안내용) — 덱에 없는 보유 유닛은 숨김
+    const shown = Object.fromEntries(Object.keys(UNITS).filter((k) => this.deck.includes(k) || !meta.ownsUnit(k)).map((k) => [k, UNITS[k]]));
+    const deckFirst = Object.fromEntries([...this.deck.map((k) => [k, UNITS[k]] as const), ...Object.entries(shown).filter(([k]) => !this.deck.includes(k))]);
     return new Hud(
       this,
-      UNITS,
+      deckFirst,
       (type) => this.trySpawnUnit(type),
       (type) => this.doBattleUpgrade(type),
       (i) => this.fireWeapon(i),
@@ -578,7 +586,7 @@ export class BattleScene extends Phaser.Scene {
   private trySpawnUnit(type: string): void {
     if (this.over || this.picking) return;
     const base = UNITS[type];
-    if (!base || !meta.ownsUnit(type)) return; // 🔒 구매 안 한 유닛
+    if (!base || !meta.ownsUnit(type) || !this.deck.includes(type)) return; // 🔒 구매 안 한 유닛 · 덱에 없는 유닛
     if ((this.summonCd[type] ?? 0) > 0) {
       this.hud.deny(type, 'cooldown'); // ⏱️ 아직 대기 중
       return;
@@ -922,8 +930,19 @@ export class BattleScene extends Phaser.Scene {
       perfectWin: BattleScene.PERFECT_WIN,
       upg: this.upgMap(),
       weapons: this.weapons.map((w) => (w ? { ratio: w.ratio, ready: w.ready } : null)),
+      good: this.goodMap(),
     });
     this.checkEnd();
+  }
+
+  /** ⚔️ 지금 전장(오른쪽 끝까지)에 상성 적이 있는 덱 유닛 */
+  private goodMap(): Record<string, boolean> {
+    const kinds = new Set<EnemyKind>();
+    for (const e of this.enemies) {
+      const k = e.active ? enemyKind(e.type) : null;
+      if (k) kinds.add(k);
+    }
+    return Object.fromEntries(this.deck.map((u) => [u, !!UNIT_COUNTER[u] && kinds.has(UNIT_COUNTER[u]!)]));
   }
 
   /** 성직자 이동: 맨 앞 아군보다 50px 뒤까지만 전진(아군이 없으면 제자리) */
@@ -995,6 +1014,14 @@ export class BattleScene extends Phaser.Scene {
       dmg = Math.max(1, Math.round(dmg * synergyMult(this.synergies, def.type, 'guard')));
       if (awakened(this.skills, 'vigor')) dmg = Math.max(1, Math.round(dmg * 0.85)); // ❤️ 강철 피부
       if (this.inHeroAura(def.x)) dmg = Math.max(1, Math.round(dmg * AURA_GUARD * (1 - 0.06 * (this.skills.auraGuard ?? 0)))); // ⭕ 오라 · 🛡️ 수호 오라
+    }
+    if (ally && counterMult(att.type, def.type) > 1) {
+      dmg = Math.round(dmg * COUNTER_MULT); // ⚔️ 상성
+      if (this.clock - this.counterFxT > 0.7) {
+        this.counterFxT = this.clock;
+        const t = this.add.text(def.x, LANE_Y - 92, '🎯 효과적!', { fontFamily: 'sans-serif', fontSize: '17px', fontStyle: 'bold', color: '#ffe14d', stroke: '#000000', strokeThickness: 4 }).setOrigin(0.5).setDepth(72);
+        this.tweens.add({ targets: t, y: t.y - 30, alpha: 0, duration: 650, onComplete: () => t.destroy() });
+      }
     }
     if (devFlags.oneHit && ally) dmg = Math.max(dmg, def.hp + 1); // 🛠️ 한 방 처치
     if (!ally && ENEMIES[att.type]?.ability === 'lifesteal') att.heal(Math.round(dmg * 0.5)); // 🦇 흡혈
