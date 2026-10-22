@@ -12,7 +12,8 @@ describe('upgrades', () => {
   it('스탯은 레벨당 +15%', () => {
     expect(scaleStat(100, 0)).toBe(100);
     expect(scaleStat(100, 1)).toBe(115);
-    expect(scaleStat(100, 2)).toBe(130);
+    expect(scaleStat(100, 2)).toBe(132);
+    expect(scaleStat(100, 30)).toBe(910); // 후반 강화가 더 크게
   });
 
   it('applyUpgrade는 hp·atk만 올리고 나머지 유지', () => {
@@ -28,7 +29,7 @@ describe('upgrades', () => {
       pop: 8,
     };
     const up = applyUpgrade(base, 2);
-    expect(up.hp).toBe(130);
+    expect(up.hp).toBe(132);
     expect(up.atk).toBe(26);
     expect(up.def).toBe(5); // 불변
     expect(up.cost).toBe(50);

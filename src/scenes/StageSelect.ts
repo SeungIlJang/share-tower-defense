@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import type { SkyTheme } from '../ui/cute';
-import { STAGES, WORLDS, bossOf } from '../systems/worlds';
+import { STAGES, WORLDS, bossOf, goldMultFor, recommendedLevel } from '../systems/worlds';
 import type { StageData } from '../types';
 import { meta } from '../systems/upgrades';
 import { iconKey, spriteOf, textureKey } from '../systems/sprites';
@@ -37,6 +37,12 @@ export class StageSelectScene extends Phaser.Scene {
     ribbon.fillStyle(W.color, 1).fillRoundedRect(640 - 110, 104, 220, 38, 19);
     ribbon.lineStyle(3, 0xffffff, 0.9).strokeRoundedRect(640 - 110, 104, 220, 38, 19);
     this.add.text(640, 123, W.name, { fontFamily: 'sans-serif', fontSize: '20px', fontStyle: 'bold', color: '#ffffff' }).setOrigin(0.5);
+    // 🎯 이 월드 권장 유닛 강화 레벨(첫 관문 ~ 마지막 관문)
+    const recLo = recommendedLevel(list[0].id, list[0].enemyMult ?? 1);
+    const recHi = recommendedLevel(list[list.length - 1].id, list[list.length - 1].enemyMult ?? 1);
+    this.add
+      .text(640, 156, `🎯 권장 유닛 강화 Lv ${recLo}~${recHi}  ·  💰 골드 ×${goldMultFor(list[0].id)}`, { fontFamily: 'sans-serif', fontSize: '15px', fontStyle: 'bold', color: '#ffffff', stroke: '#000000', strokeThickness: 3 })
+      .setOrigin(0.5);
     // 월드 넘기기 ◀ ▶ — 다음 월드는 앞 월드 마지막 스테이지를 깨야 열림
     const arrow = (x: number, to: number, label: string): void => {
       if (to < 1 || to > WORLDS.length) return;

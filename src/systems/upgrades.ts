@@ -15,9 +15,14 @@ export function upgradeCost(level: number): number {
   return 100 + level * 80;
 }
 
-/** 레벨당 +15% (반올림) */
+/** 강화 배율 — 레벨당 +15%에 높은 레벨일수록 조금 더(+0.4%×Lv²) · Lv10 ×2.9 · Lv20 ×5.6 · Lv30 ×9.1 */
+export function statMult(level: number): number {
+  return 1 + level * 0.15 + 0.004 * level * level;
+}
+
+/** 강화 적용 능력치(반올림) */
 export function scaleStat(base: number, level: number): number {
-  return Math.round(base * (1 + level * 0.15));
+  return Math.round(base * statMult(level));
 }
 
 /** 유닛 스탯에 강화 레벨 적용(hp·atk 상승) */

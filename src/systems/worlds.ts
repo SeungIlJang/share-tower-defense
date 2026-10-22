@@ -4,6 +4,7 @@
  */
 import baseStages from '../data/stages.json';
 import type { StageData, Wave } from '../types';
+import { statMult } from './upgrades';
 
 export interface WorldDef {
   id: number;
@@ -35,9 +36,21 @@ export function worldOf(id: number): number {
   return Math.min(WORLDS.length, Math.max(1, Math.ceil(id / 10)));
 }
 
-/** 21관문부터 적 체력·공격 배율 — 월드 2 끝(2.4)에서 관문마다 +0.12 (100관문 = 12) */
+/** 21관문부터 적 체력·공격 배율 — 월드 2 끝(2.4)에서 관문마다 +0.09 (100관문 = 9.6) */
 export function enemyMultFor(id: number): number {
-  return Math.round((2.4 + 0.12 * (id - 20)) * 100) / 100;
+  return Math.round((2.4 + 0.09 * (id - 20)) * 100) / 100;
+}
+
+/** 💰 월드가 깊을수록 클리어 골드 배율 — 월드 1 ×1.0 → 월드 10 ×2.35 */
+export function goldMultFor(id: number): number {
+  return Math.round((1 + 0.15 * (worldOf(id) - 1)) * 100) / 100;
+}
+
+/** 🎯 권장 유닛 강화 레벨 — 적 배율을 따라잡는 강화 레벨(최소 관문/4) */
+export function recommendedLevel(id: number, enemyMult: number): number {
+  let lv = 0;
+  while (statMult(lv) < enemyMult && lv < 99) lv++;
+  return Math.max(lv, Math.ceil(id / 4));
 }
 
 /** 21관문 이상 관문 하나 만들기 */

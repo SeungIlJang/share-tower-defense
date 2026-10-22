@@ -12,7 +12,7 @@ import { summonCooldown } from '../systems/pacing';
 import { anyDevFlag, devFlags } from '../systems/dev';
 import { UNIT_TIERS, unitTier } from '../systems/evolution';
 import { enemyLevel, hexColor, pickVariant, variantTable } from '../systems/enemyVariants';
-import { STAGES, WORLDS } from '../systems/worlds';
+import { STAGES, WORLDS, goldMultFor } from '../systems/worlds';
 import { VOLLEY_CD, VOLLEY_MAX, VOLLEY_MULT, VOLLEY_NAMES, castleArchers, ALLY_CASTLE_TIERS, ENEMY_CASTLE_TIERS, allyCastleGun, allyCastleTier, castleHpMult, castleLook, castleTarget, enemyCastleGun, enemyCastleTier, type CastleShot } from '../systems/castle';
 import { HERO_TYPE, HERO_TIERS, HERO_FALLBACK_LOOKS, heroTier, heroBodyScale, HERO_REGEN, HERO_SKILLS, AURA_ATK, AURA_GUARD, AURA_RADIUS, MANA_MAX, MANA_REGEN, MANA_START, MACE_MULT, MACE_RANGE, RALLY_SEC, RALLY_SPEED, HOLY_HEAL, HOLY_HERO_HEAL, HOLY_PUSH, HERO_ENEMY_HP, heroStats, heroLvMult, heroMoveRange, HERO_DRAG_MULT, heroSkillPower, auraRadius, inAura, maceTargets, stepToward } from '../systems/hero';
 import { HERO_PANEL_X, HERO_BTN_R, HERO_BTN_Y } from '../ui/Hud';
@@ -2141,7 +2141,7 @@ export class BattleScene extends Phaser.Scene {
     const prevStars = meta.starsOf(this.stage.id);
     const gained = win ? meta.recordStars(this.stage.id, stars) : 0;
     const starGold = gained * STAR_GOLD;
-    const earned = win ? this.runGold + 60 + this.stage.id * 30 + starGold : 0;
+    const earned = win ? Math.round((this.runGold + 60 + this.stage.id * 30) * goldMultFor(this.stage.id)) + starGold : 0; // 💰 깊은 월드일수록 골드 ↑
     if (win) {
       meta.addGold(earned); // 처치 골드 + 승리 보너스 + 새 별 보너스(강화용)
       meta.clearStage(this.stage.id); // 다음 스테이지 해금
