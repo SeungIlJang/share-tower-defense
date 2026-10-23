@@ -16,7 +16,7 @@ import { sfx } from '../systems/sound';
 const UNITS = unitsData as Record<string, UnitStats>;
 const ENEMIES = enemiesData as Record<string, EnemyStats>;
 
-/** ⚔️ 출전 준비 — 관문 미리보기(나오는 적·종류·보스) + 출전 덱 6칸 고르기. 계획: docs/hit-plan.md B */
+/** ⚔️ 출전 준비 — 관문 미리보기(나오는 적·종류·보스) + 출전 덱 8칸 고르기. 계획: docs/hit-plan.md B */
 export class PrepareScene extends Phaser.Scene {
   private stageId = 1;
   private deck: string[] = [];

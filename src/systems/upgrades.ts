@@ -82,7 +82,7 @@ export class MetaProgress {
   shards: Record<string, number> = {}; // 🃏 유닛별 카드 조각
   ranks: Record<string, number> = {}; // 🃏 유닛별 카드 랭크(0~5)
   chestsOpened = 0; // 🎁 연 상자 수
-  deck: string[] = []; // ⚔️ 출전 덱(최대 6)
+  deck: string[] = []; // ⚔️ 출전 덱(최대 8)
   kills: Record<string, number> = {}; // 📖 적별 처치 수(도감)
   codexClaimed: string[] = []; // 📖 발견 보상 받은 적
   codexSteps: number[] = []; // 📖 받은 수집 단계
@@ -444,7 +444,7 @@ export class MetaProgress {
     return Object.entries(this.kills).some(([k, n]) => n > 0 && !this.codexClaimed.includes(k)) || claimableMilestone(this.codexFound, this.codexSteps) >= 0;
   }
 
-  /** ⚔️ 출전 덱 — 보유 유닛 중 최대 6(빈칸은 보유 순서대로 채움) */
+  /** ⚔️ 출전 덱 — 보유 유닛 중 최대 8(빈칸은 보유 순서대로 채움) */
   activeDeck(allUnits: string[]): string[] {
     return normalizeDeck(this.deck, allUnits.filter((k) => this.ownsUnit(k)));
   }

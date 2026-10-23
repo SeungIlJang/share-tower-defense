@@ -1,6 +1,6 @@
 /**
  * ⚔️ 유닛 상성 — 적 6종류(빠른 적·비행·중갑·원거리·무리·거대), 유닛마다 강한 종류가 하나(피해 ×1.5).
- * 출전 덱 6칸 — 관문 미리보기에서 나오는 적을 보고 유닛을 고름. 순수 로직(Vitest 검증). 계획: docs/hit-plan.md B
+ * 출전 덱 8칸 — 관문 미리보기에서 나오는 적을 보고 유닛을 고름. 순수 로직(Vitest 검증). 계획: docs/hit-plan.md B
  */
 import type { StageData } from '../types';
 import { bossForStage, isBoss } from './bosses';
@@ -66,7 +66,7 @@ export const UNIT_COUNTER: Record<string, EnemyKind | null> = {
 };
 
 export const COUNTER_MULT = 1.5;
-export const DECK_SIZE = 6;
+export const DECK_SIZE = 8;
 
 export function enemyKind(type: string): EnemyKind | null {
   return isBoss(type) ? 'giant' : ENEMY_KIND[type] ?? null;
@@ -106,7 +106,7 @@ export function goodUnits(stage: StageData, units: string[]): string[] {
   });
 }
 
-/** 출전 덱 정리 — 보유한 것만, 최대 6, 빈칸은 보유 유닛으로 채움(새로 산 유닛이 바로 나오게) */
+/** 출전 덱 정리 — 보유한 것만, 최대 8, 빈칸은 보유 유닛으로 채움(새로 산 유닛이 바로 나오게) */
 export function normalizeDeck(deck: string[], owned: string[]): string[] {
   const d = [...new Set(deck)].filter((k) => owned.includes(k)).slice(0, DECK_SIZE);
   for (const k of owned) if (d.length < DECK_SIZE && !d.includes(k)) d.push(k);

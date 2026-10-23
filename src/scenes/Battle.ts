@@ -14,7 +14,7 @@ import { UNIT_TIERS, unitTier } from '../systems/evolution';
 import { enemyLevel, hexColor, pickVariant, variantTable } from '../systems/enemyVariants';
 import { STAGES, WORLDS, goldMultFor } from '../systems/worlds';
 import { BOSSES, BOSS_KEYS, bossForStage } from '../systems/bosses';
-import { COUNTER_MULT, counterMult, enemyKind, UNIT_COUNTER, type EnemyKind } from '../systems/counters';
+import { COUNTER_MULT, DECK_SIZE, counterMult, enemyKind, UNIT_COUNTER, type EnemyKind } from '../systems/counters';
 import { dailyBonus, dailyRule, dailyStage, dailyStageId, dailyUnits, type DailyRule } from '../systems/daily';
 import { chestForEndless, chestForStage, rankMult, rollChest, type ChestLoot } from '../systems/chests';
 import { VOLLEY_CD, VOLLEY_MAX, VOLLEY_MULT, VOLLEY_NAMES, castleArchers, ALLY_CASTLE_TIERS, ENEMY_CASTLE_TIERS, allyCastleGun, allyCastleTier, castleHpMult, castleLook, castleTarget, enemyCastleGun, enemyCastleTier, type CastleShot } from '../systems/castle';
@@ -310,7 +310,7 @@ export class BattleScene extends Phaser.Scene {
     this.eventT = EVENT_FIRST;
     this.committed = false;
     this.usedUnits = {};
-    this.deck = this.rule ? dailyUnits(this.rule, Object.keys(UNITS).filter((k) => meta.ownsUnit(k))).slice(0, 6) : meta.activeDeck(Object.keys(UNITS));
+    this.deck = this.rule ? dailyUnits(this.rule, Object.keys(UNITS).filter((k) => meta.ownsUnit(k))).slice(0, DECK_SIZE) : meta.activeDeck(Object.keys(UNITS));
     this.counterFxT = 0;
     this.kills = {};
     this.metNew = new Set();

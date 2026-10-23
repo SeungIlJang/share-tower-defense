@@ -30,10 +30,10 @@ describe('⚔️ 유닛 상성', () => {
     expect(goodUnits(s, ['spear', 'cleric'])).toEqual(['spear']);
   });
 
-  it('출전 덱 — 보유만 · 최대 6 · 빈칸 채움', () => {
+  it('출전 덱 — 보유만 · 최대 8 · 빈칸 채움', () => {
     const owned = ['soldier', 'archer', 'knight', 'spear', 'mage', 'rogue', 'cleric', 'cannon'];
-    expect(normalizeDeck([], owned)).toEqual(owned.slice(0, 6));
-    expect(normalizeDeck(['cannon', 'cleric', 'nope'], owned)).toEqual(['cannon', 'cleric', 'soldier', 'archer', 'knight', 'spear']);
+    expect(normalizeDeck([], owned)).toEqual(owned.slice(0, 8));
+    expect(normalizeDeck(['cannon', 'cleric', 'nope'], owned)).toEqual(['cannon', 'cleric', 'soldier', 'archer', 'knight', 'spear', 'mage', 'rogue']);
     expect(normalizeDeck(['archer'], ['soldier', 'archer'])).toEqual(['archer', 'soldier']);
   });
 });
