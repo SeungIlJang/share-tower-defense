@@ -60,7 +60,8 @@ export class Base {
       this.stages = def.anims.idle!.frames;
       // 넓은 성(★3 이상)은 화면 밖으로 잘리지 않게 안쪽으로(우리 성 = 왼쪽 끝, 적 성 = 오른쪽 끝 기준)
       const half = (def.frameWidth * sc) / 2;
-      const sx = this.x < 640 ? Math.max(this.x, 6 + half) : Math.min(this.x, 1274 - half);
+      const ww = Math.max(1280, this.scene.cameras.main.getBounds().width); // 🎥 넓은 전장이면 그 끝 기준
+      const sx = this.x < ww / 2 ? Math.max(this.x, 6 + half) : Math.min(this.x, ww - 6 - half);
       this.sprite = this.scene.add
         .sprite(sx, this.ground, textureKey(key), this.stages[0])
         .setOrigin(0.5, def.footY / def.frameHeight)

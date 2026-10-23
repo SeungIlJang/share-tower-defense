@@ -31,6 +31,7 @@ import { LevelUpOverlay } from '../ui/LevelUp';
 import { TipPointer } from '../ui/Tutorial';
 import { fxWarning, playFx, resetFx, type FxKey } from '../systems/fx';
 import { KNOCK_MS, KNOCK_PX, knockChance } from '../systems/knockdown';
+import { LOOK_HOLD, SCREEN_W, followX, walkMult, worldWidth } from '../systems/camera';
 import { RULE_INFO, targetBonus, targetTime, WAGON_BLOCK, WAGON_SPEED, breachGoal, holdProdMult, holdSeconds, stageRule, wagonHp, type StageRule } from '../systems/stageRules';
 import { HERO_TIP_STAGE, TIP_TEXT, featureOn, nextTip, reachedStage, type Feature, type TipKey } from '../systems/tutorial';
 import { showRewarded } from '../systems/ads';
@@ -185,6 +186,18 @@ export class BattleScene extends Phaser.Scene {
   private goals = 0;
   private goalNeed = 0;
   private objText: Phaser.GameObjects.Text | null = null;
+  // 🎥 넓은 전장 + 카메라(영웅 따라가기 · 지도로 둘러보기 · 화면 밖 알림)
+  private worldW = SCREEN_W;
+  private walkK = 1;
+  private lookX: number | null = null; // 둘러보는 중이면 카메라 왼쪽 끝
+  private lookT = 0;
+  private homeBtn!: Phaser.GameObjects.Text;
+  private alertL!: Phaser.GameObjects.Text;
+  private alertR!: Phaser.GameObjects.Text;
+  private lastBaseHp = 0;
+  private baseHitAt = -99;
+  private uiQueue: Phaser.GameObjects.GameObject[] = [];
+  private uiConts = new Set<Phaser.GameObjects.Container>();
   private counterFxT = 0; // '효과적!' 표시 간격
   private kills: Record<string, number> = {}; // 📖 이번 판 적별 처치
   private metNew = new Set<string>(); // 📖 이번 판에 '새 몬스터!' 알린 적
@@ -238,7 +251,8 @@ export class BattleScene extends Phaser.Scene {
       const cb = Phaser.Display.Color.IntegerToColor(b);
       return Phaser.Display.Color.GetColor(ca.red + (cb.red - ca.red) * t, ca.green + (cb.green - ca.green) * t, ca.blue + (cb.blue - ca.blue) * t);
     };
-    const g = this.add.graphics().setDepth(-9);
+    // 🎥 원근감 3겹 — 하늘·달(고정) / 먼 언덕(0.3배 속도) / 가까운 언덕(0.6배 속도)
+    const g = this.add.graphics().setDepth(-9).setScrollFactor(0);
     const horizon = mix(sky, line, 0.55);
     g.fillGradientStyle(sky, sky, horizon, horizon, 1);
     g.fillRect(0, 44, 1280, LANE_Y - 44);
@@ -247,21 +261,23 @@ export class BattleScene extends Phaser.Scene {
     g.fillCircle(980, 130, 58);
     g.fillStyle(0xfff4c8, 0.85);
     g.fillCircle(980, 130, 34);
-    // 먼 언덕(뒤) → 가까운 언덕(앞)
-    const hills = (baseY: number, amp: number, color: number, seed: number): void => {
-      g.fillStyle(color, 1);
-      g.beginPath();
-      g.moveTo(0, LANE_Y);
-      for (let x = 0; x <= 1280; x += 20) g.lineTo(x, baseY - amp * (0.55 + 0.45 * Math.sin(x / 140 + seed) * Math.cos(x / 310 + seed * 2)));
-      g.lineTo(1280, LANE_Y);
-      g.closePath();
-      g.fillPath();
+    // 먼 언덕(뒤) → 가까운 언덕(앞) — 느리게 움직이는 겹일수록 좁게 그려도 됨
+    const hills = (baseY: number, amp: number, color: number, seed: number, f: number): void => {
+      const h = this.add.graphics().setDepth(-9).setScrollFactor(f, 1);
+      const w = 1280 + (this.worldW - 1280) * f;
+      h.fillStyle(color, 1);
+      h.beginPath();
+      h.moveTo(0, LANE_Y);
+      for (let x = 0; x <= w; x += 20) h.lineTo(x, baseY - amp * (0.55 + 0.45 * Math.sin(x / 140 + seed) * Math.cos(x / 310 + seed * 2)));
+      h.lineTo(w, LANE_Y);
+      h.closePath();
+      h.fillPath();
     };
-    hills(LANE_Y - 120, 90, mix(sky, line, 0.35), 1.3);
-    hills(LANE_Y - 40, 70, mix(sky, lane, 0.8), 4.1);
-    // 반짝이는 별
+    hills(LANE_Y - 120, 90, mix(sky, line, 0.35), 1.3, 0.3);
+    hills(LANE_Y - 40, 70, mix(sky, lane, 0.8), 4.1, 0.6);
+    // 반짝이는 별(하늘과 함께 고정)
     for (let i = 0; i < 26; i++) {
-      const st = this.add.circle(Phaser.Math.Between(10, 1270), Phaser.Math.Between(56, LANE_Y - 170), Phaser.Math.FloatBetween(1, 2.4), 0xffffff, 0.8).setDepth(-8);
+      const st = this.add.circle(Phaser.Math.Between(10, 1270), Phaser.Math.Between(56, LANE_Y - 170), Phaser.Math.FloatBetween(1, 2.4), 0xffffff, 0.8).setDepth(-8).setScrollFactor(0);
       this.tweens.add({ targets: st, alpha: 0.15, duration: Phaser.Math.Between(900, 2200), yoyo: true, repeat: -1, delay: Phaser.Math.Between(0, 2000) });
     }
   }
@@ -269,6 +285,7 @@ export class BattleScene extends Phaser.Scene {
   create(): void {
     this.over = false;
     resetFx();
+    this.pinUiSetup();
     this.paused = false;
     this.pauseLayer = null;
     this.reviving = false;
@@ -302,10 +319,16 @@ export class BattleScene extends Phaser.Scene {
 
     // 배경 + 레인
     const [sky, lane, line] = this.endless ? THEMES.endless : WORLDS[(this.stage.world ?? 1) - 1].battle; // 🗺️ 월드별 배경색
-    this.add.rectangle(640, 360, 1280, 720, sky).setDepth(-10);
+    // 🎥 전장 폭(1~3관문은 화면 한 장) · 카메라 범위 · 넓어진 만큼 이동 속도 보정
+    const W = worldWidth(this.stage.id, this.endless, !!this.rule);
+    this.worldW = W;
+    this.walkK = walkMult(W);
+    this.lookX = null;
+    this.cameras.main.setBounds(0, 0, W, 720).setScroll(0, 0);
+    this.add.rectangle(640, 360, 1280, 720, sky).setDepth(-10).setScrollFactor(0);
     this.drawBackdrop(sky, lane, line);
-    this.add.rectangle(640, LANE_Y + 40, 1280, 80, lane).setDepth(-5);
-    this.add.rectangle(640, LANE_Y + 2, 1280, 3, line).setDepth(-4);
+    this.add.rectangle(W / 2, LANE_Y + 40, W, 80, lane).setDepth(-5);
+    this.add.rectangle(W / 2, LANE_Y + 2, W, 3, line).setDepth(-4);
 
     // 🏰 우리 성: 성 레벨로 체력·단계 / 적 성: 관문(무한=웨이브)으로 단계
     const ct = allyCastleTier(meta.castleLevel('castle'));
@@ -314,7 +337,7 @@ export class BattleScene extends Phaser.Scene {
     // 무한 모드: 적 기지는 부서지지 않는 생산 기지(버틴 웨이브가 기록)
     this.sRule = this.endless || this.rule ? 'normal' : stageRule(this.stage.id);
     const tough = this.sRule === 'hold' || this.sRule === 'breach'; // 수성·돌파는 적 성을 부술 필요 없음
-    this.enemyBase = new Base(this, 1175, LANE_Y - 10, this.endless || tough ? 1e9 : this.stage.baseHp, 0xc0392b, [castleLook('enemy', this.enemyTier), 'base_enemy'], 1 + 0.04 * this.enemyTier);
+    this.enemyBase = new Base(this, W - 105, LANE_Y - 10, this.endless || tough ? 1e9 : this.stage.baseHp, 0xc0392b, [castleLook('enemy', this.enemyTier), 'base_enemy'], 1 + 0.04 * this.enemyTier);
     this.allyGunT = 1;
     this.enemyGunT = 2.5;
     this.archers = { ally: [], enemy: [] };
@@ -371,6 +394,7 @@ export class BattleScene extends Phaser.Scene {
     this.looks = Object.fromEntries(Object.keys(UNITS).map((k) => [k, ensureSkin(this, k, meta.equippedSkin(k), meta.level(k))]));
     this.hud = this.makeHud();
     this.tip = new TipPointer(this);
+    this.setupCameraUi();
     // 키보드 1~9 = 특수 무기
     this.input.keyboard?.on('keydown', (ev: KeyboardEvent) => {
       const k = ev.key.toLowerCase();
@@ -398,6 +422,7 @@ export class BattleScene extends Phaser.Scene {
       if (Math.abs(dx) < 6) return; // 살짝 누른 건 무시
       this.heroTarget = this.heroDrag.hx + dx * HERO_DRAG_MULT;
       if (Math.abs(dx) > 40) this.tipDone('hero');
+      this.lookX = null; // 🎥 영웅을 움직이면 영웅에게 돌아옴
     });
     this.input.on('pointerup', () => {
       this.heroDrag = null;
@@ -417,12 +442,12 @@ export class BattleScene extends Phaser.Scene {
     });
 
     // 보스 HP 바(상단, 보스 등장 시만)
-    this.bossBarBg = this.add.rectangle(620, 60, 420, 20, 0x000000, 0.6).setDepth(90).setVisible(false);
-    this.bossFill = this.add.rectangle(620 - 202, 60, 404, 14, 0xff3b3b).setOrigin(0, 0.5).setDepth(91).setVisible(false);
+    this.bossBarBg = this.add.rectangle(620, 60, 420, 20, 0x000000, 0.6).setDepth(102).setVisible(false);
+    this.bossFill = this.add.rectangle(620 - 202, 60, 404, 14, 0xff3b3b).setOrigin(0, 0.5).setDepth(103).setVisible(false);
     this.bossText = this.add
       .text(620, 60, '', { fontFamily: 'sans-serif', fontSize: '15px', fontStyle: 'bold', color: '#fff', stroke: '#000000', strokeThickness: 4 })
       .setOrigin(0.5)
-      .setDepth(92)
+      .setDepth(110)
       .setVisible(false);
 
     // ⏩ 배속 · 🛒 상점 · ⏸️ 일시정지 — 상단 오른쪽(휴대폰 가장자리에 가리지 않게 안쪽)
@@ -457,6 +482,12 @@ export class BattleScene extends Phaser.Scene {
 
   /** HUD 만들기(전투 중 상점에서 산 것이 생기면 다시 만듦) */
   private makeHud(): Hud {
+    const hud = this.buildHud();
+    hud.setRadar(this.worldW, (x) => this.lookAt(x)); // 🗺️ 지도로 둘러보기
+    return hud;
+  }
+
+  private buildHud(): Hud {
     // ⚔️ 출전 덱 유닛 + (아직 안 산 유닛은 '구매' 안내용) — 덱에 없는 보유 유닛은 숨김
     const shown = Object.fromEntries(Object.keys(UNITS).filter((k) => this.deck.includes(k) || !meta.ownsUnit(k)).map((k) => [k, UNITS[k]]));
     const deckFirst = Object.fromEntries([...this.deck.map((k) => [k, UNITS[k]] as const), ...Object.entries(shown).filter(([k]) => !this.deck.includes(k))]);
@@ -734,13 +765,6 @@ export class BattleScene extends Phaser.Scene {
     }
   }
 
-  private linePos(): number {
-    let front = this.playerBase.x;
-    for (const u of this.units) if (u.active && u.x > front) front = u.x;
-    const span = this.enemyBase.x - this.playerBase.x;
-    return span > 0 ? (front - this.playerBase.x) / span : 0;
-  }
-
   /** 적 등장 — at: 위치(없으면 적 기지 앞) · exact: 변종으로 바꾸지 않음(소환·분열) */
   private spawnEnemy(type: string, elite = false, at?: number, exact = false): void {
     if (!exact && !BOSS.has(type)) type = pickVariant(type, enemyLevel(this.endless, this.stage.id, this.waveNo), VARIANTS, Math.random); // 👾 변종
@@ -782,7 +806,7 @@ export class BattleScene extends Phaser.Scene {
       const t = this.add
         .text(640, 210, `👑 ${BOSSES[type]?.name ?? '보스'} 등장!`, { fontFamily: 'sans-serif', fontSize: '44px', fontStyle: 'bold', color: '#ff5a6e' })
         .setOrigin(0.5)
-        .setDepth(95);
+        .setDepth(110);
       this.tweens.add({ targets: t, y: 170, alpha: 0, duration: 1600, onComplete: () => t.destroy() });
     }
   }
@@ -904,7 +928,7 @@ export class BattleScene extends Phaser.Scene {
           u.idle();
         }
       } else {
-        u.moveBy(u.stats.speed * dt);
+        u.moveBy(u.stats.speed * dt * this.walkK);
       }
     }
 
@@ -936,7 +960,7 @@ export class BattleScene extends Phaser.Scene {
           e.idle();
         }
       } else {
-        e.moveBy(-e.stats.speed * e.speedMult * dt);
+        e.moveBy(-e.stats.speed * e.speedMult * dt * this.walkK);
       }
     }
 
@@ -951,6 +975,7 @@ export class BattleScene extends Phaser.Scene {
 
     this.cleanupDead();
     this.updateBossBar();
+    this.updateCamera(dt);
     this.hud.updateHero(
       this.mana.amount,
       this.mana.max,
@@ -964,7 +989,15 @@ export class BattleScene extends Phaser.Scene {
       energyMax: this.energy.max,
       food: this.usedFood(),
       foodMax: this.foodMax,
-      linePos: this.linePos(),
+      radar: {
+        w: this.worldW,
+        view: this.cameras.main.scrollX,
+        allies: this.units.filter((u) => u.active).map((u) => u.x),
+        enemies: this.enemies.filter((e) => e.active && !BOSS.has(e.type)).map((e) => e.x),
+        bosses: this.enemies.filter((e) => e.active && BOSS.has(e.type)).map((e) => e.x),
+        hero: this.hero?.active ? this.hero.x : null,
+        wagon: this.wagon?.active ? this.wagon.x : null,
+      },
       afford: this.affordMap(),
       cd: this.cdMap(),
       beat: this.beat,
@@ -990,7 +1023,7 @@ export class BattleScene extends Phaser.Scene {
   private clericFollow(u: Unit, dt: number): void {
     let front = -Infinity;
     for (const o of this.units) if (o.active && o !== u && o.type !== 'cleric' && o.x > front) front = o.x;
-    if (front > -Infinity && u.x < front - 50) u.moveBy(u.stats.speed * dt);
+    if (front > -Infinity && u.x < front - 50) u.moveBy(u.stats.speed * dt * this.walkK);
     else u.idle();
   }
 
@@ -1352,14 +1385,14 @@ export class BattleScene extends Phaser.Scene {
     if (k === 'summon') {
       const p = this.hud.unitCardPos(Object.keys(UNITS).find((u) => meta.ownsUnit(u)) ?? '');
       if (p) this.tip.show(k, p.x, p.y, t, { ring: 74, bubbleY: 300 });
-    } else if (k === 'hero') this.tip.show(k, this.hero.x - 40, LANE_Y - 40, t, { drag: true, ring: 0, bubbleY: 180 });
+    } else if (k === 'hero') this.tip.show(k, this.hero.x - 40, LANE_Y - 40, t, { drag: true, ring: 0, bubbleY: 180, world: true });
     else if (k === 'mace') {
       const p = this.hud.heroSkillPos(0);
       if (p) this.tip.show(k, p.x, p.y, t, { ring: 50, bubbleY: 230 });
     } else if (k === 'weapon') {
       const p = this.hud.weaponPos(wi);
       if (p) this.tip.show(k, p.x, p.y, t, { from: 'above', ring: 44, bubbleY: 300 });
-    } else if (k === 'volley') this.tip.show(k, this.playerBase.cx, this.playerBase.top - 34, t, { ring: 40, bubbleY: 160 });
+    } else if (k === 'volley') this.tip.show(k, this.playerBase.cx, this.playerBase.top - 34, t, { ring: 40, bubbleY: 160, world: true });
     else if (k === 'perfect') {
       const p = this.hud.beatPos();
       this.tip.show(k, p.x, p.y, t, { from: 'above', ring: 0, bubbleY: 300 });
@@ -1389,6 +1422,91 @@ export class BattleScene extends Phaser.Scene {
     this.tweens.add({ targets: t, y: t.y - 26, alpha: 0, scale: 1.4, duration: 520, onComplete: () => t.destroy() });
   }
 
+  /** 🎥 화면에 붙는 UI — 깊이 98 이상(HUD·버튼·창·안내)은 카메라가 움직여도 제자리. 전장 위 안내는 setData('world') */
+  private pinUiSetup(): void {
+    this.uiQueue = [];
+    this.uiConts = new Set();
+    const onAdd = (go: Phaser.GameObjects.GameObject): void => {
+      this.uiQueue.push(go);
+    };
+    this.events.on(Phaser.Scenes.Events.ADDED_TO_SCENE, onAdd);
+    this.events.on(Phaser.Scenes.Events.POST_UPDATE, this.pinUi, this);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.events.off(Phaser.Scenes.Events.ADDED_TO_SCENE, onAdd);
+      this.events.off(Phaser.Scenes.Events.POST_UPDATE, this.pinUi, this);
+    });
+  }
+
+  private pinUi(): void {
+    type Pinnable = Phaser.GameObjects.GameObject & { depth?: number; setScrollFactor?: (x: number, y?: number) => unknown };
+    for (const go of this.uiQueue as Pinnable[]) {
+      if (!go.scene || (go.depth ?? 0) < 98 || go.getData('world')) continue;
+      go.setScrollFactor?.(0, 0);
+      if (go instanceof Phaser.GameObjects.Container) this.uiConts.add(go);
+    }
+    this.uiQueue = [];
+    // 창(레벨업·일시정지 등)은 나중에 자식이 붙으므로 매번 확인(입력 판정도 자식 기준)
+    const zero = (c: Phaser.GameObjects.Container): void => {
+      for (const ch of c.list as (Phaser.GameObjects.GameObject & { scrollFactorX?: number; setScrollFactor?: (x: number, y?: number) => unknown })[]) {
+        if (ch.scrollFactorX !== 0) ch.setScrollFactor?.(0, 0);
+        if (ch instanceof Phaser.GameObjects.Container) zero(ch);
+      }
+    };
+    for (const c of this.uiConts) {
+      if (!c.scene) this.uiConts.delete(c);
+      else zero(c);
+    }
+  }
+
+  /** 🎥 📍 영웅에게 · ◀ 화면 밖 알림 ▶ */
+  private setupCameraUi(): void {
+    this.lastBaseHp = this.playerBase.hp;
+    this.baseHitAt = -99;
+    const style = { fontFamily: 'sans-serif', fontSize: '18px', fontStyle: 'bold', color: '#ffffff', padding: { x: 10, y: 6 } };
+    this.homeBtn = this.add.text(1218, 96, '📍 영웅', { ...style, backgroundColor: '#2a5fd0ee' }).setOrigin(0.5).setDepth(106).setVisible(false).setInteractive({ useHandCursor: true });
+    this.homeBtn.on('pointerdown', () => {
+      this.lookX = null;
+      sfx(this, 'click');
+    });
+    this.alertL = this.add.text(8, 190, '◀ 🏰 성이 공격받아요!', { ...style, backgroundColor: '#c0392bee' }).setOrigin(0, 0.5).setDepth(106).setVisible(false).setInteractive({ useHandCursor: true });
+    this.alertL.on('pointerdown', () => this.lookAt(this.playerBase.x + 400));
+    this.alertR = this.add.text(1272, 190, '👑 보스 ▶', { ...style, backgroundColor: '#8a2a8aee' }).setOrigin(1, 0.5).setDepth(106).setVisible(false).setInteractive({ useHandCursor: true });
+    this.alertR.on('pointerdown', () => {
+      const b = this.enemies.find((e) => e.active && BOSS.has(e.type));
+      if (b) this.lookAt(b.x);
+    });
+  }
+
+  /** 🗺️ 지도에서 고른 곳을 화면 가운데로(3초 손을 떼면 영웅에게 돌아옴) */
+  private lookAt(x: number): void {
+    if (this.worldW <= SCREEN_W) return;
+    this.lookX = x - SCREEN_W / 2;
+    this.lookT = LOOK_HOLD;
+  }
+
+  /** 🎥 카메라 — 영웅을 화면 왼쪽 1/3에 부드럽게 따라감 / 둘러보는 중이면 그곳 + 화면 밖 알림 */
+  private updateCamera(dt: number): void {
+    const cam = this.cameras.main;
+    if (this.playerBase.hp < this.lastBaseHp) this.baseHitAt = this.clock;
+    this.lastBaseHp = this.playerBase.hp;
+    if (this.worldW <= SCREEN_W) return;
+    if (this.lookX !== null) {
+      this.lookT -= dt;
+      if (this.lookT <= 0) this.lookX = null;
+    }
+    const front = this.units.reduce((m, u) => (u.active ? Math.max(m, u.x) : m), this.playerBase.x);
+    const target = this.lookX ?? followX(this.hero?.active ? this.hero.x : front, this.worldW);
+    const k = Math.min(1, dt * (this.lookX !== null ? 12 : 5));
+    cam.scrollX += (Phaser.Math.Clamp(target, 0, this.worldW - SCREEN_W) - cam.scrollX) * k;
+    this.homeBtn.setVisible(this.lookX !== null);
+    // ◀ 성이 화면 밖인데 맞고 있음 / 보스가 화면 오른쪽 밖 ▶
+    const blink = 0.55 + 0.45 * Math.sin(this.time.now / 130);
+    const baseHidden = cam.scrollX > this.playerBase.x + 40;
+    this.alertL.setVisible(baseHidden && this.clock - this.baseHitAt < 1.5).setAlpha(blink);
+    const boss = this.enemies.find((e) => e.active && BOSS.has(e.type) && e.x > cam.scrollX + SCREEN_W - 30);
+    this.alertR.setVisible(!!boss).setAlpha(blink);
+  }
+
   /** 🎯 특수 관문 준비 — 규칙 안내 + 목표 표시 + (호위) 마차 */
   private setupRule(tough: boolean): void {
     this.wagon = null;
@@ -1406,7 +1524,7 @@ export class BattleScene extends Phaser.Scene {
       .text(640, 190, `${info.icon} ${info.name}
 ${info.desc}`, { fontFamily: 'sans-serif', fontSize: '24px', fontStyle: 'bold', color: '#3a2a10', align: 'center', lineSpacing: 8, backgroundColor: '#fff4c8', padding: { x: 22, y: 14 } })
       .setOrigin(0.5)
-      .setDepth(97);
+      .setDepth(110);
     this.tweens.add({ targets: card, alpha: 0, delay: 3500, duration: 500, onComplete: () => card.destroy() });
     if (this.sRule === 'hold') this.holdLeft = holdSeconds(this.stage.id);
     if (this.sRule === 'breach') this.goalNeed = breachGoal(this.stage.id);
@@ -1433,7 +1551,7 @@ ${info.desc}`, { fontFamily: 'sans-serif', fontSize: '24px', fontStyle: 'bold', 
       const w = this.wagon;
       const blocked = this.enemies.some((e) => e.active && e.x > w.x && e.x - w.x < WAGON_BLOCK); // 앞을 막으면 멈춤
       if (blocked || w.stunned) w.idle();
-      else w.moveBy(WAGON_SPEED * dt);
+      else w.moveBy(WAGON_SPEED * this.walkK * dt);
       const left = Math.max(0, Math.round((this.enemyBase.x - BASE_FRONT - 20 - w.x) / 10));
       this.objText.setText(`🛒 마차 호위 — 남은 거리 ${left}m · ❤️ ${Math.ceil((w.hp / w.maxHp) * 100)}%${blocked ? ' · ⛔ 길이 막혔어요!' : ''}`);
     } else if (this.sRule === 'hold') {
@@ -1780,7 +1898,7 @@ ${info.desc}`, { fontFamily: 'sans-serif', fontSize: '24px', fontStyle: 'bold', 
     if (goal !== null && Math.abs(Phaser.Math.Clamp(goal, min, max) - h.x) > 2) {
       // 적을 지나갈 수 없음 — 앞(뒤) 가장 가까운 적 앞에서 멈추고 싸움, 적이 쓰러지면 다시 이동
       const [lo, hi] = heroMoveRange(h.x, this.enemies.filter((e) => e.active).map((e) => e.x), min, max);
-      const nx = stepToward(h.x, goal, h.stats.speed, dt, lo, hi);
+      const nx = stepToward(h.x, goal, h.stats.speed * this.walkK, dt, lo, hi);
       if (Math.abs(nx - h.x) > 0.3) {
         h.faceDir(nx < h.x ? -1 : 1);
         h.moveBy(nx - h.x);
@@ -1942,7 +2060,7 @@ ${info.desc}`, { fontFamily: 'sans-serif', fontSize: '24px', fontStyle: 'bold', 
     for (const e of this.enemies) if (e.active && !BOSS.has(e.type)) e.moveBy(Math.min(40, Math.max(0, this.enemyBase.x - BASE_FRONT - e.x)));
     const ring = this.add.circle(this.playerBase.x + 80, LANE_Y - 30, 30).setStrokeStyle(8, 0xffe14d).setDepth(85);
     this.tweens.add({ targets: ring, scale: 14, alpha: 0, duration: 650, onComplete: () => ring.destroy() });
-    const flash = this.add.rectangle(640, 360, 1280, 720, 0xfff6c0, 0.35).setDepth(84);
+    const flash = this.add.rectangle(640, 360, 1280, 720, 0xfff6c0, 0.35).setDepth(98);
     this.tweens.add({ targets: flash, alpha: 0, duration: 400, onComplete: () => flash.destroy() });
   }
 
@@ -1957,7 +2075,7 @@ ${info.desc}`, { fontFamily: 'sans-serif', fontSize: '24px', fontStyle: 'bold', 
         strokeThickness: 5,
       })
       .setOrigin(0.5)
-      .setDepth(96);
+      .setDepth(110);
     this.tweens.add({ targets: t, y: 200, alpha: 0, duration: 900, onComplete: () => t.destroy() });
   }
 
@@ -1997,7 +2115,7 @@ ${info.desc}`, { fontFamily: 'sans-serif', fontSize: '24px', fontStyle: 'bold', 
       const t = this.add
         .text(640, 150 + 32 * row++, `🤝 ${s.icon} ${s.name}!  ${s.desc}`, { fontFamily: 'sans-serif', fontSize: '22px', fontStyle: 'bold', color: '#aef5ff', stroke: '#0a2a4a', strokeThickness: 5 })
         .setOrigin(0.5)
-        .setDepth(96);
+        .setDepth(110);
       this.tweens.add({ targets: t, y: t.y - 25, alpha: 0, delay: 1100, duration: 500, onComplete: () => t.destroy() });
     }
   }
@@ -2257,7 +2375,7 @@ ${info.desc}`, { fontFamily: 'sans-serif', fontSize: '24px', fontStyle: 'bold', 
     const t = this.add
       .text(640, 220, '👑 BOSS DOWN!', { fontFamily: 'sans-serif', fontSize: '56px', fontStyle: 'bold', color: '#ffe14d', stroke: '#7a3a00', strokeThickness: 8 })
       .setOrigin(0.5)
-      .setDepth(97)
+      .setDepth(110)
       .setScale(0.4);
     this.tweens.add({ targets: t, scale: 1, duration: 260, ease: 'Back.easeOut' });
     this.tweens.add({ targets: t, alpha: 0, delay: 700, duration: 300, onComplete: () => t.destroy() });

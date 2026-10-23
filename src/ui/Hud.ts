@@ -5,6 +5,7 @@ import { WEAPONS } from '../systems/weapons';
 import type { Synergy } from '../systems/synergy';
 import { HERO_SKILLS } from '../systems/hero';
 import { KIND_INFO, UNIT_COUNTER } from '../systems/counters';
+import { fromRadar, toRadar } from '../systems/camera';
 
 export interface HudState {
   lv: number;
@@ -13,7 +14,7 @@ export interface HudState {
   energyMax: number;
   food: number;
   foodMax: number;
-  linePos: number; // 0(우리 기지) ~ 1(적 기지)
+  radar?: RadarState; // 🗺️ 전장 지도(VS 막대 자리)
   afford: Record<string, boolean>; // 유닛별 지금 소환 가능 여부
   cd: Record<string, number>; // ⏱️ 유닛별 소환 대기 남은 비율(0~1)
   beat: number; // ⏱️ 리듬 소환 마커 위치 0~1
@@ -21,6 +22,17 @@ export interface HudState {
   upg: Record<string, { lv: number; cost: number; afford: boolean }>; // 전장 실시간 강화
   weapons: ({ ratio: number; ready: boolean } | null)[]; // 특수 무기 게이지(구매 안 한 것 = null)
   good?: Record<string, boolean>; // ⚔️ 지금 전장에 상성 적이 있는 유닛
+}
+
+/** 🗺️ 전장 지도 — 전장 x 좌표들 */
+export interface RadarState {
+  w: number; // 전장 폭
+  view: number; // 카메라 왼쪽 끝
+  allies: number[];
+  enemies: number[];
+  bosses: number[];
+  hero: number | null;
+  wagon: number | null;
 }
 
 /** 🎓 처음 하는 사람에게 단계적으로 보여 줄 HUD 기능(systems/tutorial.ts) */
@@ -94,9 +106,9 @@ export class Hud {
   private scene: Phaser.Scene;
   private lvText: Phaser.GameObjects.Text;
   private goldText: Phaser.GameObjects.Text;
-  private vsBlue: Phaser.GameObjects.Rectangle;
-  private vsRed: Phaser.GameObjects.Rectangle;
-  private vsMark: Phaser.GameObjects.Triangle;
+  private radarG: Phaser.GameObjects.Graphics;
+  private onLook: ((x: number) => void) | null = null; // 지도를 누르거나 끌면 그곳을 봄
+  private radarW = 1280;
   private readonly vsX = 430;
   private readonly vsW = 360;
 
@@ -144,11 +156,28 @@ export class Hud {
       .setDepth(d + 1)
       .setVisible(false);
     this.lvText = scene.add.text(64, 22, 'LV 1', { fontFamily: 'sans-serif', fontSize: '22px', fontStyle: 'bold', color: '#ffd34d' }).setOrigin(0, 0.5).setDepth(d + 1);
-    scene.add.rectangle(this.vsX + this.vsW / 2, 22, this.vsW + 4, 20, 0x000000, 0.5).setDepth(d);
-    this.vsBlue = scene.add.rectangle(this.vsX, 22, this.vsW / 2, 16, 0x3aa0ff).setOrigin(0, 0.5).setDepth(d + 1);
-    this.vsRed = scene.add.rectangle(this.vsX + this.vsW, 22, this.vsW / 2, 16, 0xff4a4a).setOrigin(1, 0.5).setDepth(d + 1);
-    scene.add.text(this.vsX + this.vsW / 2, 22, 'VS', { fontFamily: 'sans-serif', fontSize: '15px', fontStyle: 'bold', color: '#fff', stroke: '#000000', strokeThickness: 3 }).setOrigin(0.5).setDepth(d + 2);
-    this.vsMark = scene.add.triangle(this.vsX + this.vsW / 2, 36, 0, 8, 10, 8, 5, 0, 0xffffff).setDepth(d + 2);
+    // 🗺️ 전장 지도(아군 파랑·적 빨강·보스 금색·영웅 노랑, 흰 네모 = 지금 보는 곳) — 누르거나 끌면 그곳을 봄
+    scene.add.rectangle(this.vsX + this.vsW / 2, 22, this.vsW + 6, 30, 0x000000, 0.55).setStrokeStyle(1, 0x3a4560).setDepth(d);
+    this.radarG = scene.add.graphics().setDepth(d + 1);
+    const zone = scene.add.rectangle(this.vsX + this.vsW / 2, 22, this.vsW + 6, 40, 0xffffff, 0.001).setDepth(d + 3).setInteractive({ useHandCursor: true });
+    let radarDrag = false;
+    const look = (p: Phaser.Input.Pointer): void => this.onLook?.(fromRadar(p.x, this.radarW, this.vsX, this.vsW));
+    zone.on('pointerdown', (p: Phaser.Input.Pointer) => {
+      radarDrag = true;
+      look(p);
+    });
+    const rMove = (p: Phaser.Input.Pointer): void => {
+      if (radarDrag && p.isDown) look(p);
+    };
+    const rUp = (): void => {
+      radarDrag = false;
+    };
+    scene.input.on('pointermove', rMove);
+    scene.input.on('pointerup', rUp);
+    this.offs.push(() => {
+      scene.input.off('pointermove', rMove);
+      scene.input.off('pointerup', rUp);
+    });
     this.goldText = scene.add.text(808, 22, '🪙 0', { fontFamily: 'sans-serif', fontSize: '22px', fontStyle: 'bold', color: '#ffd34d' }).setOrigin(0, 0.5).setDepth(d + 1);
 
     // 하단 HUD 판(전장과 구분)
@@ -389,6 +418,31 @@ export class Hud {
     });
   }
 
+  /** 🗺️ 전장 지도 연결(전장 폭 · 둘러보기 콜백) */
+  setRadar(worldW: number, onLook: (x: number) => void): void {
+    this.radarW = worldW;
+    this.onLook = onLook;
+  }
+
+  private drawRadar(r: RadarState): void {
+    const g = this.radarG;
+    const X = (x: number): number => toRadar(x, r.w, this.vsX, this.vsW);
+    g.clear();
+    g.fillStyle(0x2a3348, 1).fillRect(this.vsX, 28, this.vsW, 3); // 땅
+    g.fillStyle(0x3aa0ff, 1).fillRect(this.vsX - 2, 12, 6, 18); // 우리 성
+    g.fillStyle(0xff4a4a, 1).fillRect(this.vsX + this.vsW - 4, 12, 6, 18); // 적 성
+    g.fillStyle(0x6ab8ff, 1);
+    for (const x of r.allies) g.fillRect(X(x) - 1.5, 21, 3, 6);
+    g.fillStyle(0xff6a6a, 1);
+    for (const x of r.enemies) g.fillRect(X(x) - 1.5, 21, 3, 6);
+    g.fillStyle(0xffc93a, 1);
+    for (const x of r.bosses) g.fillCircle(X(x), 20, 5);
+    if (r.wagon !== null) g.fillStyle(0xc8a060, 1).fillRect(X(r.wagon) - 4, 18, 8, 8);
+    if (r.hero !== null) g.fillStyle(0xffe14d, 1).fillTriangle(X(r.hero), 24, X(r.hero) - 5, 12, X(r.hero) + 5, 12);
+    const vw = (1280 / r.w) * this.vsW; // 지금 보는 곳
+    g.lineStyle(2, 0xffffff, 0.85).strokeRect(X(r.view), 9, vw, 26);
+  }
+
   /** 🎓 👆 안내용 위치 — 유닛 카드 / 특수 무기 카드 / 영웅 스킬 / 리듬 바 */
   unitCardPos(key: string): { x: number; y: number } | null {
     const s = this.slots.find((x) => x.key === key) ?? this.slots[0];
@@ -446,10 +500,7 @@ export class Hud {
   update(s: HudState): void {
     this.lvText.setText(`LV ${s.lv}`);
     this.goldText.setText(`🪙 ${s.gold}`);
-    const pos = Phaser.Math.Clamp(s.linePos, 0, 1);
-    this.vsBlue.setSize(this.vsW * pos, 16);
-    this.vsRed.setSize(this.vsW * (1 - pos), 16);
-    this.vsMark.setX(this.vsX + this.vsW * pos);
+    if (s.radar) this.drawRadar(s.radar);
     this.energyFill.setSize(396 * Phaser.Math.Clamp(s.energy / s.energyMax, 0, 1), 18);
     this.energyText.setText(`${Math.floor(s.energy)} / ${s.energyMax}`);
     this.foodFill.setSize(396 * Phaser.Math.Clamp(s.food / s.foodMax, 0, 1), 18);

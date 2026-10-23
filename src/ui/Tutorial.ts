@@ -7,6 +7,7 @@ export interface TipOpts {
   depth?: number;
   ring?: number; // 대상 강조 원 반지름(0 = 없음)
   finger?: boolean; // 손가락 표시(기본 true)
+  world?: boolean; // 🎥 전장 위(영웅·성)를 가리킴 — 카메라와 함께 움직임
 }
 
 /** 👆 손가락 안내 — 대상을 가리키는 손가락 + 강조 고리 + 말풍선. 한 번에 하나만 */
@@ -28,6 +29,7 @@ export class TipPointer {
     this.key = key;
     this.from = o.from ?? 'below';
     const layer = s.add.container(0, 0).setDepth(o.depth ?? 150);
+    if (o.world) layer.setData('world', true);
     this.layer = layer;
     const r = o.ring ?? 52;
     if (r > 0) {
@@ -63,7 +65,7 @@ export class TipPointer {
         ease: 'Sine.inOut',
       });
     const bubble = s.add
-      .text(Phaser.Math.Clamp(x, 300, 980), o.bubbleY ?? 200, text, {
+      .text(o.world ? Math.max(300, x) : Phaser.Math.Clamp(x, 300, 980), o.bubbleY ?? 200, text, {
         fontFamily: 'sans-serif',
         fontSize: '24px',
         fontStyle: 'bold',
