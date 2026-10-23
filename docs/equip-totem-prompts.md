@@ -1,6 +1,7 @@
 # 🛡️ 영웅 장비 · 🗿 설치물 카드 — Codex 그림 프롬프트
 
-> 2026-10-23. 팔라독 분석 ⑤⑥(`docs/paladog-apk-analysis.md`). **그림은 Codex가 만들고, 게임 연결·검증은 Claude가 맡음.**
+> 2026-10-23. ✅ 5장 모두 생성(Codex)·게임 적용 완료 — `tools/extract_grid.py`로 잘라 `public/sprites/equip_*`·`totem_*`.
+> 팔라독 분석 ⑤⑥(`docs/paladog-apk-analysis.md`). **그림은 Codex가 만들고, 게임 연결·검증은 Claude가 맡음.**
 > 원본은 저장소에 넣지 않음(`images/image/...`). 받으면 `tools/extract_sprites.py`로 잘라서 `public/sprites`에 넣음.
 
 ## 무엇을 만드나

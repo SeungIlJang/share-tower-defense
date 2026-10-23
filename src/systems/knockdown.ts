@@ -12,7 +12,7 @@ export const KNOCK_MS = 550; // 멈춤 시간
 const ALLY_KNOCK: Record<string, number> = { knight: 0.2, cavalry: 0.35, spear: 0.15, hero: 0.25 };
 const ENEMY_KNOCK: Record<string, number> = { orc_warchief: 0.25, stone_golem: 0.2, lava_golem: 0.2, ice_golem: 0.2, king_slime: 0.25 };
 const BOSS_KNOCK = 0.3;
-const UNMOVABLE_ALLY = new Set(['shield', 'hero', 'wagon']);
+const UNMOVABLE_ALLY = new Set(['shield', 'hero', 'wagon', 'totem_egg', 'totem_fire', 'totem_heal']);
 
 export function knockChance(attacker: string, attackerSide: 'ally' | 'enemy', target: string): number {
   if (attackerSide === 'ally') {

@@ -63,6 +63,9 @@ export const UNIT_COUNTER: Record<string, EnemyKind | null> = {
   cannon: 'swarm',
   shield: null,
   cleric: null,
+  totem_egg: 'flying', // 🗿 설치물
+  totem_fire: 'swarm',
+  totem_heal: null,
 };
 
 export const COUNTER_MULT = 1.5;

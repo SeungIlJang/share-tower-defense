@@ -31,6 +31,8 @@ import { LevelUpOverlay } from '../ui/LevelUp';
 import { TipPointer } from '../ui/Tutorial';
 import { fxWarning, playFx, resetFx, type FxKey } from '../systems/fx';
 import { KNOCK_MS, KNOCK_PX, knockChance } from '../systems/knockdown';
+import { HERO_WEAPONS, burnMult, chainCount, frostSec, goldMaceMult, ringMult, ringPct, rollEquip, scepterHeal, weaponPower, type RingKey } from '../systems/equipment';
+import { TOTEMS, TOTEM_LIFE, isTotem, totemHeal, totemX } from '../systems/totems';
 import { LOOK_HOLD, SCREEN_W, followX, walkMult, worldWidth } from '../systems/camera';
 import { RULE_INFO, targetBonus, targetTime, WAGON_BLOCK, WAGON_SPEED, breachGoal, holdProdMult, holdSeconds, stageRule, wagonHp, type StageRule } from '../systems/stageRules';
 import { HERO_TIP_STAGE, TIP_TEXT, featureOn, nextTip, reachedStage, type Feature, type TipKey } from '../systems/tutorial';
@@ -197,6 +199,8 @@ export class BattleScene extends Phaser.Scene {
   private lastBaseHp = 0;
   private baseHitAt = -99;
   private uiQueue: Phaser.GameObjects.GameObject[] = [];
+  private totemEnd = new Map<Unit, number>(); // 🗿 설치물 사라지는 시각(clock)
+  private burns: { x: number; until: number; dmg: number; t: number }[] = []; // 🔥 화염 메이스 불바다
   private uiConts = new Set<Phaser.GameObjects.Container>();
   private counterFxT = 0; // '효과적!' 표시 간격
   private kills: Record<string, number> = {}; // 📖 이번 판 적별 처치
@@ -285,6 +289,8 @@ export class BattleScene extends Phaser.Scene {
   create(): void {
     this.over = false;
     resetFx();
+    this.totemEnd = new Map();
+    this.burns = [];
     this.pinUiSetup();
     this.paused = false;
     this.pauseLayer = null;
@@ -484,6 +490,7 @@ export class BattleScene extends Phaser.Scene {
   private makeHud(): Hud {
     const hud = this.buildHud();
     hud.setRadar(this.worldW, (x) => this.lookAt(x)); // 🗺️ 지도로 둘러보기
+    hud.setSkillIcon(0, textureKey('equip_weapon_icons'), (HERO_WEAPONS.find((w) => w.key === meta.weaponEq) ?? HERO_WEAPONS[0]).frame); // 🛡️ 장착 무기
     return hud;
   }
 
@@ -671,7 +678,15 @@ export class BattleScene extends Phaser.Scene {
     const vm = vigorMult(this.skills.vigor ?? 0); // ❤️ 튼튼한 몸
     const stats = { ...m, hp: Math.round(m.hp * bm * pm * vm), atk: Math.round(m.atk * bm * pm) };
     const u = this.unitPool.acquire();
-    u.spawn(this.playerBase.x + BASE_FRONT, LANE_Y, stats, type, 'ally', this.looks[type] ?? type); // 👗 착용 스킨
+    const totem = isTotem(type); // 🗿 설치물은 영웅 앞에 설치
+    const nTot = this.units.filter((o) => o.active && isTotem(o.type)).length; // 여러 개면 조금씩 옆으로
+    const sx = totem ? totemX(this.hero?.active ? this.hero.x + (nTot % 3) * 38 : null, this.playerBase.x + BASE_FRONT, this.enemyBase.x - BASE_FRONT - 160) : this.playerBase.x + BASE_FRONT;
+    u.spawn(sx, LANE_Y, stats, type, 'ally', this.looks[type] ?? type); // 👗 착용 스킨
+    if (totem) {
+      u.skillMotion(); // 땅에서 솟아오르는 등장 동작
+      this.totemEnd.set(u, this.clock + TOTEM_LIFE);
+      this.puff(sx, 0xd8c8a0);
+    }
     u.setStars(UNIT_TIERS[unitTier(meta.level(type))].stars); // ⭐ 진화 단계(★★부터 머리 위 표시)
     u.pop = base.pop;
     sfx(this, 'spawn');
@@ -749,7 +764,7 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private gainXp(base: number): void {
-    this.xp += Math.round(base * mimicMult(this.skills.mimic ?? 0));
+    this.xp += Math.round(base * mimicMult(this.skills.mimic ?? 0) * this.ring('ring_exp')); // 💍 경험의 반지
     while (this.xp >= this.xpNext && !this.picking) {
       this.xp -= this.xpNext;
       this.level++;
@@ -788,7 +803,7 @@ export class BattleScene extends Phaser.Scene {
     e.setVariant(own ? null : hexColor(stats.tint), stats.scale ?? 1);
     e.abilityT = 0;
     e.raged = false;
-    e.reward = Math.round(stats.reward * (this.rule?.reward ?? 1)); // 📅 도전 보상 배수
+    e.reward = Math.round(stats.reward * (this.rule?.reward ?? 1) * this.ring('ring_gold')); // 📅 도전 보상 배수 · 💍 황금의 반지
     e.maxHp = Math.round(e.maxHp * HERO_ENEMY_HP); // ⚖️ 영웅이 생긴 만큼 적 체력 +15%
     e.hp = e.maxHp;
     const mult = this.endless ? endlessMult(endlessWaveAt(this.clock)) : this.stage.enemyMult ?? 1;
@@ -862,7 +877,8 @@ export class BattleScene extends Phaser.Scene {
 
     this.energy.update(dt * rechargeMult(this.skills.recharge ?? 0)); // 🔋 에너지 충전
     for (const k in this.summonCd) this.summonCd[k] = Math.max(0, this.summonCd[k] - dt);
-    this.mana.update(dt * (1 + 0.2 * (this.skills.prayer ?? 0)) * (this.rule?.mana ?? 1)); // 🙏 기도 · 📅 마법 축제
+    this.mana.update(dt * (1 + 0.2 * (this.skills.prayer ?? 0)) * (this.rule?.mana ?? 1) * this.ring('ring_mana')); // 🙏 기도 · 📅 마법 축제 · 💍 마나의 반지
+    this.updateBurns(dt);
     this.applyDevCheats();
     this.heroCd = this.heroCd.map((c) => Math.max(0, c - dt));
     this.updateHero(dt);
@@ -905,6 +921,10 @@ export class BattleScene extends Phaser.Scene {
       u.setStatus(stunned ? STUN_TINT : allyTint);
       if (stunned) {
         u.idle(); // 💫 보스 땅 내려치기로 기절
+        continue;
+      }
+      if (isTotem(u.type)) {
+        this.totemAct(u, dt); // 🗿 설치물 — 움직이지 않음
         continue;
       }
       if (u.type === 'cleric') {
@@ -1077,7 +1097,7 @@ export class BattleScene extends Phaser.Scene {
       }
     }
     const ally = att.side === 'ally';
-    const crit = ally && Math.random() < critChance(this.skills.crit ?? 0); // 💥 치명타(🎯 스킬로 증가)
+    const crit = ally && Math.random() < critChance(this.skills.crit ?? 0) + (this.ring('ring_luck') - 1); // 💥 치명타(🎯 스킬 · 💍 행운의 반지)
     const critMul = awakened(this.skills, 'power') ? CRIT_MULT_AWAKE : CRIT_MULT; // 💪 일격필살
     const attInAura = ally && this.inHeroAura(att.x);
     const lowHp = attInAura && att.hp / att.maxHp < 0.3 && (this.skills.auraBerserk ?? 0) > 0; // 😡 광폭 오라
@@ -1115,7 +1135,7 @@ export class BattleScene extends Phaser.Scene {
               chain?.(x);
             }
           : undefined;
-      p.spawn(att.x + (att.side === 'ally' ? 14 : -14), LANE_Y - 24, def, dmg, ORB_UNITS.has(att.type) ? 'orb' : 'arrow', onHit, ORB_COLOR[att.type], crit);
+      p.spawn(att.x + (att.side === 'ally' ? 14 : -14), LANE_Y - 24, def, dmg, att.type === 'totem_egg' ? 'egg' : ORB_UNITS.has(att.type) ? 'orb' : 'arrow', onHit, ORB_COLOR[att.type], crit);
       this.projectiles.push(p);
     } else {
       // 근접: 즉시 — 🛡️ 수호 중인 아군은 피해 없음
@@ -1350,7 +1370,7 @@ export class BattleScene extends Phaser.Scene {
     this.hero = new Unit(this);
     const base = heroStats(this.stage.id, this.endless ? 1 : this.stage.enemyMult ?? 1);
     const hm = heroLvMult(meta.heroLevel('hero')); // 👑 영구 강화
-    this.hero.spawn(this.playerBase.x + BASE_FRONT + 40, LANE_Y, { ...base, hp: Math.round(base.hp * hm), atk: Math.round(base.atk * hm) }, HERO_TYPE, 'ally', look);
+    this.hero.spawn(this.playerBase.x + BASE_FRONT + 40, LANE_Y, { ...base, hp: Math.round(base.hp * hm * this.ring('ring_life')), atk: Math.round(base.atk * hm) }, HERO_TYPE, 'ally', look); // 💍 생명의 반지
     this.rallyUntil = 0;
     this.hero.setBodyScale(heroBodyScale(tier));
     this.heroTarget = null;
@@ -1898,7 +1918,7 @@ ${info.desc}`, { fontFamily: 'sans-serif', fontSize: '24px', fontStyle: 'bold', 
     if (goal !== null && Math.abs(Phaser.Math.Clamp(goal, min, max) - h.x) > 2) {
       // 적을 지나갈 수 없음 — 앞(뒤) 가장 가까운 적 앞에서 멈추고 싸움, 적이 쓰러지면 다시 이동
       const [lo, hi] = heroMoveRange(h.x, this.enemies.filter((e) => e.active).map((e) => e.x), min, max);
-      const nx = stepToward(h.x, goal, h.stats.speed * this.walkK, dt, lo, hi);
+      const nx = stepToward(h.x, goal, h.stats.speed * this.walkK * this.ring('ring_wind'), dt, lo, hi); // 💍 바람의 반지
       if (Math.abs(nx - h.x) > 0.3) {
         h.faceDir(nx < h.x ? -1 : 1);
         h.moveBy(nx - h.x);
@@ -1984,12 +2004,25 @@ ${info.desc}`, { fontFamily: 'sans-serif', fontSize: '24px', fontStyle: 'bold', 
   /** 🔨 철퇴 던지기 — 앞으로 빙글빙글 날아가 가까운 적 2명 관통 */
   private throwMace(pw = 1): void {
     const h = this.hero;
+    // 🛡️ 장착 무기 — 그림이 회전하며 날아가고, 무기마다 추가 효과
+    const wk = meta.weaponEq;
+    const g = Math.max(1, meta.equipGrade(wk));
+    const wdef = HERO_WEAPONS.find((w) => w.key === wk) ?? HERO_WEAPONS[0];
     const targets = maceTargets(h.x, this.enemies);
-    const dmg = Math.round(h.stats.atk * MACE_MULT * pw * powerMult(this.skills.power ?? 0));
+    const scepter = wk === 'healing_scepter';
+    const dmg = Math.round(h.stats.atk * MACE_MULT * pw * powerMult(this.skills.power ?? 0) * weaponPower(g) * (scepter ? 0.6 : 1));
     const endX = targets.length ? targets[targets.length - 1].x : h.x + MACE_RANGE;
     sfx(this, 'slash');
-    const m = this.add.text(h.x + 20, LANE_Y - 60, '🔨', { fontSize: '34px' }).setOrigin(0.5).setDepth(80);
+    const m: Phaser.GameObjects.Image | Phaser.GameObjects.Text = this.textures.exists(textureKey('equip_weapon_icons'))
+      ? this.add.image(h.x + 20, LANE_Y - 60, textureKey('equip_weapon_icons'), wdef.frame).setDisplaySize(52, 52).setDepth(80)
+      : this.add.text(h.x + 20, LANE_Y - 60, '🔨', { fontSize: '34px' }).setOrigin(0.5).setDepth(80);
     this.tweens.add({ targets: m, angle: 720, duration: 320 });
+    if (scepter) {
+      // 🌿 치유의 홀 — 던지는 순간 오라 안 아군 회복
+      const heal = scepterHeal(g);
+      for (const u of [...this.units, h]) if (u.active && this.inHeroAura(u.x)) u.heal(Math.round(u.maxHp * heal));
+      playFx(this, 'heal', h.x, LANE_Y + 6, { scale: 1.1 });
+    }
     this.tweens.add({
       targets: m,
       x: endX,
@@ -1997,11 +2030,101 @@ ${info.desc}`, { fontFamily: 'sans-serif', fontSize: '24px', fontStyle: 'bold', 
       duration: 320,
       ease: 'Quad.easeIn',
       onComplete: () => {
-        for (const e of targets) if (e.active) e.takeDamage(computeDamage(dmg, e.stats.def), true);
+        for (const e of targets) {
+          if (!e.active) continue;
+          e.takeDamage(computeDamage(dmg, e.stats.def), true);
+          if (wk === 'frost_mace') e.slowUntil = this.time.now + frostSec(g) * 1000; // ❄️ 느려짐
+          if (wk === 'golden_mace' && e.hp <= 0) {
+            // 💰 황금 철퇴로 처치 — 골드 추가
+            const extra = Math.round(e.reward * (goldMaceMult(g) - 1));
+            this.runGold += extra;
+            const t = this.add.text(e.x, LANE_Y - 90, `+🪙${extra}`, { fontFamily: 'sans-serif', fontSize: '18px', fontStyle: 'bold', color: '#ffe14d', stroke: '#000000', strokeThickness: 4 }).setOrigin(0.5).setDepth(80);
+            this.tweens.add({ targets: t, y: t.y - 30, alpha: 0, duration: 700, onComplete: () => t.destroy() });
+          }
+        }
+        if (wk === 'thunder_hammer' && targets.length) this.chainBolt(targets[targets.length - 1].x, Math.round(dmg * 0.5), chainCount(g), targets);
+        if (wk === 'flame_mace') this.burns.push({ x: endX, until: this.clock + 3, dmg: Math.round(h.stats.atk * burnMult(g)), t: 0 });
+        if (wk === 'frost_mace') playFx(this, 'frost', endX + 60, LANE_Y + 26, { scale: 0.6, sound: false, depth: 56 });
         if (targets.length) sfx(this, 'hit');
         this.tweens.add({ targets: m, alpha: 0, y: m.y - 30, duration: 200, onComplete: () => m.destroy() });
       },
     });
+  }
+
+  /** ⚡ 번개 망치 — 맞은 자리에서 가까운 적 n명에게 번개가 튐 */
+  private chainBolt(fromX: number, dmg: number, n: number, skip: Enemy[]): void {
+    const near = this.enemies
+      .filter((e) => e.active && !skip.includes(e) && Math.abs(e.x - fromX) <= 220)
+      .sort((a, b) => Math.abs(a.x - fromX) - Math.abs(b.x - fromX))
+      .slice(0, n);
+    let px = fromX;
+    near.forEach((e, i) => {
+      this.time.delayedCall(i * 70, () => {
+        if (!e.active) return;
+        const gfx = this.add.graphics().setDepth(81);
+        gfx.lineStyle(4, 0xfff27a, 1).beginPath();
+        gfx.moveTo(px, LANE_Y - 50);
+        gfx.lineTo((px + e.x) / 2, LANE_Y - 80);
+        gfx.lineTo(e.x, LANE_Y - 40);
+        gfx.strokePath();
+        px = e.x;
+        this.tweens.add({ targets: gfx, alpha: 0, duration: 260, onComplete: () => gfx.destroy() });
+        e.takeDamage(computeDamage(dmg, e.stats.def), false);
+      });
+    });
+    if (near.length) sfx(this, 'magic');
+  }
+
+  /** 🔥 화염 메이스 불바다 — 0.5초마다 주변 적 피해 */
+  private updateBurns(dt: number): void {
+    for (const b of this.burns) {
+      b.t -= dt;
+      if (b.t > 0) continue;
+      b.t = 0.5;
+      const f = this.add.text(b.x + Phaser.Math.Between(-40, 40), LANE_Y + 6, '🔥', { fontSize: '24px', padding: { top: 8, bottom: 2 } }).setOrigin(0.5, 1).setDepth(56);
+      this.tweens.add({ targets: f, y: f.y - 24, alpha: 0, duration: 450, onComplete: () => f.destroy() });
+      for (const e of this.enemies) if (e.active && Math.abs(e.x - b.x) <= 70) e.takeDamage(Math.max(1, Math.round(b.dmg * 0.5)), false);
+    }
+    this.burns = this.burns.filter((b) => this.clock < b.until);
+  }
+
+  /** 💍 장착 반지 배수(다른 반지면 1) */
+  private ring(k: RingKey): number {
+    return ringMult(meta.ringEq, meta.ringEq ? meta.equipGrade(meta.ringEq) : 0, k);
+  }
+
+  /** 🗿 설치물 — 알 대포는 쏘고, 화염은 주변 불, 회복은 주변 회복. 60초 지나면 사라짐 */
+  private totemAct(u: Unit, dt: number): void {
+    const end = this.totemEnd.get(u) ?? Infinity;
+    if (this.clock >= end) {
+      u.hp = 0; // 사라짐(정리 단계에서 사라지는 동작)
+      this.totemEnd.delete(u);
+      return;
+    }
+    u.setStatus(end - this.clock < 5 && Math.floor(this.time.now / 200) % 2 === 0 ? 0x8a8a8a : null); // 곧 사라짐 — 깜빡
+    const kind = TOTEMS[u.type].kind;
+    u.cooldown -= dt;
+    if (kind === 'shooter') {
+      const t = this.enemies.find((e) => e.active && e.x > u.x - 20 && e.x - u.x <= u.stats.range);
+      if (t) this.attack(u, t);
+      else u.idle();
+      return;
+    }
+    if (u.cooldown > 0) return;
+    if (kind === 'burn') {
+      const hit = this.enemies.filter((e) => e.active && Math.abs(e.x - u.x) <= u.stats.range);
+      if (!hit.length) return u.idle();
+      for (const e of hit) e.takeDamage(computeDamage(u.stats.atk * powerMult(this.skills.power ?? 0), e.stats.def), false);
+      u.cooldown = 1 / u.stats.atkSpeed;
+      u.lunge();
+      return;
+    }
+    const hurt = [...this.units, ...(this.hero?.active ? [this.hero] : [])].filter((a) => a.active && a !== u && a.hp < a.maxHp && Math.abs(a.x - u.x) <= u.stats.range);
+    if (!hurt.length) return u.idle();
+    for (const a of hurt) a.heal(totemHeal(u.stats.atk));
+    playFx(this, 'heal', u.x, LANE_Y + 6, { scale: 0.7, volume: 0.4, depth: 55 });
+    u.cooldown = 1 / u.stats.atkSpeed;
+    u.lunge();
   }
 
   /** 다음 소환이 공짜인가 — 🎁 무료 소환 남음 / 💎 마나 순환(각성: 5번째마다) */
@@ -2545,7 +2668,11 @@ ${info.desc}`, { fontFamily: 'sans-serif', fontSize: '24px', fontStyle: 'bold', 
   /** 🎁 상자 내용 정하고 바로 지급(결과 화면은 여는 연출만) */
   private openChest(tier: ChestLoot['tier'], goldMult: number): ChestLoot {
     const owned = Object.keys(UNITS).filter((k) => meta.ownsUnit(k));
-    const loot = rollChest(tier, owned, this.usedUnits, goldMult, Math.random);
+    // 💍 행운의 반지: 확률로 상자 한 등급 위
+    const up = Math.random() < (ringPct('ring_luck', meta.ringEq === 'ring_luck' ? meta.equipGrade('ring_luck') : 0) * 2) / 100;
+    const t = Math.min(3, tier + (up ? 1 : 0)) as ChestLoot['tier'];
+    const loot = rollChest(t, owned, this.usedUnits, goldMult, Math.random);
+    loot.equip = rollEquip(t, Math.random); // 🛡️ 영웅 장비
     meta.grantChest(loot);
     return loot;
   }

@@ -123,7 +123,7 @@ export class Hud {
   private objs: Phaser.GameObjects.GameObject[] = []; // 이 HUD가 만든 오브젝트
   private offs: (() => void)[] = []; // 입력·업데이트 리스너 해제
   private weaponBtns: WeaponButton[] = [];
-  private heroBtns: { bg: Phaser.GameObjects.Arc; shade: Phaser.GameObjects.Graphics; cx: number; cy: number; glow: Phaser.GameObjects.Arc; cost: Phaser.GameObjects.Text; owned: boolean }[] = [];
+  private heroBtns: { bg: Phaser.GameObjects.Arc; shade: Phaser.GameObjects.Graphics; cx: number; cy: number; glow: Phaser.GameObjects.Arc; cost: Phaser.GameObjects.Text; owned: boolean; icon: Phaser.GameObjects.Text }[] = [];
   private manaFill: Phaser.GameObjects.Rectangle | null = null;
   private manaText: Phaser.GameObjects.Text | null = null;
   private heroHpFill!: Phaser.GameObjects.Rectangle;
@@ -373,7 +373,7 @@ export class Hud {
       const cy = HERO_BTN_Y;
       const bx = x - i * (HERO_BTN_R * 2 + 14); // 스킬이 늘면 왼쪽으로
       const bg = s.add.circle(bx, cy, HERO_BTN_R, 0x1a2133, 0.92).setStrokeStyle(4, 0xffd34d).setDepth(d);
-      s.add.text(bx, cy - 4, sk.icon, { fontSize: '32px', padding: { top: 12, bottom: 4 } }).setOrigin(0.5).setDepth(d + 2);
+      const icon = s.add.text(bx, cy - 4, sk.icon, { fontSize: '32px', padding: { top: 12, bottom: 4 } }).setOrigin(0.5).setDepth(d + 2);
       const cost = s.add.text(bx, cy + 27, `💧${sk.mana}`, { fontFamily: 'sans-serif', fontSize: '15px', fontStyle: 'bold', color: '#d8f0ff', stroke: '#000000', strokeThickness: 4 }).setOrigin(0.5).setDepth(d + 2);
       // ✨ 쓸 수 있을 때 바깥에서 반짝이는 금빛 고리
       const glow = s.add.circle(bx, cy, HERO_BTN_R + 6).setStrokeStyle(4, 0xffe14d, 1).setDepth(d - 1).setVisible(false);
@@ -388,7 +388,7 @@ export class Hud {
         s.tweens.add({ targets: bg, scale: 0.88, duration: 70, yoyo: true }); // 눌림
         onHeroSkill(i);
       });
-      this.heroBtns.push({ bg, shade, cx: bx, cy, glow, cost, owned: !!owned[i] });
+      this.heroBtns.push({ bg, shade, cx: bx, cy, glow, cost, owned: !!owned[i], icon });
     });
   }
 
@@ -416,6 +416,15 @@ export class Hud {
       b.glow.setVisible(ready);
       b.cost.setColor(b.owned && !st.enough ? '#ff8a8a' : '#d8f0ff');
     });
+  }
+
+  /** 🛡️ 영웅 스킬 버튼 그림 바꾸기(장착 무기 아이콘) */
+  setSkillIcon(index: number, tex: string, frame: number): void {
+    const b = this.heroBtns[index];
+    if (!b || !this.scene.textures.exists(tex)) return;
+    b.icon.setVisible(false);
+    const img = this.scene.add.image(b.cx, b.cy - 6, tex, frame).setDisplaySize(50, 50).setDepth(b.icon.depth);
+    this.objs.push(img);
   }
 
   /** 🗺️ 전장 지도 연결(전장 폭 · 둘러보기 콜백) */

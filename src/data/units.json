@@ -10,5 +10,8 @@
   "darkmage":  { "name": "암흑마법사", "hp": 70,  "atk": 58, "def": 2,  "atkSpeed": 0.55,"range": 220, "speed": 50,  "cost": 65, "pop": 12 },
   "shield":    { "name": "방패병",     "hp": 380, "atk": 12, "def": 18, "atkSpeed": 0.7, "range": 42,  "speed": 44,  "cost": 50, "pop": 14 },
   "cavalry":   { "name": "기병",       "hp": 260, "atk": 30, "def": 9,  "atkSpeed": 0.9, "range": 50,  "speed": 110, "cost": 70, "pop": 16 },
-  "cannon":    { "name": "대포병",     "hp": 120, "atk": 70, "def": 4,  "atkSpeed": 0.35,"range": 260, "speed": 40,  "cost": 90, "pop": 18 }
+  "cannon":    { "name": "대포병",     "hp": 120, "atk": 70, "def": 4,  "atkSpeed": 0.35,"range": 260, "speed": 40,  "cost": 90, "pop": 18 },
+  "totem_egg":  { "name": "알 대포", "hp": 160, "atk": 22, "def": 4, "atkSpeed": 0.9, "range": 230, "speed": 0, "cost": 40, "pop": 6 },
+  "totem_fire": { "name": "화염 토템", "hp": 200, "atk": 14, "def": 6, "atkSpeed": 1.0, "range": 110, "speed": 0, "cost": 50, "pop": 6 },
+  "totem_heal": { "name": "회복 토템", "hp": 180, "atk": 12, "def": 4, "atkSpeed": 1.0, "range": 140, "speed": 0, "cost": 45, "pop": 6 }
 }

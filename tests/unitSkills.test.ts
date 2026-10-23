@@ -1,10 +1,11 @@
 import { describe, it, expect } from 'vitest';
+import { isTotem } from '../src/systems/totems';
 import { UNIT_SKILLS, skillEvery, skillMult, isSkillSwing } from '../src/systems/unitSkills';
 import unitsData from '../src/data/units.json';
 
 describe('유닛 스킬', () => {
-  it('유닛 12종 모두 스킬 정의', () => {
-    for (const k of Object.keys(unitsData)) expect(UNIT_SKILLS[k], k).toBeDefined();
+  it('유닛 12종 모두(설치물 제외) 스킬 정의', () => {
+    for (const k of Object.keys(unitsData).filter((u) => !isTotem(u))) expect(UNIT_SKILLS[k], k).toBeDefined();
   });
   it('Lv0은 스킬 없음', () => {
     expect(skillEvery(0)).toBe(Infinity);

@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { CHESTS, rankUpCost, type ChestLoot } from '../systems/chests';
-import { iconKey } from '../systems/sprites';
+import { iconKey, textureKey } from '../systems/sprites';
+import { equipDef } from '../systems/equipment';
 import { sfx } from '../systems/sound';
 import { meta } from '../systems/upgrades';
 
@@ -74,17 +75,24 @@ export function chestCard(s: Phaser.Scene, x: number, y: number, loot: ChestLoot
   hit.on('pointerdown', open);
 
   const reveal = (): void => {
-    const rows: { icon: string | null; text: string; sub: string }[] = [{ icon: null, text: `🪙 +${loot.gold}`, sub: '' }];
+    const rows: { icon: string | null; text: string; sub: string; sheet?: [string, number] }[] = [{ icon: null, text: `🪙 +${loot.gold}`, sub: '' }];
+    const ed = loot.equip ? equipDef(loot.equip) : null;
+    if (ed) {
+      // 🛡️ 영웅 장비 — 새로 얻음 / 등급 업 / 최고 등급이라 골드
+      const g = meta.equipGrade(ed.key);
+      rows.push({ icon: 'equip', sheet: [textureKey(ed.kind === 'weapon' ? 'equip_weapon_icons' : 'equip_ring_icons'), ed.frame], text: `${ed.name} ${'★'.repeat(g)}`, sub: loot.equipGold ? `최고 등급! 🪙 +${loot.equipGold}` : g === 1 ? '새 장비! 강화 → 👑 영웅 탭' : '등급 업!' });
+    }
     for (const [k, n] of Object.entries(loot.shards)) {
       const need = rankUpCost(meta.rank(k));
       rows.push({ icon: k, text: `🃏 ${unitName(k)} +${n}`, sub: need === null ? 'MAX' : `${meta.shards[k] ?? 0}/${need}${(meta.shards[k] ?? 0) >= need ? ' 랭크업 가능!' : ''}` });
     }
     rows.forEach((r, i) => {
-      const ry = y - 5 + i * 44;
+      const ry = y - 5 + i * (rows.length > 4 ? 36 : 44);
       const parts: Phaser.GameObjects.GameObject[] = [];
-      if (r.icon && s.textures.exists(iconKey(r.icon))) parts.push(s.add.image(-96, 0, iconKey(r.icon)).setDisplaySize(40, 40));
+      if (r.sheet && s.textures.exists(r.sheet[0])) parts.push(s.add.image(-96, 0, r.sheet[0], r.sheet[1]).setDisplaySize(40, 40));
+      else if (r.icon && s.textures.exists(iconKey(r.icon))) parts.push(s.add.image(-96, 0, iconKey(r.icon)).setDisplaySize(40, 40));
       parts.push(s.add.text(r.icon ? -70 : 0, r.sub ? -9 : 0, r.text, { fontFamily: 'sans-serif', fontSize: r.icon ? '18px' : '26px', fontStyle: 'bold', color: r.icon ? '#3a3a5a' : '#e8a000' }).setOrigin(r.icon ? 0 : 0.5, 0.5));
-      if (r.sub) parts.push(s.add.text(-70, 12, r.sub, { fontFamily: 'sans-serif', fontSize: '13px', fontStyle: 'bold', color: r.sub.includes('가능') ? '#2fa25a' : '#7a86a8' }).setOrigin(0, 0.5));
+      if (r.sub) parts.push(s.add.text(-70, 12, r.sub, { fontFamily: 'sans-serif', fontSize: '13px', fontStyle: 'bold', color: r.sub.includes('가능') || r.sub.includes('!') ? '#2fa25a' : '#7a86a8' }).setOrigin(0, 0.5));
       const row = s.add.container(x, ry, parts).setScale(0).setDepth(5);
       s.tweens.add({ targets: row, scale: 1, delay: 350 + i * 220, duration: 260, ease: 'Back.easeOut', onStart: () => sfx(s, 'coin', 1 + i * 0.1) });
     });

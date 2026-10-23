@@ -1,10 +1,11 @@
 import { describe, it, expect } from 'vitest';
+import { isTotem } from '../src/systems/totems';
 import { SKINS, recolor, rgbToHsv, inHueRange, skinType } from '../src/systems/skins';
 import unitsData from '../src/data/units.json';
 
 describe('레어 스킨', () => {
-  it('유닛 12종 모두 레어 스킨', () => {
-    for (const k of Object.keys(unitsData)) expect(SKINS[k], k).toBeDefined();
+  it('유닛 12종 모두(설치물 제외) 레어 스킨', () => {
+    for (const k of Object.keys(unitsData).filter((u) => !isTotem(u))) expect(SKINS[k], k).toBeDefined();
   });
   it('360을 감싸는 색상 범위', () => {
     expect(inHueRange(350, [345, 12])).toBe(true);

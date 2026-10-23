@@ -12,6 +12,7 @@ import { ensureSkin, loadLook } from '../systems/skinTextures';
 import { BASE_MAX_LV, BASE_UPGRADES } from '../systems/baseUpgrades';
 import { ALLY_CASTLE_TIERS, CASTLE_MAX_LV, CASTLE_RATE_MAX_LV, allyCastleGun, allyCastleTier, castleHpMult, castleLook } from '../systems/castle';
 import { RANK_MAX, rankMult, rankUpCost } from '../systems/chests';
+import { EQUIP_MAX, GRADE_COLORS, GRADE_NAMES, HERO_WEAPONS, RINGS, equipUpCost } from '../systems/equipment';
 import { UNIT_TIERS, evolvedKey, nextUnitTier, starText, unitTier } from '../systems/evolution';
 import { AURA_MAX_LV, AURA_RADIUS, HERO_MAX_LV, HERO_SKILLS, HERO_TIERS, SKILL_MAX_LV, auraBonus, heroLvMult, heroSkillPower, heroTier, heroUpCost, nextHeroTier } from '../systems/hero';
 
@@ -93,8 +94,11 @@ export class UpgradeScene extends Phaser.Scene {
     });
   }
 
+  private gridH = GRID_H; // 영웅 탭은 아래 진화 줄 자리만큼 낮게
+
   private render(): void {
     this.layer.removeAll(true);
+    this.gridH = this.tab === 'hero' ? 372 : GRID_H;
     this.goldText.setText(`보유 🪙 ${meta.gold}`);
     for (const [key, t] of Object.entries(this.tabBtns) as [Tab, Phaser.GameObjects.Text][]) {
       const on = key === this.tab;
@@ -109,7 +113,7 @@ export class UpgradeScene extends Phaser.Scene {
   /** 2열 격자의 i번째 칸 위치 */
   private cell(i: number, count: number): { x: number; y: number; h: number } {
     const rows = Math.ceil(count / 2);
-    const h = Math.min(110, GRID_H / rows);
+    const h = Math.min(110, this.gridH / rows);
     return { x: i % 2 === 0 ? 330 : 950, y: GRID_TOP + h / 2 + Math.floor(i / 2) * h, h };
   }
 
@@ -345,7 +349,7 @@ export class UpgradeScene extends Phaser.Scene {
 
   /** 👑 영웅 강화 — 영웅 레벨 · 오라 크기 · 영웅 스킬 해금/위력 */
   private renderHero(): void {
-    const count = 2 + HERO_SKILLS.length;
+    const count = 4 + HERO_SKILLS.length; // 영웅 · 오라 · ⚔️ 무기 · 💍 반지 · 스킬
     const pct = (m: number): string => `+${Math.round((m - 1) * 100)}%`;
     const up = (key: string, kind: 'hero' | 'aura' | 'skill', max: number): void => {
       const before = heroTier(meta.heroLevel('hero'));
@@ -368,8 +372,10 @@ export class UpgradeScene extends Phaser.Scene {
     this.heroEvolution(hl);
     const al = meta.heroLevel('aura');
     row(1, 'aura', 'aura', AURA_MAX_LV, '⭕ 오라 크기', `오라 반지름 ${AURA_RADIUS + auraBonus(al)}  →  ${AURA_RADIUS + auraBonus(al + 1)}`);
+    this.equipCard(2, count, 'weapon'); // 🛡️ 영웅 장비
+    this.equipCard(3, count, 'ring');
     HERO_SKILLS.forEach((sk, j) => {
-      const i = 2 + j;
+      const i = 4 + j;
       if (!meta.ownsHeroSkill(sk.key)) {
         this.card(i, count, null, `${sk.icon} ${sk.name}  (${sk.hotkey})`, `${sk.desc} · 💧${sk.mana}`, `🛒 해금\n🪙${sk.price}`, meta.gold >= sk.price, true, () => {
           if (meta.buyHeroSkill(sk.key, sk.price)) {
@@ -381,6 +387,97 @@ export class UpgradeScene extends Phaser.Scene {
       }
       const lv = meta.heroLevel(sk.key);
       row(i, sk.key, 'skill', SKILL_MAX_LV, `${sk.icon} ${sk.name}`, `${sk.desc} · 위력 ${pct(heroSkillPower(lv))} → ${pct(heroSkillPower(lv + 1))}`);
+    });
+  }
+
+  /** 🛡️ 장비 칸 카드(무기·반지) — 누르면 고르기 창 */
+  private equipCard(i: number, count: number, kind: 'weapon' | 'ring'): void {
+    const list = kind === 'weapon' ? HERO_WEAPONS : RINGS;
+    const cur = kind === 'weapon' ? meta.weaponEq : meta.ringEq;
+    const def = list.find((d) => d.key === cur) ?? null;
+    const g = def ? meta.equipGrade(def.key) : 0;
+    const tex = textureKey(kind === 'weapon' ? 'equip_weapon_icons' : 'equip_ring_icons');
+    const icon = def && this.textures.exists(tex) ? this.add.image(0, 0, tex, def.frame) : null;
+    const owned = list.filter((d) => meta.equipGrade(d.key) > 0).length;
+    this.card(
+      i,
+      count,
+      icon,
+      def ? `${kind === 'weapon' ? '⚔️' : '💍'} ${def.name} ${'★'.repeat(g)}` : '💍 반지: 비어 있음',
+      def ? `${def.desc(g)} · ${GRADE_NAMES[g - 1]}` : '🎁 보물 상자에서 반지를 얻어요',
+      `${kind === 'weapon' ? '무기' : '반지'} 바꾸기\n(${owned}/${list.length})`,
+      true,
+      false,
+      () => this.openEquipPicker(kind)
+    );
+  }
+
+  /** 🛡️ 장비 고르기 창 — 장착 · 골드로 등급 올리기, 없는 장비는 그림자 */
+  private openEquipPicker(kind: 'weapon' | 'ring'): void {
+    const list = kind === 'weapon' ? HERO_WEAPONS : RINGS;
+    const tex = textureKey(kind === 'weapon' ? 'equip_weapon_icons' : 'equip_ring_icons');
+    const layer = this.add.container(0, 0).setDepth(200);
+    const close = (): void => {
+      layer.destroy();
+      this.render();
+    };
+    const dim = this.add.rectangle(640, 360, 1280, 720, 0x000000, 0.7).setInteractive();
+    dim.on('pointerdown', close);
+    const panel = this.add.rectangle(640, 372, 1000, 600, 0x141c30).setStrokeStyle(3, 0x4a6ad8).setInteractive();
+    layer.add([dim, panel]);
+    layer.add(this.add.text(640, 98, kind === 'weapon' ? '⚔️ 영웅 무기 — 🔨 J 스킬이 바뀌어요' : '💍 반지 — 늘 켜져 있는 능력', { fontFamily: 'sans-serif', fontSize: '24px', fontStyle: 'bold', color: '#ffd34d' }).setOrigin(0.5));
+    const x = this.add.text(1112, 98, '✕', { fontFamily: 'sans-serif', fontSize: '30px', color: '#fff' }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+    x.on('pointerdown', close);
+    layer.add(x);
+    const cur = kind === 'weapon' ? meta.weaponEq : meta.ringEq;
+    list.forEach((d, i) => {
+      const y = 158 + i * 86;
+      const g = meta.equipGrade(d.key);
+      const have = g > 0;
+      const on = cur === d.key;
+      const row: Phaser.GameObjects.GameObject[] = [this.add.rectangle(640, y, 960, 78, on ? 0x24345a : 0x1a2338).setStrokeStyle(2, on ? 0xffd34d : 0x33406a)];
+      row.push(this.add.circle(200, y, 33, 0x0b0f1a).setStrokeStyle(4, have ? GRADE_COLORS[g - 1] : 0x3a3f4a));
+      if (this.textures.exists(tex)) {
+        const im = this.add.image(200, y, tex, d.frame).setDisplaySize(56, 56);
+        if (!have) im.setTint(0x10141f).setTintMode(Phaser.TintModes.FILL).setAlpha(0.8);
+        row.push(im);
+      }
+      row.push(
+        this.add.text(250, y - 14, have ? `${d.name}  ${'★'.repeat(g)}${'☆'.repeat(EQUIP_MAX - g)}  ${GRADE_NAMES[g - 1]}` : `${d.name}  🔒`, { fontFamily: 'sans-serif', fontSize: '20px', fontStyle: 'bold', color: have ? '#ffffff' : '#7c8698' }).setOrigin(0, 0.5),
+        this.add.text(250, y + 16, have ? d.desc(g) : '🎁 보물 상자에서 얻어요(금·전설 상자일수록 잘 나와요)', { fontFamily: 'sans-serif', fontSize: '15px', fontStyle: 'bold', color: have ? '#d6e2f5' : '#6a7488' }).setOrigin(0, 0.5)
+      );
+      const btn = (bx: number, label: string, color: string, ok: boolean, fn: () => void): void => {
+        const t = this.add
+          .text(bx, y, label, { fontFamily: 'sans-serif', fontSize: '16px', fontStyle: 'bold', color: '#fff', backgroundColor: ok ? color : '#3a3f55', padding: { x: 12, y: 8 }, align: 'center' })
+          .setOrigin(0.5);
+        if (ok) t.setInteractive({ useHandCursor: true }).on('pointerdown', fn);
+        row.push(t);
+      };
+      if (have) {
+        if (on && kind === 'ring')
+          btn(905, '빼기', '#8a3a3a', true, () => {
+            meta.unequipRing();
+            layer.destroy();
+            this.openEquipPicker(kind);
+          });
+        else
+          btn(905, on ? '✅ 장착 중' : '장착', '#2f7a4d', !on, () => {
+            meta.equipItem(d.key);
+            sfx(this, 'click');
+            layer.destroy();
+            this.openEquipPicker(kind);
+          });
+        const cost = equipUpCost(g);
+        btn(1030, cost === null ? 'MAX' : `★ 강화\n🪙${cost}`, '#8a5ad8', cost !== null && meta.gold >= cost, () => {
+          if (meta.upgradeEquip(d.key)) {
+            sfx(this, 'levelup');
+            this.goldText.setText(`보유 🪙 ${meta.gold}`);
+            layer.destroy();
+            this.openEquipPicker(kind);
+          }
+        });
+      }
+      layer.add(row);
     });
   }
 

@@ -8,6 +8,7 @@ import { BASE_MAX_LV, baseUpgradeCost, type BaseKey } from './baseUpgrades';
 import { timeRecord } from './pacing';
 import { rankUpCost, type ChestLoot } from './chests';
 import { normalizeDeck } from './counters';
+import { EQUIP_MAX, equipUpCost, isWeapon, type RingKey, type WeaponKey } from './equipment';
 import { CODEX_MILESTONES, claimableMilestone, discoverReward, mergeKills } from './codex';
 import { CASTLE_MAX_LV, CASTLE_RATE_MAX_LV, castleUpCost } from './castle';
 
@@ -87,6 +88,9 @@ export class MetaProgress {
   codexClaimed: string[] = []; // 📖 발견 보상 받은 적
   codexSteps: number[] = []; // 📖 받은 수집 단계
   dailyWon = -1; // 📅 오늘의 도전 첫 승리 보상 받은 날
+  equip: Record<string, number> = { mace: 1 }; // 🛡️ 영웅 장비 등급(0/없음 = 미보유)
+  weaponEq: WeaponKey = 'mace'; // 장착 무기
+  ringEq: RingKey | null = null; // 장착 반지
   lastDaily = -1; // 마지막 일일보상 수령 day index
   streak = 0; // 연속 출석
   lastSeen = 0; // 마지막 접속(ms) — 방치 보상 기준
@@ -456,10 +460,47 @@ export class MetaProgress {
 
   /** 🎁 상자 보상 받기(골드 + 조각) */
   grantChest(loot: ChestLoot): void {
+    if (loot.equip) {
+      // 🛡️ 장비 — 없으면 ★1, 있으면 등급 +1, 이미 최고면 골드 500
+      const g = this.equipGrade(loot.equip);
+      if (g >= EQUIP_MAX) loot.equipGold = 500;
+      else this.equip[loot.equip] = g + 1;
+      this.gold += loot.equipGold ?? 0;
+    }
     this.gold += loot.gold;
     for (const [k, n] of Object.entries(loot.shards)) this.shards[k] = (this.shards[k] ?? 0) + n;
     this.chestsOpened++;
     this.save();
+  }
+
+  /** 🛡️ 장비 등급(0 = 없음) */
+  equipGrade(k: string): number {
+    return this.equip[k] ?? 0;
+  }
+
+  /** 🛡️ 장착(가진 것만) — 무기/반지 칸은 이름으로 구분 */
+  equipItem(k: string): boolean {
+    if (this.equipGrade(k) <= 0) return false;
+    if (isWeapon(k)) this.weaponEq = k;
+    else this.ringEq = k as RingKey;
+    this.save();
+    return true;
+  }
+
+  unequipRing(): void {
+    this.ringEq = null;
+    this.save();
+  }
+
+  /** 🛡️ 골드로 등급 올리기 */
+  upgradeEquip(k: string): boolean {
+    const g = this.equipGrade(k);
+    const cost = g > 0 ? equipUpCost(g) : null;
+    if (cost === null || this.gold < cost) return false;
+    this.gold -= cost;
+    this.equip[k] = g + 1;
+    this.save();
+    return true;
   }
 
   /** 🃏 카드 랭크 */
@@ -519,6 +560,9 @@ export class MetaProgress {
         codexClaimed?: string[];
         codexSteps?: number[];
         dailyWon?: number;
+        equip?: Record<string, number>;
+        weaponEq?: WeaponKey;
+        ringEq?: RingKey | null;
         lastDaily?: number;
         streak?: number;
         lastSeen?: number;
@@ -548,6 +592,9 @@ export class MetaProgress {
       this.codexClaimed = obj.codexClaimed ?? [];
       this.codexSteps = obj.codexSteps ?? [];
       this.dailyWon = obj.dailyWon ?? -1;
+      this.equip = { mace: 1, ...(obj.equip ?? {}) };
+      this.weaponEq = obj.weaponEq ?? 'mace';
+      this.ringEq = obj.ringEq ?? null;
       this.tips = obj.tips ?? (this.clearedMax > 0 ? ['summon', 'hero'] : []); // 예전 저장 = 기본 안내는 본 것으로
       this.lastDaily = obj.lastDaily ?? -1;
       this.streak = obj.streak ?? 0;
@@ -602,6 +649,9 @@ export class MetaProgress {
         codexClaimed: this.codexClaimed,
         codexSteps: this.codexSteps,
         dailyWon: this.dailyWon,
+        equip: this.equip,
+        weaponEq: this.weaponEq,
+        ringEq: this.ringEq,
         lastDaily: this.lastDaily,
         streak: this.streak,
         lastSeen: this.lastSeen,

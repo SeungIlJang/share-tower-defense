@@ -44,6 +44,8 @@ export interface ChestLoot {
   tier: ChestTier;
   gold: number;
   shards: Record<string, number>;
+  equip?: string | null; // 🛡️ 영웅 장비(없으면 null) — 이미 있으면 등급 +1
+  equipGold?: number; // 이미 최고 등급이라 골드로 바뀐 몫
 }
 
 /**

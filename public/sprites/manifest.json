@@ -6826,5 +6826,207 @@
         "fps": 8
       }
     }
+  },
+  "totem_egg": {
+    "file": "totem_egg.png",
+    "filter": "linear",
+    "frameWidth": 178,
+    "frameHeight": 200,
+    "scale": 0.5,
+    "footY": 169,
+    "icon": "icon_totem_egg.png",
+    "anims": {
+      "skill": {
+        "frames": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "fps": 8
+      },
+      "idle": {
+        "frames": [
+          6,
+          7,
+          8,
+          9
+        ],
+        "fps": 5
+      },
+      "attack": {
+        "frames": [
+          12,
+          13,
+          14,
+          15,
+          16
+        ],
+        "fps": 10
+      },
+      "death": {
+        "frames": [
+          18,
+          19,
+          20,
+          21
+        ],
+        "fps": 7
+      }
+    }
+  },
+  "totem_egg_ball": {
+    "file": "totem_egg_ball.png",
+    "filter": "linear",
+    "frameWidth": 31,
+    "frameHeight": 36,
+    "scale": 0.5,
+    "footY": 36,
+    "anims": {
+      "idle": {
+        "frames": [
+          0
+        ],
+        "fps": 1
+      }
+    }
+  },
+  "totem_fire": {
+    "file": "totem_fire.png",
+    "filter": "linear",
+    "frameWidth": 162,
+    "frameHeight": 182,
+    "scale": 0.5,
+    "footY": 154,
+    "icon": "icon_totem_fire.png",
+    "anims": {
+      "skill": {
+        "frames": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "fps": 8
+      },
+      "idle": {
+        "frames": [
+          6,
+          7,
+          8,
+          9
+        ],
+        "fps": 5
+      },
+      "attack": {
+        "frames": [
+          12,
+          13,
+          14,
+          15,
+          16
+        ],
+        "fps": 10
+      },
+      "death": {
+        "frames": [
+          18,
+          19,
+          20,
+          21
+        ],
+        "fps": 7
+      }
+    }
+  },
+  "totem_heal": {
+    "file": "totem_heal.png",
+    "filter": "linear",
+    "frameWidth": 192,
+    "frameHeight": 216,
+    "scale": 0.5,
+    "footY": 183,
+    "icon": "icon_totem_heal.png",
+    "anims": {
+      "skill": {
+        "frames": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "fps": 8
+      },
+      "idle": {
+        "frames": [
+          6,
+          7,
+          8,
+          9
+        ],
+        "fps": 5
+      },
+      "attack": {
+        "frames": [
+          12,
+          13,
+          14,
+          15,
+          16
+        ],
+        "fps": 10
+      },
+      "death": {
+        "frames": [
+          18,
+          19,
+          20,
+          21
+        ],
+        "fps": 7
+      }
+    }
+  },
+  "equip_weapon_icons": {
+    "file": "equip_weapon_icons.png",
+    "filter": "linear",
+    "frameWidth": 96,
+    "frameHeight": 96,
+    "scale": 0.5,
+    "footY": 96,
+    "anims": {
+      "idle": {
+        "frames": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "fps": 1
+      }
+    }
+  },
+  "equip_ring_icons": {
+    "file": "equip_ring_icons.png",
+    "filter": "linear",
+    "frameWidth": 96,
+    "frameHeight": 96,
+    "scale": 0.5,
+    "footY": 96,
+    "anims": {
+      "idle": {
+        "frames": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "fps": 1
+      }
+    }
   }
 }
