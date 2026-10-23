@@ -245,6 +245,11 @@ export class Fighter {
     return this.root.x;
   }
 
+  /** 몸에 장식 붙이기(🛒 마차 바퀴·덮개 등 — 다음 spawn 때 지워짐) */
+  attach(o: Phaser.GameObjects.GameObject): void {
+    this.char.add(o);
+  }
+
   moveBy(dx: number): void {
     this.root.x += dx;
     this.play('walk');

@@ -30,11 +30,14 @@ import { Hud } from '../ui/Hud';
 import { LevelUpOverlay } from '../ui/LevelUp';
 import { TipPointer } from '../ui/Tutorial';
 import { fxWarning, playFx, resetFx, type FxKey } from '../systems/fx';
+import { KNOCK_MS, KNOCK_PX, knockChance } from '../systems/knockdown';
+import { RULE_INFO, targetBonus, targetTime, WAGON_BLOCK, WAGON_SPEED, breachGoal, holdProdMult, holdSeconds, stageRule, wagonHp, type StageRule } from '../systems/stageRules';
 import { HERO_TIP_STAGE, TIP_TEXT, featureOn, nextTip, reachedStage, type Feature, type TipKey } from '../systems/tutorial';
 import { showRewarded } from '../systems/ads';
 import {
   UNIT_SKILLS,
   isSkillSwing,
+  AURA_SKILL_POWER,
   skillMult,
   SINGLE_BONUS,
   GUARD_SEC as SKILL_GUARD_SEC,
@@ -175,6 +178,13 @@ export class BattleScene extends Phaser.Scene {
   private usedUnits: Record<string, number> = {}; // 🎁 이번 판 유닛별 소환 수(상자 조각 비율)
   private deck: string[] = []; // ⚔️ 출전 덱
   private rule: DailyRule | null = null; // 📅 오늘의 도전 규칙
+  // 🎯 특수 관문 — 🛒 호위(마차) · 🏰 수성(시간) · 🏃 돌파(결승선)
+  private sRule: StageRule = 'normal';
+  private wagon: Unit | null = null;
+  private holdLeft = 0;
+  private goals = 0;
+  private goalNeed = 0;
+  private objText: Phaser.GameObjects.Text | null = null;
   private counterFxT = 0; // '효과적!' 표시 간격
   private kills: Record<string, number> = {}; // 📖 이번 판 적별 처치
   private metNew = new Set<string>(); // 📖 이번 판에 '새 몬스터!' 알린 적
@@ -302,7 +312,9 @@ export class BattleScene extends Phaser.Scene {
     this.playerBase = new Base(this, 105, LANE_Y - 10, Math.round(this.stage.baseHp * castleHpMult(meta.castleLevel('castle'))), 0x2f6fe0, [castleLook('ally', ct), 'base_ally'], 1 + 0.04 * ct);
     this.enemyTier = enemyCastleTier(this.endless, this.stage.id, 0);
     // 무한 모드: 적 기지는 부서지지 않는 생산 기지(버틴 웨이브가 기록)
-    this.enemyBase = new Base(this, 1175, LANE_Y - 10, this.endless ? 1e9 : this.stage.baseHp, 0xc0392b, [castleLook('enemy', this.enemyTier), 'base_enemy'], 1 + 0.04 * this.enemyTier);
+    this.sRule = this.endless || this.rule ? 'normal' : stageRule(this.stage.id);
+    const tough = this.sRule === 'hold' || this.sRule === 'breach'; // 수성·돌파는 적 성을 부술 필요 없음
+    this.enemyBase = new Base(this, 1175, LANE_Y - 10, this.endless || tough ? 1e9 : this.stage.baseHp, 0xc0392b, [castleLook('enemy', this.enemyTier), 'base_enemy'], 1 + 0.04 * this.enemyTier);
     this.allyGunT = 1;
     this.enemyGunT = 2.5;
     this.archers = { ally: [], enemy: [] };
@@ -314,6 +326,7 @@ export class BattleScene extends Phaser.Scene {
     this.volleyIcon = this.add.text(0, 0, '🏹', { fontSize: '22px', padding: { top: 10, bottom: 4 } }).setOrigin(0.5).setDepth(97);
     this.playerBase.onTap(() => this.castleVolley());
     this.spawnHero();
+    this.setupRule(tough);
     this.devHud();
     this.waveNo = 0;
     this.waveText = null;
@@ -834,7 +847,7 @@ export class BattleScene extends Phaser.Scene {
 
     // 적 기지가 병력을 계속 생산(기지 파괴 전까지) → 기지를 부숴야 생산이 멈춤
     if (!this.enemyBase.destroyed) {
-      this.prodTimer -= dt;
+      this.prodTimer -= dt * (this.sRule === 'hold' ? 1 / holdProdMult(holdSeconds(this.stage.id) - this.holdLeft, holdSeconds(this.stage.id)) : 1); // 🏰 수성: 점점 빨리
       if (this.prodTimer <= 0) {
         this.prodTimer = this.prodInterval;
         this.spawnEnemy(PROD_TYPES[this.prodIdx % PROD_TYPES.length]);
@@ -879,7 +892,9 @@ export class BattleScene extends Phaser.Scene {
       u.cooldown -= dt;
       if (target && inRange(u.x, target.x, u.stats.range + REACH)) {
         this.attack(u, target);
-      } else if (!this.enemyBase.destroyed && inRange(u.x, this.enemyBase.x, u.stats.range + BASE_REACH)) {
+      } else if (this.sRule === 'breach' && inRange(u.x, this.enemyBase.x, Math.min(u.stats.range, 60) + BASE_REACH)) {
+        this.goalIn(u); // 🏃 돌파: 결승선 도착
+      } else if (!this.enemyBase.destroyed && this.sRule !== 'breach' && inRange(u.x, this.enemyBase.x, u.stats.range + BASE_REACH)) {
         // 🏰 적 기지에 닿으면 더 지나가지 않고 기지를 공격(다른 적을 쫓느라 지나치지 않게)
         if (u.cooldown <= 0) {
           this.enemyBase.takeDamage(computeDamage(u.stats.atk * (berserk ? BERSERK_ATK : 1), 0));
@@ -894,11 +909,17 @@ export class BattleScene extends Phaser.Scene {
     }
 
     // 적: 아군 추격/공격, 없으면 전진 → 플레이어 기지 공격 (👑 영웅도 노림)
-    const allyTargets: Unit[] = this.hero?.active ? [...this.units, this.hero] : this.units;
+    const allyTargets: Unit[] = [...this.units, ...(this.hero?.active ? [this.hero] : []), ...(this.wagon?.active ? [this.wagon] : [])]; // 🛒 마차도 노림
+    this.updateRule(dt);
     for (const e of this.enemies) {
       if (!e.active) continue;
-      e.setStatus(frozen ? FROZEN_TINT : null, frozen);
+      const knocked = e.stunned; // 💫 넉다운
+      e.setStatus(frozen ? FROZEN_TINT : knocked ? STUN_TINT : null, frozen);
       if (frozen) continue; // ❄️ 빙결: 이동·공격 정지
+      if (knocked) {
+        e.idle();
+        continue;
+      }
       if (BOSS.has(e.type)) this.bossPattern(e, dt);
       else if (ENEMIES[e.type]?.ability) this.enemyAbility(e, dt); // 👾 치유·소환·분노
       const target = this.nearest(e.x, allyTargets) as Unit | null;
@@ -1009,12 +1030,13 @@ export class BattleScene extends Phaser.Scene {
     const berserk = att.side === 'ally' && this.clock < this.berserkUntil; // ⚔️ 광폭
     // ✨ 유닛 스킬: 영구 강화 Lv1부터, 일반 공격 N번마다
     if (att.side === 'ally') {
-      const lv = meta.level(att.type);
       att.swings++;
       const inA = this.inHeroAura(att.x);
-      if (lv > 0 && UNIT_SKILLS[att.type] && isSkillSwing(att.swings, lv, inA ? this.skills.auraSkill ?? 0 : 0)) {
+      const lv = Math.max(meta.level(att.type), inA ? 1 : 0); // ⭕ 오라 안에선 Lv0 유닛도 스킬을 씀
+      if (lv > 0 && UNIT_SKILLS[att.type] && isSkillSwing(att.swings, lv, inA ? this.skills.auraSkill ?? 0 : 0, inA)) {
+        if (inA) this.auraSpark(att.x); // ⭕ 오라 특수기 표시
         const resonance = inA && awakened(this.skills, 'auraSkill') ? 1.5 : 1; // 🌟 오라 공명
-        this.castSkill(att, def, lv, (berserk ? BERSERK_ATK : 1) * powerMult(this.skills.power ?? 0) * (inA ? AURA_ATK : 1) * resonance);
+        this.castSkill(att, def, lv, (berserk ? BERSERK_ATK : 1) * powerMult(this.skills.power ?? 0) * (inA ? AURA_ATK * AURA_SKILL_POWER : 1) * resonance);
         let scd = attackCooldown(att.stats.atkSpeed) * hasteMult(this.skills.haste ?? 0);
         if (berserk) scd *= BERSERK_COOLDOWN;
         att.cooldown = scd;
@@ -1065,6 +1087,8 @@ export class BattleScene extends Phaser.Scene {
     } else {
       // 근접: 즉시 — 🛡️ 수호 중인 아군은 피해 없음
       if (!(def.side === 'ally' && this.clock < this.guardUntil)) def.takeDamage(dmg, crit);
+      const kc = knockChance(att.type, att.side, def.type); // 💫 넉다운
+      if (kc > 0 && def.active && def.hp > 0 && Math.random() < kc) this.knock(def, ally ? 1 : -1);
       chain?.(def.x);
       if (ally) playFx(this, crit ? 'critical' : 'slash', def.x - 6, LANE_Y - 36, { scale: crit ? 1 : 0.9 }); // ⚔️ 베기 · 💥 치명타(소리 포함)
       else sfx(this, 'hit');
@@ -1347,6 +1371,88 @@ export class BattleScene extends Phaser.Scene {
     if (this.endless) return;
     if (this.tip.key === k) this.tip.hide();
     meta.markTip(k);
+  }
+
+  /** 💫 넉다운 — 뒤로 튕기고 잠깐 멈춤 */
+  private knock(f: Unit | Enemy, dir: 1 | -1): void {
+    f.moveBy(dir * KNOCK_PX);
+    f.stunUntil = this.time.now + KNOCK_MS;
+    const t = this.add.text(f.x, LANE_Y - 84, '💫', { fontSize: '22px', padding: { top: 8, bottom: 2 } }).setOrigin(0.5).setDepth(72);
+    this.tweens.add({ targets: t, angle: 360, alpha: 0, y: t.y - 16, duration: KNOCK_MS, onComplete: () => t.destroy() });
+    const dust = this.add.ellipse(f.x - dir * 10, LANE_Y + 30, 40, 12, 0xd8c8a0, 0.6).setDepth(-2);
+    this.tweens.add({ targets: dust, scaleX: 2, alpha: 0, duration: 380, onComplete: () => dust.destroy() });
+  }
+
+  /** ⭕ 오라 안에서 스킬이 나가면 머리 위에 반짝 */
+  private auraSpark(x: number): void {
+    const t = this.add.text(x, LANE_Y - 96, '✨', { fontSize: '22px', padding: { top: 8, bottom: 2 } }).setOrigin(0.5).setDepth(72);
+    this.tweens.add({ targets: t, y: t.y - 26, alpha: 0, scale: 1.4, duration: 520, onComplete: () => t.destroy() });
+  }
+
+  /** 🎯 특수 관문 준비 — 규칙 안내 + 목표 표시 + (호위) 마차 */
+  private setupRule(tough: boolean): void {
+    this.wagon = null;
+    this.goals = 0;
+    this.objText = null;
+    if (this.sRule === 'normal') return;
+    const info = RULE_INFO[this.sRule];
+    if (tough) this.add.text(this.enemyBase.x, this.enemyBase.top - 26, info.icon, { fontSize: '30px', padding: { top: 10, bottom: 4 } }).setOrigin(0.5).setDepth(60); // 부술 필요 없는 성
+    this.objText = this.add
+      .text(470, 74, '', { fontFamily: 'sans-serif', fontSize: '20px', fontStyle: 'bold', color: '#ffe680', backgroundColor: '#0d1424cc', padding: { x: 12, y: 5 } })
+      .setOrigin(0.5)
+      .setDepth(101);
+    // 시작 안내 카드(3.5초)
+    const card = this.add
+      .text(640, 190, `${info.icon} ${info.name}
+${info.desc}`, { fontFamily: 'sans-serif', fontSize: '24px', fontStyle: 'bold', color: '#3a2a10', align: 'center', lineSpacing: 8, backgroundColor: '#fff4c8', padding: { x: 22, y: 14 } })
+      .setOrigin(0.5)
+      .setDepth(97);
+    this.tweens.add({ targets: card, alpha: 0, delay: 3500, duration: 500, onComplete: () => card.destroy() });
+    if (this.sRule === 'hold') this.holdLeft = holdSeconds(this.stage.id);
+    if (this.sRule === 'breach') this.goalNeed = breachGoal(this.stage.id);
+    if (this.sRule === 'escort') {
+      const w = new Unit(this);
+      const hp = wagonHp(this.stage.baseHp, this.stage.enemyMult ?? 1);
+      w.spawn(this.playerBase.x + BASE_FRONT + 10, LANE_Y, { name: '짐마차', hp, atk: 0, def: 4, atkSpeed: 1, range: 0, speed: WAGON_SPEED }, 'wagon', 'ally');
+      const g = this.add.graphics();
+      g.fillStyle(0xf4e6c0, 1).fillEllipse(0, -6, 58, 34); // 천 덮개
+      g.lineStyle(2, 0x8a6a3a, 1).strokeEllipse(0, -6, 58, 34);
+      g.fillStyle(0x3a2a1a, 1).fillCircle(-20, 26, 9).fillCircle(20, 26, 9); // 바퀴
+      g.fillStyle(0xc8a060, 1).fillCircle(-20, 26, 3).fillCircle(20, 26, 3);
+      g.fillStyle(0xff4a4a, 1).fillTriangle(24, -38, 24, -26, 36, -32); // 깃발
+      g.lineStyle(2, 0x5a3a1a, 1).lineBetween(24, -38, 24, -12);
+      w.attach(g);
+      this.wagon = w;
+    }
+  }
+
+  /** 🎯 특수 관문 진행 — 마차 이동 · 수성 시간 · 목표 표시 */
+  private updateRule(dt: number): void {
+    if (this.sRule === 'normal' || !this.objText) return;
+    if (this.sRule === 'escort' && this.wagon?.active) {
+      const w = this.wagon;
+      const blocked = this.enemies.some((e) => e.active && e.x > w.x && e.x - w.x < WAGON_BLOCK); // 앞을 막으면 멈춤
+      if (blocked || w.stunned) w.idle();
+      else w.moveBy(WAGON_SPEED * dt);
+      const left = Math.max(0, Math.round((this.enemyBase.x - BASE_FRONT - 20 - w.x) / 10));
+      this.objText.setText(`🛒 마차 호위 — 남은 거리 ${left}m · ❤️ ${Math.ceil((w.hp / w.maxHp) * 100)}%${blocked ? ' · ⛔ 길이 막혔어요!' : ''}`);
+    } else if (this.sRule === 'hold') {
+      this.holdLeft = Math.max(0, this.holdLeft - dt);
+      const s = Math.ceil(this.holdLeft);
+      this.objText.setText(`🏰 수성 — 남은 시간 ${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`).setColor(s <= 10 ? '#7cff9a' : '#ffe680');
+    } else if (this.sRule === 'breach') {
+      this.objText.setText(`🏃 돌파 — 🏁 ${this.goals} / ${this.goalNeed}`);
+    }
+  }
+
+  /** 🏃 돌파 — 결승선에 닿은 아군은 골인(사라짐) */
+  private goalIn(u: Unit): void {
+    this.goals++;
+    const t = this.add.text(u.x, LANE_Y - 80, '🏁 골인!', { fontFamily: 'sans-serif', fontSize: '20px', fontStyle: 'bold', color: '#7cff9a', stroke: '#000000', strokeThickness: 4 }).setOrigin(0.5).setDepth(80);
+    this.tweens.add({ targets: t, y: t.y - 40, alpha: 0, duration: 800, onComplete: () => t.destroy() });
+    sfx(this, 'coin', 1.2);
+    u.deactivate();
+    this.unitPool.release(u);
   }
 
   /** ⭕ 지금 오라 반지름(영구 강화 + 레벨업 '오라 확장' + 각성) */
@@ -1869,6 +1975,8 @@ export class BattleScene extends Phaser.Scene {
   private commitRun(): void {
     if (this.committed) return;
     this.committed = true;
+    if ((this.run.kills ?? 0) >= 100) this.track('bigRuns'); // 🏅 한 판 기록 업적
+    if (this.level - 1 >= 8) this.track('levelRuns');
     meta.addRunStats(this.run);
     meta.addKills(this.kills);
   }
@@ -2221,6 +2329,27 @@ export class BattleScene extends Phaser.Scene {
   private checkEnd(): void {
     // 승리 = 적 생산기지 파괴 / 패배 = 우리 기지 파괴
     if (!this.endless && this.enemyBase.destroyed) return this.end(true);
+    // 🎯 특수 관문 승패
+    if (this.sRule === 'escort' && this.wagon) {
+      if (this.wagon.hp <= 0) {
+        this.puff(this.wagon.x, 0x9a6a3a);
+        this.wagon.deactivate();
+        this.banner('🛒 마차가 부서졌어요…', 0xff7a8a);
+        return this.end(false);
+      }
+      if (this.wagon.x >= this.enemyBase.x - BASE_FRONT - 20) {
+        this.banner('🛒 마차 도착!', 0x7cff9a);
+        return this.end(true);
+      }
+    }
+    if (this.sRule === 'hold' && this.holdLeft <= 0) {
+      this.banner('🏰 성을 지켜냈다!', 0x7cff9a);
+      return this.end(true);
+    }
+    if (this.sRule === 'breach' && this.goals >= this.goalNeed) {
+      this.banner('🏁 돌파 성공!', 0x7cff9a);
+      return this.end(true);
+    }
     if (this.hero && this.hero.hp <= 0 && this.hero.active) {
       // 👑 영웅이 쓰러지면 바로 패배
       this.hero.playDeath();
@@ -2355,15 +2484,23 @@ export class BattleScene extends Phaser.Scene {
     // ⏱️ 클리어 시간(게임 시간 기준 — 배속과 무관)
     const time = Math.round(this.clock);
     const timeRec = win ? meta.recordTime(this.stage.id, time) : null;
+    // ⏱️ 목표 시간 안에 깨면 보너스
+    const target = targetTime(this.stage, this.sRule);
+    const targetGold = win && target !== null && time <= target ? Math.round(targetBonus(this.stage.id) * goldMultFor(this.stage.id)) : 0;
+    if (targetGold > 0) {
+      meta.addGold(targetGold);
+      this.track('timeGoals');
+    }
     if (win) {
       this.track('clears');
+      if (this.sRule !== 'normal') this.track('specials');
     }
     this.commitRun();
     bgm(this, null);
     sfx(this, win ? 'win' : 'lose');
     this.slowmo = 1;
     this.time.delayedCall(600, () =>
-      this.scene.start('Result', { win, stageId: this.stage.id, earned, stars, prevStars, starGold, time, timeRec, prevCleared, chest })
+      this.scene.start('Result', { win, stageId: this.stage.id, earned, stars, prevStars, starGold, time, timeRec, prevCleared, chest, target, targetGold })
     );
   }
 }

@@ -28,6 +28,7 @@ export const VISUALS: Record<string, Visual> = {
   shield: { bodyW: 32, bodyH: 40, body: 0x6a7a96, shape: 'rect', head: true, headColor: 0xb8c0cc, weapon: 'shield', weaponColor: 0xd8b04a },
   cavalry: { bodyW: 42, bodyH: 34, body: 0x8a5a2a, shape: 'rect', head: true, headColor: SKIN, weapon: 'spear', weaponColor: 0xd8d2b0 },
   cannon: { bodyW: 30, bodyH: 26, body: 0x3a3f4a, shape: 'rect', head: true, headColor: SKIN, weapon: 'club', weaponColor: 0x202430 },
+  wagon: { bodyW: 62, bodyH: 24, body: 0x9a6a3a, shape: 'rect', head: false, headColor: 0, weapon: 'none', weaponColor: 0 }, // 🛒 호위 관문 짐마차(바퀴·덮개는 Battle에서 덧그림)
   // 적
   goblin: { bodyW: 18, bodyH: 26, body: 0xff5a6e, shape: 'rect', head: true, headColor: 0xe88a6a, weapon: 'dagger', weaponColor: 0xcccccc },
   orc: { bodyW: 32, bodyH: 44, body: 0xb0392b, shape: 'rect', head: true, headColor: 0x7aa05a, weapon: 'club', weaponColor: 0x8a5a2a },

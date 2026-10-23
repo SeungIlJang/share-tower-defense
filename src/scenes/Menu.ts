@@ -61,7 +61,7 @@ export class MenuScene extends Phaser.Scene {
   }
 
   /** 📋 미션 창 — [오늘의 미션] 3개 / [업적] 목록, 진행 막대 + 받기 */
-  private openMissions(tab: 'daily' | 'ach'): void {
+  private openMissions(tab: 'daily' | 'ach', page = 0): void {
     const layer = this.add.container(0, 0).setDepth(100);
     const dim = this.add.rectangle(640, 360, 1280, 720, 0x000000, 0.45).setInteractive();
     const g = this.add.graphics();
@@ -92,7 +92,29 @@ export class MenuScene extends Phaser.Scene {
       layer.add(t);
     });
 
-    const list: Mission[] = tab === 'daily' ? meta.todayMissions() : ACHIEVEMENTS;
+    // 🏅 업적은 받을 것 → 진행 중 → 완료 순, 한 쪽에 7개씩
+    const PER = 7;
+    const order = (m: Mission): number => (meta.isClaimed(m, 'ach') ? 2 : meta.progress(m, 'ach') >= m.goal ? 0 : 1);
+    const all = tab === 'daily' ? meta.todayMissions() : [...ACHIEVEMENTS].sort((a, b) => order(a) - order(b));
+    const pages = Math.max(1, Math.ceil(all.length / PER));
+    const pg = Math.min(page, pages - 1);
+    const list: Mission[] = tab === 'daily' ? all : all.slice(pg * PER, pg * PER + PER);
+    if (tab === 'ach' && pages > 1) {
+      const nav = (x: number, label: string, to: number): void => {
+        const t = this.add
+          .text(x, 628, label, { fontFamily: 'sans-serif', fontSize: '18px', fontStyle: 'bold', color: to < 0 || to >= pages ? '#d0c0c8' : '#d85a88', padding: { x: 10, y: 4 } })
+          .setOrigin(0.5);
+        if (to >= 0 && to < pages)
+          t.setInteractive({ useHandCursor: true }).on('pointerdown', () => {
+            layer.destroy();
+            this.openMissions('ach', to);
+          });
+        layer.add(t);
+      };
+      nav(560, '◀', pg - 1);
+      layer.add(this.add.text(640, 628, `${pg + 1} / ${pages}`, { fontFamily: 'sans-serif', fontSize: '16px', fontStyle: 'bold', color: '#8a7a90' }).setOrigin(0.5));
+      nav(720, '▶', pg + 1);
+    }
     const rowH = tab === 'daily' ? 96 : 52;
     list.forEach((m, i) => {
       const y = 232 + rowH / 2 + i * rowH;
@@ -136,7 +158,7 @@ export class MenuScene extends Phaser.Scene {
             sfx(this, 'coin', 2);
             this.floatGold(860, y, got);
             layer.destroy();
-            this.openMissions(tab);
+            this.openMissions(tab, pg);
           }
         });
       }

@@ -30,6 +30,8 @@ interface ResultData {
   timeRec?: 'first' | 'best' | null; // 첫 기록 / 신기록
   prevCleared?: number; // 🎓 이번 판 전 클리어 최고 관문
   chest?: ChestLoot | null; // 🎁 보물 상자(이미 지급됨 — 여는 연출만)
+  target?: number | null; // ⏱️ 목표 시간(초)
+  targetGold?: number; // 목표 시간 보너스(이미 지급됨)
 }
 
 /** 결과 화면 — 별 평가 연출 + 보상 + 광고 2배 */
@@ -128,9 +130,14 @@ export class ResultScene extends Phaser.Scene {
     const goldLine = this.add
       .text(640, 392, win ? `획득 골드 🪙 ${earned}` : '보상 없음', { fontFamily: 'sans-serif', fontSize: '28px', fontStyle: 'bold', color: '#e8a000' })
       .setOrigin(0.5);
-    if (starGold > 0) {
+    // 새 별 보너스 · ⏱️ 목표 시간(달성하면 보너스 — 따로 지급됨)
+    const { target, targetGold = 0 } = this.resultData;
+    const notes: string[] = [];
+    if (starGold > 0) notes.push(`새 별 보너스 +${starGold} 포함`);
+    if (win && !daily && target) notes.push(targetGold > 0 ? `⏱️ 목표 ${formatTime(target)} 달성! +${targetGold}` : `⏱️ 목표 ${formatTime(target)} — 다음엔 더 빨리!`);
+    if (notes.length) {
       this.add
-        .text(640, 426, `(새 별 보너스 +${starGold} 포함)`, { fontFamily: 'sans-serif', fontSize: '15px', color: '#c08a20' })
+        .text(640, 426, notes.join('   ·   '), { fontFamily: 'sans-serif', fontSize: '15px', fontStyle: targetGold > 0 ? 'bold' : 'normal', color: targetGold > 0 ? '#2fa25a' : '#c08a20' })
         .setOrigin(0.5);
     }
     this.add

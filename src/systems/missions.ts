@@ -2,7 +2,7 @@
  * 📋 일일 미션·업적 — 순수 로직(Vitest 검증).
  * 전투 기록(StatKey)을 판이 끝날 때 한 번에 누적 → 일일(오늘) / 업적(전체) 진행도 계산.
  */
-export type StatKey = 'kills' | 'spawns' | 'perfects' | 'weapons' | 'clears' | 'bosses' | 'elites' | 'stars' | 'skills';
+export type StatKey = 'kills' | 'spawns' | 'perfects' | 'weapons' | 'clears' | 'bosses' | 'elites' | 'stars' | 'skills' | 'timeGoals' | 'bigRuns' | 'levelRuns' | 'specials';
 
 export type Stats = Partial<Record<StatKey, number>>;
 
@@ -35,6 +35,16 @@ export const ACHIEVEMENTS: Mission[] = [
   { key: 'a_elites', stat: 'elites', goal: 30, reward: 250, text: '엘리트 적 {n}마리 처치' },
   { key: 'a_stars', stat: 'stars', goal: 30, reward: 500, text: '별 {n}개 모으기' },
   { key: 'a_clears', stat: 'clears', goal: 20, reward: 200, text: '스테이지 {n}번 클리어' },
+  // 🐶 팔라독식 도전 업적(한 판 기록 · 목표 시간 · 특수 관문)
+  { key: 'a_timegoal', stat: 'timeGoals', goal: 10, reward: 400, text: '⏱️ 목표 시간 안에 {n}번 클리어' },
+  { key: 'a_bigrun', stat: 'bigRuns', goal: 1, reward: 300, text: '한 판에 적 100마리 처치' },
+  { key: 'a_levelrun', stat: 'levelRuns', goal: 1, reward: 300, text: '한 판에 레벨업 8번' },
+  { key: 'a_special', stat: 'specials', goal: 10, reward: 500, text: '🎯 특수 관문 {n}번 클리어' },
+  { key: 'a_bosses2', stat: 'bosses', goal: 30, reward: 800, text: '보스 {n}마리 처치' },
+  { key: 'a_kills3', stat: 'kills', goal: 10000, reward: 1500, text: '적 {n}마리 처치' },
+  { key: 'a_clears2', stat: 'clears', goal: 100, reward: 1000, text: '스테이지 {n}번 클리어' },
+  { key: 'a_stars2', stat: 'stars', goal: 150, reward: 1500, text: '별 {n}개 모으기' },
+  { key: 'a_stars3', stat: 'stars', goal: 300, reward: 4000, text: '별 {n}개 모으기' },
 ];
 
 export function missionText(m: Mission): string {

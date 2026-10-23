@@ -58,8 +58,12 @@ export function skillMult(lv: number): number {
   return lv <= 0 ? 0 : 1.5 + 0.2 * lv;
 }
 
-/** 이번 공격이 스킬인가 — swings = 지금 공격을 포함한 누적 공격 수 */
-export function isSkillSwing(swings: number, lv: number, fewer = 0): boolean {
-  const n = Math.max(2, skillEvery(lv) - fewer); // ✨ 기술 오라: 오라 안에선 더 자주
+/** ⭕ 오라 안 유닛 스킬 위력 배수(팔라독식 '오라 특수기') */
+export const AURA_SKILL_POWER = 1.3;
+
+/** 이번 공격이 스킬인가 — swings = 지금 공격을 포함한 누적 공격 수. 오라 안이면 주기 절반(2배 자주) */
+export function isSkillSwing(swings: number, lv: number, fewer = 0, aura = false): boolean {
+  const every = skillEvery(lv);
+  const n = Math.max(2, (aura ? Math.ceil(every / 2) : every) - fewer); // ✨ 기술 오라: 오라 안에선 더 자주
   return Number.isFinite(n) && swings > 0 && swings % n === 0;
 }

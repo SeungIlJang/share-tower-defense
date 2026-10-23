@@ -6,6 +6,7 @@ import { meta } from '../systems/upgrades';
 import { iconKey, spriteOf, textureKey } from '../systems/sprites';
 import { bgm } from '../systems/sound';
 import { featureOn, reachedStage } from '../systems/tutorial';
+import { RULE_INFO, stageRule } from '../systems/stageRules';
 import { DAILY_UNLOCK, dailyRule, dailyStageId } from '../systems/daily';
 import { cuteButton, cuteTitle, drawSky } from '../ui/cute';
 
@@ -144,6 +145,12 @@ export class StageSelectScene extends Phaser.Scene {
     g.fillStyle(0xffffff, 0.3).fillEllipse(0, -r * 0.45, r * 1.2, r * 0.5);
     g.lineStyle(4, 0xffffff, 1).strokeCircle(0, 0, r);
     node.add(g);
+    const sr = stageRule(id);
+    if (sr !== 'normal') {
+      // 🎯 특수 관문 표시(왼쪽 위 배지)
+      node.add(this.add.circle(-r * 0.78, -r * 0.72, 17, 0xfff4c8).setStrokeStyle(3, 0xd8962a));
+      node.add(this.add.text(-r * 0.78, -r * 0.72, RULE_INFO[sr].icon, { fontSize: '19px', padding: { top: 6, bottom: 2 } }).setOrigin(0.5));
+    }
 
     if (unlocked) {
       node.add(

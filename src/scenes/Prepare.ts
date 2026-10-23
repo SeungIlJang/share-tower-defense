@@ -8,6 +8,8 @@ import { DECK_SIZE, KIND_INFO, UNIT_COUNTER, enemyKind, goodUnits, stageEnemies,
 import { isBoss } from '../systems/bosses';
 import { enemyPortrait } from '../ui/enemyArt';
 import { iconKey } from '../systems/sprites';
+import { RULE_INFO, stageRule, targetTime } from '../systems/stageRules';
+import { formatTime } from '../systems/pacing';
 import { cuteButton, cuteTitle, drawSky, type SkyTheme } from '../ui/cute';
 import { sfx } from '../systems/sound';
 
@@ -32,7 +34,14 @@ export class PrepareScene extends Phaser.Scene {
   create(): void {
     const stage = STAGES.find((s) => s.id === this.stageId) ?? STAGES[0];
     drawSky(this, { theme: WORLDS[(stage.world ?? 1) - 1].theme as SkyTheme });
-    cuteTitle(this, 640, 44, `관문 ${stage.id} — 출전 준비`, 38);
+    const sr = stageRule(stage.id);
+    const info = sr === 'normal' ? null : RULE_INFO[sr];
+    cuteTitle(this, 640, 44, `관문 ${stage.id}${info ? ` · ${info.icon} ${info.name}` : ''} — 출전 준비`, 38);
+    if (info)
+      this.add
+        .text(592, 668, info.desc.replace('! ', '!\n'), { fontFamily: 'sans-serif', fontSize: '15px', fontStyle: 'bold', color: '#3a2a10', align: 'center', backgroundColor: '#fff4c8e8', padding: { x: 10, y: 5 } })
+        .setOrigin(0.5)
+        .setDepth(5);
     const owned = Object.keys(UNITS).filter((k) => meta.ownsUnit(k));
     this.deck = meta.activeDeck(Object.keys(UNITS));
 
@@ -65,7 +74,8 @@ export class PrepareScene extends Phaser.Scene {
       this.add.text(56, 504 + i * 30, `${KIND_INFO[k.kind].icon} ${KIND_INFO[k.kind].name} ×${k.count}  →  ${names}`, { fontFamily: 'sans-serif', fontSize: '16px', fontStyle: 'bold', color: '#4a5a7a' });
     });
     const rec = recommendedLevel(stage.id, stage.enemyMult ?? 1);
-    this.add.text(310, 586, `권장 유닛 강화 Lv${rec}`, { fontFamily: 'sans-serif', fontSize: '15px', color: '#7a86a8' }).setOrigin(0.5);
+    const tt = targetTime(stage, sr);
+    this.add.text(310, 586, `권장 유닛 강화 Lv${rec}${tt ? `   ·   ⏱️ 목표 ${formatTime(tt)}` : ''}`, { fontFamily: 'sans-serif', fontSize: '15px', color: '#7a86a8' }).setOrigin(0.5);
 
     // 🃏 오른쪽: 출전 덱
     panel(620, 630);
