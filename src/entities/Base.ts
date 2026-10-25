@@ -3,7 +3,7 @@ import { damageStage, spriteOf, textureKey } from '../systems/sprites';
 
 const RECT_W = 60;
 const RECT_H = 110;
-const BASE_SCALE = 1.9; // 🏰 성의 위압감 — 크게
+const BASE_SCALE = 1.62; // 🏰 성의 위압감 — 크게 (단, 탑 꼭대기가 상단 LV버튼을 가리지 않게 낮춤)
 
 /**
  * 기지(성) — HP가 0이 되면 패배.
