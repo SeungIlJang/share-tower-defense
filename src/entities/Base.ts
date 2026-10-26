@@ -3,7 +3,7 @@ import { damageStage, spriteOf, textureKey } from '../systems/sprites';
 
 const RECT_W = 60;
 const RECT_H = 110;
-const BASE_SCALE = 1.48; // 🏰 성 크기 — LV버튼 안 가리면서 적당한 위압감(1.35는 너무 작아 상향)
+const BASE_SCALE = 1.50; // 🏰 성 크기 — LV버튼 안 가리면서 적당한 위압감
 
 /**
  * 기지(성) — HP가 0이 되면 패배.
