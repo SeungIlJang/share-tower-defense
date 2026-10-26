@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import unitsData from '../data/units.json';
 import type { UnitStats } from '../types';
 import { unitPrice, weaponPrice } from '../systems/unlocks';
-import { iconKey, spriteOf, textureKey } from '../systems/sprites';
+import { animKey, iconKey, spriteOf, textureKey } from '../systems/sprites';
 import { meta, scaleStat } from '../systems/upgrades';
 import { bgm, sfx } from '../systems/sound';
 import { WEAPONS, weaponChargeMult, weaponDurationMult, weaponPowerMult } from '../systems/weapons';
@@ -16,6 +16,7 @@ import { EQUIP_MAX, GRADE_COLORS, GRADE_NAMES, HERO_WEAPONS, RINGS, equipUpCost 
 import { UNIT_TIERS, evolvedKey, nextUnitTier, starText, unitTier } from '../systems/evolution';
 import { AURA_MAX_LV, AURA_RADIUS, HERO_MAX_LV, HERO_SKILLS, HERO_TIERS, SKILL_MAX_LV, auraBonus, heroLvMult, heroSkillPower, heroTier, heroUpCost, nextHeroTier } from '../systems/hero';
 import { VIEW_W } from '../systems/view';
+import { UNIT_GROUPS, unitGroup, type UnitGroup } from '../systems/unitGroups';
 
 const UNITS = unitsData as Record<string, UnitStats>;
 
@@ -26,6 +27,7 @@ const DURATION_WEAPONS = new Set(['freeze', 'guard', 'berserk']);
 
 const GRID_TOP = 118; // 제목·보유 골드를 한 줄로 올려서 카드 공간 확보
 const GRID_H = 548;
+const SUB_H = 34; // 유닛 탭: 근접·원거리·설치물 고르는 줄
 
 /** 영구 강화 씬 — 메타 골드로 [유닛 강화] hp·atk / [특수 무기 강화] 위력·충전·지속 */
 export class UpgradeScene extends Phaser.Scene {
@@ -33,6 +35,7 @@ export class UpgradeScene extends Phaser.Scene {
   private goldText!: Phaser.GameObjects.Text;
   private tab: Tab = 'units';
   private tabBtns: Partial<Record<Tab, Phaser.GameObjects.Text>> = {};
+  private static group: UnitGroup = 'melee'; // 🛡️ 마지막으로 본 유닛 묶음(다시 열어도 유지)
 
   constructor() {
     super('Upgrade');
@@ -96,10 +99,14 @@ export class UpgradeScene extends Phaser.Scene {
   }
 
   private gridH = GRID_H; // 영웅 탭은 아래 진화 줄 자리만큼 낮게
+  private gridTop = GRID_TOP;
+  private cellMax = 110; // 칸 최대 높이(유닛 탭은 묶음별 6칸 이하라 크게)
 
   private render(): void {
     this.layer.removeAll(true);
-    this.gridH = this.tab === 'hero' ? 372 : GRID_H;
+    this.gridH = this.tab === 'hero' ? 372 : this.tab === 'units' ? GRID_H - SUB_H : GRID_H;
+    this.gridTop = this.tab === 'units' ? GRID_TOP + SUB_H : GRID_TOP;
+    this.cellMax = this.tab === 'units' ? 160 : 110;
     this.goldText.setText(`보유 🪙 ${meta.gold}`);
     for (const [key, t] of Object.entries(this.tabBtns) as [Tab, Phaser.GameObjects.Text][]) {
       const on = key === this.tab;
@@ -114,8 +121,8 @@ export class UpgradeScene extends Phaser.Scene {
   /** 2열 격자의 i번째 칸 위치 */
   private cell(i: number, count: number): { x: number; y: number; h: number } {
     const rows = Math.ceil(count / 2);
-    const h = Math.min(110, this.gridH / rows);
-    return { x: i % 2 === 0 ? 330 : 950, y: GRID_TOP + h / 2 + Math.floor(i / 2) * h, h };
+    const h = Math.min(this.cellMax, this.gridH / rows);
+    return { x: i % 2 === 0 ? 330 : 950, y: this.gridTop + h / 2 + Math.floor(i / 2) * h, h };
   }
 
   /** 한 줄 카드: 아이콘 · 제목 · 설명 · 강화 버튼 */
@@ -131,12 +138,17 @@ export class UpgradeScene extends Phaser.Scene {
     onUp: () => void,
     extra = '', // 제목 오른쪽 작은 글씨(유닛 스킬)
     skin?: { label: string; color: number; onClick: () => void }, // 👗 스킨 버튼
-    chip?: { label: string; color: number; onClick: () => void; pulse?: boolean } // 🃏 카드 랭크(제목 줄 오른쪽)
+    chip?: { label: string; color: number; onClick: () => void; pulse?: boolean }, // 🃏 카드 랭크(제목 줄 오른쪽)
+    look?: string // 큰 칸이면 아이콘 대신 이 그림(전신, 대기 동작)
   ): void {
     const { x, y, h } = this.cell(i, count);
     const parts: Phaser.GameObjects.GameObject[] = [
       this.add.rectangle(x, y, 600, h - 8, 0x1a2338).setStrokeStyle(2, 0x33406a),
     ];
+    if (h >= 130) {
+      this.bigCard(parts, x, y, h, icon, title, desc, btnLabel, canUp, dim, onUp, extra, skin, chip, look);
+      return;
+    }
     // 3줄: 제목(크게) / 수치 / 스킬·스킨 — 휴대폰에서도 잘 보이게 큰 글씨·밝은 색·검은 테두리
     const tall = h >= 86;
     const l1 = tall ? y - 24 : y - 14;
@@ -179,17 +191,42 @@ export class UpgradeScene extends Phaser.Scene {
 
   private renderUnits(): void {
     const keys = Object.keys(UNITS);
-    keys.forEach((key, i) => {
+    // 🛡️ 근접 · 원거리 · 설치물 — 고른 묶음만 크게
+    UNIT_GROUPS.forEach((g, gi) => {
+      const on = g.key === UpgradeScene.group;
+      const n = keys.filter((k) => unitGroup(UNITS[k]) === g.key);
+      const up = n.some((k) => (meta.ownsUnit(k) ? meta.canUpgrade(k) : false));
+      const t = this.add
+        .text(470 + gi * 170, GRID_TOP + 12, `${g.label} ${n.length}${up ? ' ⬆' : ''}`, {
+          fontFamily: 'sans-serif',
+          fontSize: '17px',
+          fontStyle: 'bold',
+          color: on ? '#1a2338' : '#cfe0ff',
+          backgroundColor: on ? '#ffd34d' : '#26324e',
+          padding: { x: 14, y: 4 },
+        })
+        .setOrigin(0.5)
+        .setInteractive({ useHandCursor: true });
+      t.on('pointerdown', () => {
+        if (UpgradeScene.group === g.key) return;
+        UpgradeScene.group = g.key;
+        sfx(this, 'click');
+        this.render();
+      });
+      this.layer.add(t);
+    });
+    const shown = keys.filter((k) => unitGroup(UNITS[k]) === UpgradeScene.group);
+    shown.forEach((key, i) => {
       const u = UNITS[key];
       const owned = meta.ownsUnit(key);
-      const price = unitPrice(i);
+      const price = unitPrice(keys.indexOf(key)); // 값은 전체 순서 기준 그대로
       const lv = meta.level(key);
       const look = owned ? ensureSkin(this, key, meta.equippedSkin(key), lv) : key; // 👗 착용 스킨 · ⭐ 진화 단계 얼굴
       this.needEvolutionArt(key, lv);
       const icon = this.textures.exists(iconKey(look)) ? this.add.image(0, 0, iconKey(look)) : null;
       this.card(
         i,
-        keys.length,
+        shown.length,
         icon,
         `${u.name} ${starText(lv)} Lv.${lv}`,
         `❤️ ${scaleStat(u.hp, lv)}  ⚔️ ${scaleStat(u.atk, lv)}  ▶  ❤️ ${scaleStat(u.hp, lv + 1)}  ⚔️ ${scaleStat(u.atk, lv + 1)}${nextUnitTier(lv) ? `   ⭐Lv${nextUnitTier(lv)!.min} 진화` : ''}`,
@@ -215,9 +252,120 @@ export class UpgradeScene extends Phaser.Scene {
         },
         this.skillLabel(key, lv),
         owned ? this.skinButton(key) : undefined,
-        owned ? this.rankChip(key) : undefined
+        owned ? this.rankChip(key) : undefined,
+        look
       );
     });
+  }
+
+  private static boxes = new Map<string, { left: number; top: number; right: number; bottom: number } | null>();
+
+  /** 프레임에서 그림이 있는 칸(투명 여백 제외) — 한 번 재고 기억 */
+  private contentBox(tex: string, frame: number): { left: number; top: number; right: number; bottom: number } | null {
+    const id = `${tex}#${frame}`;
+    const hit = UpgradeScene.boxes.get(id);
+    if (hit !== undefined) return hit;
+    let box: { left: number; top: number; right: number; bottom: number } | null = null;
+    try {
+      const fr = this.textures.getFrame(tex, frame);
+      const src = fr.source.image as CanvasImageSource;
+      const w = fr.cutWidth;
+      const h = fr.cutHeight;
+      const cv = document.createElement('canvas');
+      cv.width = w;
+      cv.height = h;
+      const ctx = cv.getContext('2d', { willReadFrequently: true })!;
+      ctx.drawImage(src, fr.cutX, fr.cutY, w, h, 0, 0, w, h);
+      const px = ctx.getImageData(0, 0, w, h).data;
+      let l = w, t = h, r = -1, b = -1;
+      for (let yy = 0; yy < h; yy++) {
+        for (let xx = 0; xx < w; xx++) {
+          if (px[(yy * w + xx) * 4 + 3] > 40) {
+            if (xx < l) l = xx;
+            if (xx > r) r = xx;
+            if (yy < t) t = yy;
+            if (yy > b) b = yy;
+          }
+        }
+      }
+      if (r >= 0) box = { left: l, top: t, right: r + 1, bottom: b + 1 };
+    } catch {
+      box = null;
+    }
+    UpgradeScene.boxes.set(id, box);
+    return box;
+  }
+
+  /** 큰 칸 — 왼쪽 무대에 전신 그림(대기 동작) · 큰 제목 · 수치 · 스킬, 오른쪽 위 랭크 · 아래 강화 버튼 */
+  private bigCard(
+    parts: Phaser.GameObjects.GameObject[],
+    x: number,
+    y: number,
+    h: number,
+    icon: Phaser.GameObjects.Image | null,
+    title: string,
+    desc: string,
+    btnLabel: string,
+    canUp: boolean,
+    dim: boolean,
+    onUp: () => void,
+    extra: string,
+    skin?: { label: string; color: number; onClick: () => void },
+    chip?: { label: string; color: number; onClick: () => void; pulse?: boolean },
+    look?: string
+  ): void {
+    const sx = x - 222; // 무대 가운데
+    const stageW = 148;
+    const stageH = h - 22;
+    parts.push(this.add.rectangle(sx, y, stageW, stageH, 0x0f1626).setStrokeStyle(1, 0x2a3656));
+    parts.push(this.add.ellipse(sx, y + stageH / 2 - 16, 96, 16, 0x000000, 0.4)); // 발밑 그림자
+    const d = look ? spriteOf(look) : null;
+    if (d && look && this.textures.exists(textureKey(look))) {
+      // 그림이 실제로 차지하는 칸(빈 여백 제외)을 무대에 꽉 차게 — 발은 무대 바닥에
+      const f0 = d.anims.idle!.frames[0];
+      const box = this.contentBox(textureKey(look), f0) ?? { left: 0, top: 0, right: d.frameWidth, bottom: d.footY };
+      const sc = Math.min((stageH - 26) / Math.max(1, d.footY - box.top), (stageW - 14) / Math.max(1, box.right - box.left), d.scale * 4);
+      const spr = this.add
+        .sprite(sx - ((box.left + box.right) / 2 - d.frameWidth / 2) * sc, y + stageH / 2 - 14, textureKey(look), f0)
+        .setOrigin(0.5, d.footY / d.frameHeight)
+        .setScale(sc)
+        .setAlpha(dim ? 0.45 : 1);
+      if (dim) spr.setTint(0x8890a0);
+      else if (this.anims.exists(animKey(look, 'idle'))) spr.play(animKey(look, 'idle'));
+      parts.push(spr);
+      icon?.destroy();
+    } else if (icon) parts.push(icon.setPosition(sx, y).setDisplaySize(96, 96).setAlpha(dim ? 0.5 : 1));
+    const tx = x - 136;
+    parts.push(
+      this.add.text(tx, y - h / 2 + 30, title, { fontFamily: 'sans-serif', fontSize: '24px', fontStyle: 'bold', color: dim ? '#aab6c8' : '#ffffff', stroke: '#000000', strokeThickness: 4 }).setOrigin(0, 0.5),
+      this.add.text(tx, y - 4, desc.replace(/\s+⭐/, '\n⭐'), { fontFamily: 'sans-serif', fontSize: '16px', fontStyle: 'bold', color: '#d6e2f5', wordWrap: { width: 300 }, lineSpacing: 2 }).setOrigin(0, 0.5)
+    );
+    if (extra) parts.push(this.add.text(tx, y + h / 2 - 30, extra, { fontFamily: 'sans-serif', fontSize: '15px', fontStyle: 'bold', color: '#ffe680', wordWrap: { width: 300 } }).setOrigin(0, 0.5));
+    const pill = (label: string, color: number, px: number, py: number, fn: () => void): Phaser.GameObjects.Text => {
+      const t = this.add
+        .text(px, py, label, { fontFamily: 'sans-serif', fontSize: '14px', fontStyle: 'bold', color: '#ffffff', backgroundColor: `#${color.toString(16).padStart(6, '0')}`, padding: { x: 7, y: 3 } })
+        .setOrigin(0.5)
+        .setInteractive({ useHandCursor: true });
+      t.on('pointerdown', fn);
+      parts.push(t);
+      return t;
+    };
+    if (chip) {
+      const cb = pill(chip.label, chip.color, x + 232, y - h / 2 + 28, chip.onClick);
+      if (chip.pulse) this.tweens.add({ targets: cb, scale: 1.12, duration: 420, yoyo: true, repeat: -1 });
+    }
+    if (skin) pill(skin.label, skin.color, sx + stageW / 2 - 30, y - stageH / 2 + 16, skin.onClick); // 무대 오른쪽 위
+    const by = y + 14;
+    const btn = this.add
+      .rectangle(x + 232, by, 118, Math.min(84, h - 64), canUp ? 0x2f7a4d : 0x3a3f55)
+      .setStrokeStyle(2, canUp ? 0x5cff9e : 0x555)
+      .setInteractive({ useHandCursor: true });
+    btn.on('pointerdown', onUp);
+    parts.push(
+      btn,
+      this.add.text(x + 232, by, btnLabel, { fontFamily: 'sans-serif', fontSize: '18px', fontStyle: 'bold', color: '#fff', align: 'center', stroke: '#000000', strokeThickness: 3 }).setOrigin(0.5)
+    );
+    this.layer.add(parts);
   }
 
   /** 🃏 카드 랭크 칩 — 조각이 모이면 눌러서 랭크업(체력·공격 +6%) */
