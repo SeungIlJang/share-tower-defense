@@ -170,6 +170,7 @@ export class BattleScene extends Phaser.Scene {
   private volleyT = 0; // 🎯 성 특수 공격 남은 대기(초)
   private volleyGauge!: Phaser.GameObjects.Graphics;
   private volleyIcon!: Phaser.GameObjects.Text;
+  private volleyHit!: Phaser.GameObjects.Arc;
   private xpNext = xpToNext(1);
   private skills: Record<string, number> = {};
   private picking = false;
@@ -354,6 +355,9 @@ export class BattleScene extends Phaser.Scene {
     this.volleyGauge = this.add.graphics().setDepth(96);
     this.volleyIcon = this.add.text(0, 0, '🏹', { fontSize: '22px', padding: { top: 10, bottom: 4 } }).setOrigin(0.5).setDepth(97);
     this.playerBase.onTap(() => this.castleVolley());
+    // 게이지 동그라미도 직접 누를 수 있게(손가락 크기 판정)
+    this.volleyHit = this.add.circle(0, 0, 34, 0xffffff, 0.001).setDepth(97).setInteractive({ useHandCursor: true });
+    this.volleyHit.on('pointerdown', () => this.castleVolley());
     this.spawnHero();
     this.setupRule(tough);
     this.devHud();
@@ -1798,6 +1802,7 @@ ${info.desc}`, { fontFamily: 'sans-serif', fontSize: '24px', fontStyle: 'bold', 
     g.clear();
     if (this.playerBase.destroyed || !this.feat.volley) {
       this.volleyIcon.setVisible(false);
+      this.volleyHit.setVisible(false);
       return;
     }
     const ready = this.volleyT <= 0;
@@ -1808,6 +1813,7 @@ ${info.desc}`, { fontFamily: 'sans-serif', fontSize: '24px', fontStyle: 'bold', 
     g.strokePath();
     if (ready) g.lineStyle(2, 0xffffff, 0.5 + 0.5 * Math.sin(this.time.now / 150)).strokeCircle(x, y, r + 6);
     const icon = VOLLEY_NAMES[allyCastleTier(meta.castleLevel('castle'))].split(' ')[0];
+    this.volleyHit.setVisible(true).setPosition(x, y);
     this.volleyIcon.setVisible(true).setPosition(x, y).setText(icon).setAlpha(ready ? 1 : 0.5).setScale(ready ? 1 + 0.08 * Math.sin(this.time.now / 120) : 1);
   }
 
