@@ -6,6 +6,7 @@ import type { Synergy } from '../systems/synergy';
 import { HERO_SKILLS } from '../systems/hero';
 import { KIND_INFO, UNIT_COUNTER } from '../systems/counters';
 import { fromRadar, toRadar } from '../systems/camera';
+import { VIEW_L, VIEW_OFF, VIEW_R, VIEW_W, uiX } from '../systems/view';
 
 export interface HudState {
   lv: number;
@@ -87,7 +88,7 @@ interface WeaponButton {
 }
 
 const WEAPON_R = 34;
-export const HERO_PANEL_X = 1010; // 👑 영웅 스킬 버튼 x(적 성 그림 왼쪽 — 성 꼭대기·체력 바를 가리지 않게)
+export const HERO_PANEL_X = 1010 + VIEW_OFF; // 👑 영웅 스킬 버튼 x(적 성 그림 왼쪽 — 성 꼭대기·체력 바를 가리지 않게)
 export const HERO_BTN_R = 40;
 export const HERO_BTN_Y = 114; // 적 기지 그림(위쪽 ~165)보다 위
 const W_CARD_W = 150; // 📱 특수 무기 카드(가로 스크롤)
@@ -150,18 +151,18 @@ export class Hud {
     const before = new Set(scene.children.list); // destroy()용 — 이 HUD가 만든 것만 기억
     const d = 100;
     this.buildHeroPanel(onHeroSkill, heroOwned, d, features.heroSkill);
-    scene.add.rectangle(640, 22, 1280, 44, 0x0d1424, 0.8).setDepth(d);
+    scene.add.rectangle(640, 22, VIEW_W, 44, 0x0d1424, 0.8).setDepth(d);
     this.synergyText = scene.add
-      .text(12, 52, '', { fontFamily: 'sans-serif', fontSize: '14px', fontStyle: 'bold', color: '#aef5ff', backgroundColor: '#0d1424cc', padding: { x: 8, y: 4 } })
+      .text(VIEW_L + 12, 52, '', { fontFamily: 'sans-serif', fontSize: '14px', fontStyle: 'bold', color: '#aef5ff', backgroundColor: '#0d1424cc', padding: { x: 8, y: 4 } })
       .setDepth(d + 1)
       .setVisible(false);
-    this.lvText = scene.add.text(64, 22, 'LV 1', { fontFamily: 'sans-serif', fontSize: '22px', fontStyle: 'bold', color: '#ffd34d' }).setOrigin(0, 0.5).setDepth(d + 1);
+    this.lvText = scene.add.text(VIEW_L + 64, 22, 'LV 1', { fontFamily: 'sans-serif', fontSize: '22px', fontStyle: 'bold', color: '#ffd34d' }).setOrigin(0, 0.5).setDepth(d + 1);
     // 🗺️ 전장 지도(아군 파랑·적 빨강·보스 금색·영웅 노랑, 흰 네모 = 지금 보는 곳) — 누르거나 끌면 그곳을 봄
     scene.add.rectangle(this.vsX + this.vsW / 2, 22, this.vsW + 6, 30, 0x000000, 0.55).setStrokeStyle(1, 0x3a4560).setDepth(d);
     this.radarG = scene.add.graphics().setDepth(d + 1);
     const zone = scene.add.rectangle(this.vsX + this.vsW / 2, 22, this.vsW + 6, 40, 0xffffff, 0.001).setDepth(d + 3).setInteractive({ useHandCursor: true });
     let radarDrag = false;
-    const look = (p: Phaser.Input.Pointer): void => this.onLook?.(fromRadar(p.x, this.radarW, this.vsX, this.vsW));
+    const look = (p: Phaser.Input.Pointer): void => this.onLook?.(fromRadar(uiX(p.x), this.radarW, this.vsX, this.vsW));
     zone.on('pointerdown', (p: Phaser.Input.Pointer) => {
       radarDrag = true;
       look(p);
@@ -181,17 +182,19 @@ export class Hud {
     this.goldText = scene.add.text(808, 22, '🪙 0', { fontFamily: 'sans-serif', fontSize: '22px', fontStyle: 'bold', color: '#ffd34d' }).setOrigin(0, 0.5).setDepth(d + 1);
 
     // 하단 HUD 판(전장과 구분)
-    scene.add.rectangle(640, 565, 1280, 310, 0x0b0f1a, 0.92).setDepth(d - 1);
-    scene.add.rectangle(640, 410, 1280, 2, 0x3a4560).setDepth(d - 1);
+    scene.add.rectangle(640, 565, VIEW_W, 310, 0x0b0f1a, 0.92).setDepth(d - 1);
+    scene.add.rectangle(640, 410, VIEW_W, 2, 0x3a4560).setDepth(d - 1);
+    const fl = VIEW_L; // 🍖 인구 바는 왼쪽 끝, ⚡ 에너지 바는 오른쪽 끝에 붙임
+    const er = VIEW_OFF;
     const by = 428;
-    scene.add.rectangle(240, by, 400, 22, 0x000000, 0.5).setDepth(d);
-    this.foodFill = scene.add.rectangle(42, by, 396, 18, 0xe0a24e).setOrigin(0, 0.5).setDepth(d + 1);
-    this.foodText = scene.add.text(240, by, '', { fontFamily: 'sans-serif', fontSize: '15px', fontStyle: 'bold', color: '#fff', stroke: '#000000', strokeThickness: 3 }).setOrigin(0.5).setDepth(d + 2);
-    scene.add.text(22, by, '🍖 인구', { fontFamily: 'sans-serif', fontSize: '14px', fontStyle: 'bold', color: '#fff', stroke: '#000000', strokeThickness: 3 }).setOrigin(0, 0.5).setDepth(d + 2);
-    scene.add.rectangle(1040, by, 400, 22, 0x000000, 0.5).setDepth(d);
-    this.energyFill = scene.add.rectangle(842, by, 396, 18, 0x4ac8e0).setOrigin(0, 0.5).setDepth(d + 1);
-    this.energyText = scene.add.text(1040, by, '', { fontFamily: 'sans-serif', fontSize: '14px', fontStyle: 'bold', color: '#fff', stroke: '#000000', strokeThickness: 3 }).setOrigin(0.5).setDepth(d + 2);
-    scene.add.text(1238, by, '⚡ 소환', { fontFamily: 'sans-serif', fontSize: '14px', fontStyle: 'bold', color: '#fff', stroke: '#000000', strokeThickness: 3 }).setOrigin(1, 0.5).setDepth(d + 2);
+    scene.add.rectangle(fl + 240, by, 400, 22, 0x000000, 0.5).setDepth(d);
+    this.foodFill = scene.add.rectangle(fl + 42, by, 396, 18, 0xe0a24e).setOrigin(0, 0.5).setDepth(d + 1);
+    this.foodText = scene.add.text(fl + 240, by, '', { fontFamily: 'sans-serif', fontSize: '15px', fontStyle: 'bold', color: '#fff', stroke: '#000000', strokeThickness: 3 }).setOrigin(0.5).setDepth(d + 2);
+    scene.add.text(fl + 22, by, '🍖 인구', { fontFamily: 'sans-serif', fontSize: '14px', fontStyle: 'bold', color: '#fff', stroke: '#000000', strokeThickness: 3 }).setOrigin(0, 0.5).setDepth(d + 2);
+    scene.add.rectangle(er + 1040, by, 400, 22, 0x000000, 0.5).setDepth(d);
+    this.energyFill = scene.add.rectangle(er + 842, by, 396, 18, 0x4ac8e0).setOrigin(0, 0.5).setDepth(d + 1);
+    this.energyText = scene.add.text(er + 1040, by, '', { fontFamily: 'sans-serif', fontSize: '14px', fontStyle: 'bold', color: '#fff', stroke: '#000000', strokeThickness: 3 }).setOrigin(0.5).setDepth(d + 2);
+    scene.add.text(er + 1238, by, '⚡ 소환', { fontFamily: 'sans-serif', fontSize: '14px', fontStyle: 'bold', color: '#fff', stroke: '#000000', strokeThickness: 3 }).setOrigin(1, 0.5).setDepth(d + 2);
 
     // ⏱️ 리듬 소환 바 (초록 중앙 = PERFECT) — 하단 HUD, 인구/에너지 바 사이
     const beatY = by + 4;
@@ -206,7 +209,7 @@ export class Hud {
     // 하단 1단: 유닛 카드(큰 카드, 가로 스크롤) — 보유 유닛 먼저, 나머지는 잠금
     const keys = Object.keys(units).sort((x, y) => Number(!unitOwned[x]) - Number(!unitOwned[y]));
     while (keys.length < UNIT_SLOTS) keys.push('');
-    const strip = scene.add.container(0, 0).setDepth(d);
+    const strip = scene.add.container(VIEW_L, 0).setDepth(d); // 카드 줄은 화면 왼쪽 끝부터
     this.strip = strip;
     const cy = CARD_CY;
     const add = <T extends Phaser.GameObjects.GameObject>(o: T): T => {
@@ -260,7 +263,7 @@ export class Hud {
     this.scroller(strip, cy, CARD_H, keys.length * (CARD_W + CARD_GAP) - CARD_GAP, d);
 
     // 하단 2단: 특수 무기 카드 9장(게이지가 차면 발사, 단축키 1~9) — 가로 스크롤
-    const wStrip = scene.add.container(0, 0).setDepth(d);
+    const wStrip = scene.add.container(VIEW_L, 0).setDepth(d);
     const wy = W_CARD_CY;
     if (!features.weapon) {
       scene.add.text(640, wy, '🔒 특수 무기 — 3관문에서 열려요', { fontFamily: 'sans-serif', fontSize: '20px', fontStyle: 'bold', color: '#7c8aa0' }).setOrigin(0.5).setDepth(d);
@@ -315,7 +318,7 @@ export class Hud {
   /** ↔ 가로 스크롤 줄(끌기·마우스 휠) — 화면보다 넓을 때만 움직이고 ▶ 표시 */
   private scroller(strip: Phaser.GameObjects.Container, cy: number, h: number, contentW: number, depth: number): void {
     const scene = this.scene;
-    const minX = Math.min(0, 1280 - (contentW + ROW_X0 * 2));
+    const minX = Math.min(VIEW_L, VIEW_R - (contentW + ROW_X0 * 2));
     let downX: number | null = null;
     let startX = 0;
     const inStrip = (p: Phaser.Input.Pointer): boolean => Math.abs(p.y - cy) <= h / 2;
@@ -328,13 +331,13 @@ export class Hud {
       if (downX === null || !p.isDown) return;
       const dx = p.x - downX;
       if (Math.abs(dx) > DRAG_START) this.dragged = true; // 손가락이 조금 흔들린 건 탭으로
-      if (this.dragged) strip.x = Phaser.Math.Clamp(startX + dx, minX, 0);
+      if (this.dragged) strip.x = Phaser.Math.Clamp(startX + dx, minX, VIEW_L);
     };
     const up = (): void => {
       downX = null;
     };
     const wheel = (p: Phaser.Input.Pointer, _o: unknown, dx: number, dy: number): void => {
-      if (inStrip(p)) strip.x = Phaser.Math.Clamp(strip.x - (dx || dy), minX, 0);
+      if (inStrip(p)) strip.x = Phaser.Math.Clamp(strip.x - (dx || dy), minX, VIEW_L);
     };
     scene.input.on('pointerdown', down);
     scene.input.on('pointermove', move);
@@ -346,9 +349,9 @@ export class Hud {
       scene.input.off('pointerup', up);
       scene.input.off('wheel', wheel);
     });
-    if (minX < 0) {
-      const hint = scene.add.text(1272, cy, '▶', { fontSize: '22px', color: '#ffffff' }).setOrigin(1, 0.5).setDepth(depth + 5).setAlpha(0.7);
-      scene.tweens.add({ targets: hint, x: 1262, duration: 500, yoyo: true, repeat: -1 });
+    if (minX < VIEW_L) {
+      const hint = scene.add.text(VIEW_R - 8, cy, '▶', { fontSize: '22px', color: '#ffffff' }).setOrigin(1, 0.5).setDepth(depth + 5).setAlpha(0.7);
+      scene.tweens.add({ targets: hint, x: VIEW_R - 18, duration: 500, yoyo: true, repeat: -1 });
       const show = (): void => {
         hint.setVisible(strip.x > minX + 4);
       };
@@ -448,7 +451,7 @@ export class Hud {
     for (const x of r.bosses) g.fillCircle(X(x), 20, 5);
     if (r.wagon !== null) g.fillStyle(0xc8a060, 1).fillRect(X(r.wagon) - 4, 18, 8, 8);
     if (r.hero !== null) g.fillStyle(0xffe14d, 1).fillTriangle(X(r.hero), 24, X(r.hero) - 5, 12, X(r.hero) + 5, 12);
-    const vw = (1280 / r.w) * this.vsW; // 지금 보는 곳
+    const vw = (VIEW_W / r.w) * this.vsW; // 지금 보는 곳
     g.lineStyle(2, 0xffffff, 0.85).strokeRect(X(r.view), 9, vw, 26);
   }
 

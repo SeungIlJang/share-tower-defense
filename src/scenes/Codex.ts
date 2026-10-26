@@ -9,6 +9,7 @@ import { isBoss } from '../systems/bosses';
 import { sfx } from '../systems/sound';
 import { cuteButton, cuteTitle, drawSky } from '../ui/cute';
 import { enemyPortrait } from '../ui/enemyArt';
+import { VIEW_W } from '../systems/view';
 
 const ENEMIES = enemiesData as Record<string, EnemyStats>;
 const UNITS = unitsData as Record<string, UnitStats>;
@@ -112,7 +113,7 @@ export class CodexScene extends Phaser.Scene {
     const seen = (meta.kills[k] ?? 0) > 0;
     const e = ENEMIES[k];
     const d = this.add.container(0, 0).setDepth(50);
-    const dim = this.add.rectangle(640, 360, 1280, 720, 0x000000, 0.55).setInteractive();
+    const dim = this.add.rectangle(640, 360, VIEW_W, 720, 0x000000, 0.55).setInteractive();
     const g = this.add.graphics();
     g.fillStyle(0xffffff, 0.97).fillRoundedRect(390, 170, 500, 380, 28);
     g.lineStyle(4, isBoss(k) ? 0xff6a6a : 0x6a8ad8, 1).strokeRoundedRect(390, 170, 500, 380, 28);

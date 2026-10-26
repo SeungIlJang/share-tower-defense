@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { GRADES, type SkillDef } from '../systems/skills';
+import { VIEW_W } from '../systems/view';
 
 /** 레벨업 → 무작위 3장 중 택1 오버레이 (등급 색 · 지금→다음 수치 · 각성 예고 · 다시 뽑기) */
 export class LevelUpOverlay {
@@ -10,7 +11,7 @@ export class LevelUpOverlay {
     this.hide();
     const s = this.scene;
     const c = s.add.container(0, 0).setDepth(300);
-    c.add(s.add.rectangle(640, 360, 1280, 720, 0x000000, 0.72).setInteractive()); // 뒤 클릭 막기
+    c.add(s.add.rectangle(640, 360, VIEW_W, 720, 0x000000, 0.72).setInteractive()); // 뒤 클릭 막기
     // 배너
     c.add(s.add.rectangle(640, 70, 520, 70, 0xc9942a).setStrokeStyle(4, 0x8a5e12));
     c.add(s.add.text(640, 70, 'LEVEL UP!', { fontFamily: 'sans-serif', fontSize: '48px', fontStyle: 'bold', color: '#fff' }).setOrigin(0.5));

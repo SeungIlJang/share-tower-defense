@@ -6,6 +6,7 @@ import { ACHIEVEMENTS, missionText, type Mission } from '../systems/missions';
 import { GROUND_Y, cuteButton, drawSky } from '../ui/cute';
 import { openKeypad } from '../ui/Keypad';
 import { DEV_PIN_LEN, checkDevPin } from '../systems/dev';
+import { VIEW_W } from '../systems/view';
 
 /** 메인 화면 행진에 나오는 아군(오른쪽으로) / 적(왼쪽으로) */
 const PARADE_ALLY = ['knight', 'soldier', 'archer', 'cleric', 'mage', 'spear'];
@@ -63,7 +64,7 @@ export class MenuScene extends Phaser.Scene {
   /** 📋 미션 창 — [오늘의 미션] 3개 / [업적] 목록, 진행 막대 + 받기 */
   private openMissions(tab: 'daily' | 'ach', page = 0): void {
     const layer = this.add.container(0, 0).setDepth(100);
-    const dim = this.add.rectangle(640, 360, 1280, 720, 0x000000, 0.45).setInteractive();
+    const dim = this.add.rectangle(640, 360, VIEW_W, 720, 0x000000, 0.45).setInteractive();
     const g = this.add.graphics();
     g.fillStyle(0xd85a88, 0.35).fillRoundedRect(330, 66, 620, 600, 34);
     g.fillStyle(0xffffff, 0.97).fillRoundedRect(330, 58, 620, 600, 34);
@@ -244,7 +245,7 @@ export class MenuScene extends Phaser.Scene {
   /** 🎁 보상 창 — 일일 출석(7일 달력) + 방치 보상, 미션 창과 같은 귀여운 카드 */
   private openRewards(): void {
     const layer = this.add.container(0, 0).setDepth(100);
-    const dim = this.add.rectangle(640, 360, 1280, 720, 0x000000, 0.45).setInteractive();
+    const dim = this.add.rectangle(640, 360, VIEW_W, 720, 0x000000, 0.45).setInteractive();
     const g = this.add.graphics();
     // 📱 휴대폰에서도 잘 보이게 화면 대부분을 쓰는 큰 창
     g.fillStyle(0x2fa25a, 0.35).fillRoundedRect(160, 32, 960, 672, 40);

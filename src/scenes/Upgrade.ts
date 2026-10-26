@@ -15,6 +15,7 @@ import { RANK_MAX, rankMult, rankUpCost } from '../systems/chests';
 import { EQUIP_MAX, GRADE_COLORS, GRADE_NAMES, HERO_WEAPONS, RINGS, equipUpCost } from '../systems/equipment';
 import { UNIT_TIERS, evolvedKey, nextUnitTier, starText, unitTier } from '../systems/evolution';
 import { AURA_MAX_LV, AURA_RADIUS, HERO_MAX_LV, HERO_SKILLS, HERO_TIERS, SKILL_MAX_LV, auraBonus, heroLvMult, heroSkillPower, heroTier, heroUpCost, nextHeroTier } from '../systems/hero';
+import { VIEW_W } from '../systems/view';
 
 const UNITS = unitsData as Record<string, UnitStats>;
 
@@ -44,7 +45,7 @@ export class UpgradeScene extends Phaser.Scene {
   }
 
   create(): void {
-    if (this.fromBattle) this.add.rectangle(640, 360, 1280, 720, 0x0d1018); // 멈춘 전투 화면을 가림
+    if (this.fromBattle) this.add.rectangle(640, 360, VIEW_W, 720, 0x0d1018); // 멈춘 전투 화면을 가림
     else bgm(this, 'bgm_menu');
     this.add
       .text(628, 38, '🔧 강화', { fontFamily: 'sans-serif', fontSize: '34px', fontStyle: 'bold', color: '#ffd34d' })
@@ -260,7 +261,7 @@ export class UpgradeScene extends Phaser.Scene {
       return;
     }
     const layer = this.add.container(0, 0).setDepth(200);
-    const dim = this.add.rectangle(640, 360, 1280, 720, 0x000000, 0.55).setInteractive();
+    const dim = this.add.rectangle(640, 360, VIEW_W, 720, 0x000000, 0.55).setInteractive();
     const panel = this.add.graphics();
     panel.fillStyle(0xffffff, 0.97).fillRoundedRect(310, 150, 660, 400, 30);
     panel.lineStyle(5, 0xa07aff, 1).strokeRoundedRect(310, 150, 660, 400, 30);
@@ -421,7 +422,7 @@ export class UpgradeScene extends Phaser.Scene {
       layer.destroy();
       this.render();
     };
-    const dim = this.add.rectangle(640, 360, 1280, 720, 0x000000, 0.7).setInteractive();
+    const dim = this.add.rectangle(640, 360, VIEW_W, 720, 0x000000, 0.7).setInteractive();
     dim.on('pointerdown', close);
     const panel = this.add.rectangle(640, 372, 1000, 600, 0x141c30).setStrokeStyle(3, 0x4a6ad8).setInteractive();
     layer.add([dim, panel]);
@@ -533,7 +534,7 @@ export class UpgradeScene extends Phaser.Scene {
   /** ✨ 진화 연출 */
   private evolveFx(name: string, head = '✨ 진화!'): void {
     sfx(this, 'levelup');
-    const flash = this.add.rectangle(640, 360, 1280, 720, 0xfff6c0, 0.7).setDepth(300);
+    const flash = this.add.rectangle(640, 360, VIEW_W, 720, 0xfff6c0, 0.7).setDepth(300);
     this.tweens.add({ targets: flash, alpha: 0, duration: 700, onComplete: () => flash.destroy() });
     const t = this.add
       .text(640, 300, `${head} ${name} ✨`, { fontFamily: 'sans-serif', fontSize: head ? '52px' : '40px', fontStyle: 'bold', color: '#ffd34d', stroke: '#5a3a00', strokeThickness: 8 })

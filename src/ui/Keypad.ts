@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { sfx } from '../systems/sound';
+import { VIEW_W } from '../systems/view';
 
 export interface KeypadOptions {
   title: string;
@@ -22,7 +23,7 @@ export function openKeypad(
   const maxLen = opts.maxLen ?? 9;
   let value = opts.initial ?? '';
   const layer = scene.add.container(0, 0).setDepth(1000);
-  const dim = scene.add.rectangle(640, 360, 1280, 720, 0x000000, 0.65).setInteractive();
+  const dim = scene.add.rectangle(640, 360, VIEW_W, 720, 0x000000, 0.65).setInteractive();
   const panel = scene.add.graphics();
   panel.fillStyle(0x1a2133, 0.98).fillRoundedRect(440, 40, 400, 640, 28);
   panel.lineStyle(4, 0x6ab8ff, 1).strokeRoundedRect(440, 40, 400, 640, 28);

@@ -33,6 +33,7 @@ import { fxWarning, playFx, resetFx, type FxKey } from '../systems/fx';
 import { KNOCK_MS, KNOCK_PX, knockChance } from '../systems/knockdown';
 import { HERO_WEAPONS, burnMult, chainCount, frostSec, goldMaceMult, ringMult, ringPct, rollEquip, scepterHeal, weaponPower, type RingKey } from '../systems/equipment';
 import { TOTEMS, TOTEM_LIFE, isTotem, totemHeal, totemX } from '../systems/totems';
+import { VIEW_L, VIEW_OFF, VIEW_R, VIEW_W, uiX } from '../systems/view';
 import { LOOK_HOLD, SCREEN_W, followX, walkMult, worldWidth } from '../systems/camera';
 import { RULE_INFO, targetBonus, targetTime, WAGON_BLOCK, WAGON_SPEED, breachGoal, holdProdMult, holdSeconds, stageRule, wagonHp, type StageRule } from '../systems/stageRules';
 import { HERO_TIP_STAGE, TIP_TEXT, featureOn, nextTip, reachedStage, type Feature, type TipKey } from '../systems/tutorial';
@@ -203,6 +204,7 @@ export class BattleScene extends Phaser.Scene {
   private totemEnd = new Map<Unit, number>(); // 🗿 설치물 사라지는 시각(clock)
   private burns: { x: number; until: number; dmg: number; t: number }[] = []; // 🔥 화염 메이스 불바다
   private uiConts = new Set<Phaser.GameObjects.Container>();
+  private uiCam!: Phaser.Cameras.Scene2D.Camera;
   private counterFxT = 0; // '효과적!' 표시 간격
   private kills: Record<string, number> = {}; // 📖 이번 판 적별 처치
   private metNew = new Set<string>(); // 📖 이번 판에 '새 몬스터!' 알린 적
@@ -260,7 +262,7 @@ export class BattleScene extends Phaser.Scene {
     const g = this.add.graphics().setDepth(-9).setScrollFactor(0);
     const horizon = mix(sky, line, 0.55);
     g.fillGradientStyle(sky, sky, horizon, horizon, 1);
-    g.fillRect(0, 44, 1280, LANE_Y - 44);
+    g.fillRect(0, 44, VIEW_W, LANE_Y - 44);
     // 달
     g.fillStyle(0xfff4c8, 0.12);
     g.fillCircle(980, 130, 58);
@@ -269,7 +271,7 @@ export class BattleScene extends Phaser.Scene {
     // 먼 언덕(뒤) → 가까운 언덕(앞) — 느리게 움직이는 겹일수록 좁게 그려도 됨
     const hills = (baseY: number, amp: number, color: number, seed: number, f: number): void => {
       const h = this.add.graphics().setDepth(-9).setScrollFactor(f, 1);
-      const w = 1280 + (this.worldW - 1280) * f;
+      const w = VIEW_W + (this.worldW - VIEW_W) * f;
       h.fillStyle(color, 1);
       h.beginPath();
       h.moveTo(0, LANE_Y);
@@ -282,7 +284,7 @@ export class BattleScene extends Phaser.Scene {
     hills(LANE_Y - 40, 70, mix(sky, lane, 0.8), 4.1, 0.6);
     // 반짝이는 별(하늘과 함께 고정)
     for (let i = 0; i < 26; i++) {
-      const st = this.add.circle(Phaser.Math.Between(10, 1270), Phaser.Math.Between(56, LANE_Y - 170), Phaser.Math.FloatBetween(1, 2.4), 0xffffff, 0.8).setDepth(-8).setScrollFactor(0);
+      const st = this.add.circle(Phaser.Math.Between(10, VIEW_W - 10), Phaser.Math.Between(56, LANE_Y - 170), Phaser.Math.FloatBetween(1, 2.4), 0xffffff, 0.8).setDepth(-8).setScrollFactor(0);
       this.tweens.add({ targets: st, alpha: 0.15, duration: Phaser.Math.Between(900, 2200), yoyo: true, repeat: -1, delay: Phaser.Math.Between(0, 2000) });
     }
   }
@@ -327,12 +329,13 @@ export class BattleScene extends Phaser.Scene {
     // 배경 + 레인
     const [sky, lane, line] = this.endless ? THEMES.endless : WORLDS[(this.stage.world ?? 1) - 1].battle; // 🗺️ 월드별 배경색
     // 🎥 전장 폭(1~3관문은 화면 한 장) · 카메라 범위 · 넓어진 만큼 이동 속도 보정
-    const W = worldWidth(this.stage.id, this.endless, !!this.rule);
+    const W = Math.max(VIEW_W, worldWidth(this.stage.id, this.endless, !!this.rule)); // 📱 넓은 휴대폰이면 작은 전장도 화면 폭만큼
     this.worldW = W;
     this.walkK = walkMult(W);
     this.lookX = null;
     this.cameras.main.setBounds(0, 0, W, 720).setScroll(0, 0);
-    this.add.rectangle(640, 360, 1280, 720, sky).setDepth(-10).setScrollFactor(0);
+    this.setupUiCamera();
+    this.add.rectangle(VIEW_W / 2, 360, VIEW_W, 720, sky).setDepth(-10).setScrollFactor(0);
     this.drawBackdrop(sky, lane, line);
     this.add.rectangle(W / 2, LANE_Y + 40, W, 80, lane).setDepth(-5);
     this.add.rectangle(W / 2, LANE_Y + 2, W, 3, line).setDepth(-4);
@@ -423,7 +426,7 @@ export class BattleScene extends Phaser.Scene {
       this.heroDrag = null;
       if (this.over || this.picking || this.paused || this.reviving || !this.hero?.active) return;
       if (p.y < 60 || p.y > 405) return;
-      if (p.x > HERO_PANEL_X - HERO_SKILLS.length * (HERO_BTN_R * 2 + 14) - 10 && p.y < HERO_BTN_Y + HERO_BTN_R + 10) return; // 영웅 스킬 버튼·마나 바
+      if (uiX(p.x) > HERO_PANEL_X - HERO_SKILLS.length * (HERO_BTN_R * 2 + 14) - 10 && p.y < HERO_BTN_Y + HERO_BTN_R + 10) return; // 영웅 스킬 버튼·마나 바
       this.heroDrag = { px: p.x, hx: this.hero.x };
     });
     this.input.on('pointermove', (p: Phaser.Input.Pointer) => {
@@ -467,14 +470,14 @@ export class BattleScene extends Phaser.Scene {
         .setOrigin(0.5)
         .setDepth(105) // 상단 바(100) 위
         .setInteractive({ useHandCursor: true });
-    this.speedBtn = topBtn(965, '', '#ffe680');
+    this.speedBtn = topBtn(965 + VIEW_OFF, '', '#ffe680');
     this.speedBtn.on('pointerdown', () => {
       BattleScene.speed = BattleScene.speed === 1 ? 2 : 1;
       sfx(this, 'click');
       this.applySpeed();
     });
-    topBtn(1068, '🛒 상점', '#ffd34d').on('pointerdown', () => this.openShop());
-    topBtn(1170, '⏸ 정지', '#cfe0ff').on('pointerdown', () => this.openPause());
+    topBtn(1068 + VIEW_OFF, '🛒 상점', '#ffd34d').on('pointerdown', () => this.openShop());
+    topBtn(1170 + VIEW_OFF, '⏸ 정지', '#cfe0ff').on('pointerdown', () => this.openPause());
     this.slowmo = 1;
     this.applySpeed();
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => (this.anims.globalTimeScale = 1));
@@ -523,7 +526,7 @@ export class BattleScene extends Phaser.Scene {
     this.paused = true;
     const layer = this.add.container(0, 0).setDepth(200);
     this.pauseLayer = layer;
-    const dim = this.add.rectangle(640, 360, 1280, 720, 0x000000, 0.65).setInteractive();
+    const dim = this.add.rectangle(640, 360, VIEW_W, 720, 0x000000, 0.65).setInteractive();
     const panel = this.add.rectangle(640, 360, 480, 520, 0x182238).setStrokeStyle(3, 0x3a7bff);
     const title = this.add.text(640, 145, '⏸️ 일시정지', { fontFamily: 'sans-serif', fontSize: '36px', fontStyle: 'bold', color: '#fff' }).setOrigin(0.5);
     layer.add([dim, panel, title]);
@@ -1455,24 +1458,36 @@ export class BattleScene extends Phaser.Scene {
     };
     this.events.on(Phaser.Scenes.Events.ADDED_TO_SCENE, onAdd);
     this.events.on(Phaser.Scenes.Events.POST_UPDATE, this.pinUi, this);
+    this.events.on(Phaser.Scenes.Events.PRE_RENDER, this.pinUi, this); // 업데이트 뒤에 생긴 것도 그리기 전에 나눔
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.events.off(Phaser.Scenes.Events.ADDED_TO_SCENE, onAdd);
       this.events.off(Phaser.Scenes.Events.POST_UPDATE, this.pinUi, this);
+      this.events.off(Phaser.Scenes.Events.PRE_RENDER, this.pinUi, this);
     });
   }
 
+  /** 📱 UI 카메라 — 1280 기준 화면을 가운데에(넓은 휴대폰이면 양옆 VIEW_L~VIEW_R까지 보임), 흔들림 없음 */
+  private setupUiCamera(): void {
+    const old = this.cameras.getCamera('ui');
+    if (old) this.cameras.remove(old);
+    this.uiCam = this.cameras.add(0, 0, VIEW_W, 720, false, 'ui').setScroll(-VIEW_OFF, 0);
+  }
+
   private pinUi(): void {
-    type Pinnable = Phaser.GameObjects.GameObject & { depth?: number; setScrollFactor?: (x: number, y?: number) => unknown };
+    type Pinnable = Phaser.GameObjects.GameObject & { depth?: number; cameraFilter: number };
+    const main = this.cameras.main;
     for (const go of this.uiQueue as Pinnable[]) {
-      if (!go.scene || (go.depth ?? 0) < 98 || go.getData('world')) continue;
-      go.setScrollFactor?.(0, 0);
-      if (go instanceof Phaser.GameObjects.Container) this.uiConts.add(go);
+      if (!go.scene || go.parentContainer) continue; // 상자 안 그림은 상자를 따름
+      if ((go.depth ?? 0) >= 98 && !go.getData('world')) {
+        main.ignore(go);
+        if (go instanceof Phaser.GameObjects.Container) this.uiConts.add(go);
+      } else this.uiCam.ignore(go);
     }
     this.uiQueue = [];
-    // 창(레벨업·일시정지 등)은 나중에 자식이 붙으므로 매번 확인(입력 판정도 자식 기준)
+    // 창(레벨업·일시정지 등)은 나중에 자식이 붙으므로 매번 확인(자식은 카메라 구분 없이 상자를 따름)
     const zero = (c: Phaser.GameObjects.Container): void => {
-      for (const ch of c.list as (Phaser.GameObjects.GameObject & { scrollFactorX?: number; setScrollFactor?: (x: number, y?: number) => unknown })[]) {
-        if (ch.scrollFactorX !== 0) ch.setScrollFactor?.(0, 0);
+      for (const ch of c.list as Pinnable[]) {
+        if (ch.cameraFilter) ch.cameraFilter = 0;
         if (ch instanceof Phaser.GameObjects.Container) zero(ch);
       }
     };
@@ -1487,14 +1502,14 @@ export class BattleScene extends Phaser.Scene {
     this.lastBaseHp = this.playerBase.hp;
     this.baseHitAt = -99;
     const style = { fontFamily: 'sans-serif', fontSize: '18px', fontStyle: 'bold', color: '#ffffff', padding: { x: 10, y: 6 } };
-    this.homeBtn = this.add.text(1218, 96, '📍 영웅', { ...style, backgroundColor: '#2a5fd0ee' }).setOrigin(0.5).setDepth(106).setVisible(false).setInteractive({ useHandCursor: true });
+    this.homeBtn = this.add.text(1218 + VIEW_OFF, 96, '📍 영웅', { ...style, backgroundColor: '#2a5fd0ee' }).setOrigin(0.5).setDepth(106).setVisible(false).setInteractive({ useHandCursor: true });
     this.homeBtn.on('pointerdown', () => {
       this.lookX = null;
       sfx(this, 'click');
     });
-    this.alertL = this.add.text(8, 190, '◀ 🏰 성이 공격받아요!', { ...style, backgroundColor: '#c0392bee' }).setOrigin(0, 0.5).setDepth(106).setVisible(false).setInteractive({ useHandCursor: true });
+    this.alertL = this.add.text(VIEW_L + 8, 190, '◀ 🏰 성이 공격받아요!', { ...style, backgroundColor: '#c0392bee' }).setOrigin(0, 0.5).setDepth(106).setVisible(false).setInteractive({ useHandCursor: true });
     this.alertL.on('pointerdown', () => this.lookAt(this.playerBase.x + 400));
-    this.alertR = this.add.text(1272, 190, '👑 보스 ▶', { ...style, backgroundColor: '#8a2a8aee' }).setOrigin(1, 0.5).setDepth(106).setVisible(false).setInteractive({ useHandCursor: true });
+    this.alertR = this.add.text(VIEW_R - 8, 190, '👑 보스 ▶', { ...style, backgroundColor: '#8a2a8aee' }).setOrigin(1, 0.5).setDepth(106).setVisible(false).setInteractive({ useHandCursor: true });
     this.alertR.on('pointerdown', () => {
       const b = this.enemies.find((e) => e.active && BOSS.has(e.type));
       if (b) this.lookAt(b.x);
@@ -1503,8 +1518,8 @@ export class BattleScene extends Phaser.Scene {
 
   /** 🗺️ 지도에서 고른 곳을 화면 가운데로(3초 손을 떼면 영웅에게 돌아옴) */
   private lookAt(x: number): void {
-    if (this.worldW <= SCREEN_W) return;
-    this.lookX = x - SCREEN_W / 2;
+    if (this.worldW <= VIEW_W) return;
+    this.lookX = x - VIEW_W / 2;
     this.lookT = LOOK_HOLD;
   }
 
@@ -1513,21 +1528,21 @@ export class BattleScene extends Phaser.Scene {
     const cam = this.cameras.main;
     if (this.playerBase.hp < this.lastBaseHp) this.baseHitAt = this.clock;
     this.lastBaseHp = this.playerBase.hp;
-    if (this.worldW <= SCREEN_W) return;
+    if (this.worldW <= VIEW_W) return;
     if (this.lookX !== null) {
       this.lookT -= dt;
       if (this.lookT <= 0) this.lookX = null;
     }
     const front = this.units.reduce((m, u) => (u.active ? Math.max(m, u.x) : m), this.playerBase.x);
-    const target = this.lookX ?? followX(this.hero?.active ? this.hero.x : front, this.worldW);
+    const target = this.lookX ?? followX(this.hero?.active ? this.hero.x : front, this.worldW, VIEW_W);
     const k = Math.min(1, dt * (this.lookX !== null ? 12 : 5));
-    cam.scrollX += (Phaser.Math.Clamp(target, 0, this.worldW - SCREEN_W) - cam.scrollX) * k;
+    cam.scrollX += (Phaser.Math.Clamp(target, 0, this.worldW - VIEW_W) - cam.scrollX) * k;
     this.homeBtn.setVisible(this.lookX !== null);
     // ◀ 성이 화면 밖인데 맞고 있음 / 보스가 화면 오른쪽 밖 ▶
     const blink = 0.55 + 0.45 * Math.sin(this.time.now / 130);
     const baseHidden = cam.scrollX > this.playerBase.x + 40;
     this.alertL.setVisible(baseHidden && this.clock - this.baseHitAt < 1.5).setAlpha(blink);
-    const boss = this.enemies.find((e) => e.active && BOSS.has(e.type) && e.x > cam.scrollX + SCREEN_W - 30);
+    const boss = this.enemies.find((e) => e.active && BOSS.has(e.type) && e.x > cam.scrollX + VIEW_W - 30);
     this.alertR.setVisible(!!boss).setAlpha(blink);
   }
 
@@ -2189,7 +2204,7 @@ ${info.desc}`, { fontFamily: 'sans-serif', fontSize: '24px', fontStyle: 'bold', 
     for (const e of this.enemies) if (e.active && !BOSS.has(e.type)) e.moveBy(Math.min(40, Math.max(0, this.enemyBase.x - BASE_FRONT - e.x)));
     const ring = this.add.circle(this.playerBase.x + 80, LANE_Y - 30, 30).setStrokeStyle(8, 0xffe14d).setDepth(85);
     this.tweens.add({ targets: ring, scale: 14, alpha: 0, duration: 650, onComplete: () => ring.destroy() });
-    const flash = this.add.rectangle(640, 360, 1280, 720, 0xfff6c0, 0.35).setDepth(98);
+    const flash = this.add.rectangle(640, 360, VIEW_W, 720, 0xfff6c0, 0.35).setDepth(98);
     this.tweens.add({ targets: flash, alpha: 0, duration: 400, onComplete: () => flash.destroy() });
   }
 
@@ -2620,7 +2635,7 @@ ${info.desc}`, { fontFamily: 'sans-serif', fontSize: '24px', fontStyle: 'bold', 
     if (this.reviving || this.revivedOnce) return;
     this.reviving = true; // 업데이트 정지
     const layer = this.add.container(0, 0).setDepth(200);
-    const dim = this.add.rectangle(640, 360, 1280, 720, 0x000000, 0.7).setInteractive();
+    const dim = this.add.rectangle(640, 360, VIEW_W, 720, 0x000000, 0.7).setInteractive();
     const panel = this.add.rectangle(640, 360, 480, 340, 0x241824).setStrokeStyle(3, 0xff5a6e);
     const title = this.add.text(640, 250, '💔 기지 파괴!', { fontFamily: 'sans-serif', fontSize: '40px', color: '#ff5a6e' }).setOrigin(0.5);
     const sub = this.add.text(640, 310, '광고를 보고 기지를 부활시킬까요?', { fontFamily: 'sans-serif', fontSize: '20px', color: '#cfd6e6' }).setOrigin(0.5);

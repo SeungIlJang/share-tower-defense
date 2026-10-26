@@ -9,6 +9,7 @@ import { ResultScene } from './scenes/Result';
 import { DevScene } from './scenes/Dev';
 import { PrepareScene } from './scenes/Prepare';
 import { CodexScene } from './scenes/Codex';
+import { VIEW_OFF, VIEW_W } from './systems/view';
 
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
@@ -17,7 +18,7 @@ const config: Phaser.Types.Core.GameConfig = {
   scale: {
     mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH,
-    width: 1280,
+    width: VIEW_W, // 📱 넓은 휴대폰이면 양옆까지 씀
     height: 720,
   },
   physics: {
@@ -39,5 +40,13 @@ const config: Phaser.Types.Core.GameConfig = {
 };
 
 const game = new Phaser.Game(config);
+// 📱 전투 외 화면은 1280 기준으로 만들어 가운데 둠(양옆은 배경이 넓게 채움)
+game.events.once(Phaser.Core.Events.READY, () => {
+  for (const s of game.scene.scenes) {
+    if (s.sys.settings.key === 'Battle') continue;
+    s.events.on(Phaser.Scenes.Events.CREATE, () => s.cameras.main.setScroll(-VIEW_OFF, 0));
+    s.cameras?.main?.setScroll(-VIEW_OFF, 0); // 이미 시작한 첫 화면(Boot)
+  }
+});
 // 디버그/헤드리스 테스트용 핸들(프로덕션 무해)
 (globalThis as unknown as { __LD?: Phaser.Game }).__LD = game;

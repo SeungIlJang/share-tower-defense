@@ -13,6 +13,7 @@ import { sfx } from '../systems/sound';
 
 const UNITS = unitsData as Record<string, UnitStats>;
 import { STAGES, MAX_STAGE } from '../systems/worlds';
+import { VIEW_W } from '../systems/view';
 const UNIT_MAX_LV = 30; // 개발자 모드에서 올릴 수 있는 유닛·무기 최대 레벨
 const GOLD_MAX = 999_999_999;
 
@@ -44,7 +45,7 @@ export class DevScene extends Phaser.Scene {
   }
 
   create(): void {
-    this.add.rectangle(640, 360, 1280, 720, 0x0d1424);
+    this.add.rectangle(640, 360, VIEW_W, 720, 0x0d1424);
     this.add.text(640, 40, '🛠️ 개발자 모드', { fontFamily: 'sans-serif', fontSize: '32px', fontStyle: 'bold', color: '#ffd34d' }).setOrigin(0.5);
     this.goldText = this.add.text(1180, 40, '', { fontFamily: 'sans-serif', fontSize: '22px', fontStyle: 'bold', color: '#ffe14d' }).setOrigin(1, 0.5);
     // 휴대폰 가장자리(둥근 모서리·제스처 영역)에 가리지 않게 안쪽에 + 아래쪽에도 하나 더

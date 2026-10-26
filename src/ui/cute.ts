@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { sfx } from '../systems/sound';
+import { VIEW_L, VIEW_R, VIEW_W } from '../systems/view';
 
 /** 귀여운 UI 공용 — 하늘 배경 · 말랑 버튼 (메뉴·스테이지 선택 등에서 공유) */
 
@@ -25,17 +26,20 @@ export function drawSky(scene: Phaser.Scene, opts: { stars?: number; ground?: bo
   const [top, bottom, hill, ground, ground2, grass] = SKY[opts.theme ?? 'forest'];
   const g = scene.add.graphics();
   g.fillGradientStyle(top, top, bottom, bottom, 1);
-  g.fillRect(0, 0, 1280, 720);
+  g.fillRect(VIEW_L, 0, VIEW_W, 720);
   if (opts.ground !== false) {
     g.fillStyle(hill, 1);
     g.fillEllipse(260, 640, 900, 260);
     g.fillEllipse(1040, 650, 900, 240);
     g.fillStyle(ground, 1);
-    g.fillRect(0, GROUND_Y - 6, 1280, 90);
+    g.fillEllipse(VIEW_L + 60, 650, 500, 230);
+    g.fillEllipse(VIEW_R - 60, 640, 500, 250);
+    g.fillStyle(ground, 1);
+    g.fillRect(VIEW_L, GROUND_Y - 6, VIEW_W, 90);
     g.fillStyle(ground2, 1);
-    g.fillRect(0, GROUND_Y + 34, 1280, 50);
+    g.fillRect(VIEW_L, GROUND_Y + 34, VIEW_W, 50);
     g.fillStyle(grass, 1);
-    for (let x = 10; x < 1280; x += 46) g.fillTriangle(x, GROUND_Y - 6, x + 8, GROUND_Y - 18, x + 16, GROUND_Y - 6);
+    for (let x = VIEW_L + 10; x < VIEW_R; x += 46) g.fillTriangle(x, GROUND_Y - 6, x + 8, GROUND_Y - 18, x + 16, GROUND_Y - 6);
   }
 
   const cloud = (x: number, y: number, s: number, speed: number): void => {
@@ -47,16 +51,16 @@ export function drawSky(scene: Phaser.Scene, opts: { stars?: number; ground?: bo
       scene.add.ellipse(6 * s, -16 * s, 70 * s, 44 * s, 0xffffff),
     ]);
     c.setAlpha(0.9);
-    scene.tweens.add({ targets: c, x: x + 1500, duration: speed, repeat: -1, onRepeat: () => (c.x = -160) });
+    scene.tweens.add({ targets: c, x: x + 1500, duration: speed, repeat: -1, onRepeat: () => (c.x = VIEW_L - 160) });
   };
-  cloud(160, 110, 1, 70000);
+  cloud(VIEW_L + 160, 110, 1, 70000);
   cloud(760, 70, 0.7, 90000);
   cloud(1100, 170, 0.9, 80000);
   cloud(420, 250, 0.6, 100000);
 
   for (let i = 0; i < (opts.stars ?? 18); i++) {
     const s = scene.add
-      .text(Phaser.Math.Between(30, 1250), Phaser.Math.Between(20, 360), '✦', { fontSize: `${Phaser.Math.Between(12, 22)}px`, color: '#ffffff' })
+      .text(Phaser.Math.Between(VIEW_L + 30, VIEW_R - 30), Phaser.Math.Between(20, 360), '✦', { fontSize: `${Phaser.Math.Between(12, 22)}px`, color: '#ffffff' })
       .setOrigin(0.5)
       .setAlpha(0);
     scene.tweens.add({ targets: s, alpha: 0.9, duration: 900, yoyo: true, repeat: -1, delay: Phaser.Math.Between(0, 2500), hold: 300 });

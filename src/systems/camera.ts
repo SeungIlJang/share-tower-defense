@@ -17,8 +17,8 @@ export function walkMult(w: number): number {
 }
 
 /** 카메라 왼쪽 끝 — 영웅을 화면 왼쪽 1/3에, 전장 밖으로는 안 나감 */
-export function followX(heroX: number, w: number): number {
-  return Math.min(Math.max(0, w - SCREEN_W), Math.max(0, heroX - SCREEN_W / 3));
+export function followX(heroX: number, w: number, view = SCREEN_W): number {
+  return Math.min(Math.max(0, w - view), Math.max(0, heroX - view / 3));
 }
 
 /** 전장 지도(레이더) — 전장 x ↔ 지도 x */
