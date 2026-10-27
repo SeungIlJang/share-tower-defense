@@ -13,7 +13,7 @@ import { BASE_MAX_LV, BASE_UPGRADES } from '../systems/baseUpgrades';
 import { ALLY_CASTLE_TIERS, CASTLE_MAX_LV, CASTLE_RATE_MAX_LV, allyCastleGun, allyCastleTier, castleHpMult, castleLook } from '../systems/castle';
 import { RANK_MAX, rankMult, rankUpCost } from '../systems/chests';
 import { EQUIP_MAX, GRADE_COLORS, GRADE_NAMES, HERO_WEAPONS, RINGS, equipUpCost } from '../systems/equipment';
-import { UNIT_TIERS, evolvedKey, levelCap, nextUnitTier, readyToEvolve, starText, tierPerks, unitOfKey } from '../systems/evolution';
+import { MAX_TIER, UNIT_TIERS, evolvedKey, levelCap, nextUnitTier, readyToEvolve, starText, tierPerks, unitOfKey } from '../systems/evolution';
 import { AURA_MAX_LV, AURA_RADIUS, HERO_MAX_LV, HERO_SKILLS, HERO_TIERS, SKILL_MAX_LV, auraBonus, heroLvMult, heroSkillPower, heroTier, heroUpCost, nextHeroTier } from '../systems/hero';
 import { VIEW_W } from '../systems/view';
 import { UNIT_GROUPS, unitGroup, type UnitGroup } from '../systems/unitGroups';
@@ -342,7 +342,7 @@ export class UpgradeScene extends Phaser.Scene {
       // 그림이 실제로 차지하는 칸(빈 여백 제외)을 무대에 꽉 차게 — 발은 무대 바닥에
       const f0 = d.anims.idle!.frames[0];
       const box = this.contentBox(textureKey(look), f0) ?? { left: 0, top: 0, right: d.frameWidth, bottom: d.footY };
-      const grow = 0.88 + 0.03 * meta.tier(unitOfKey(look)); // ⭐ 진화할수록 아주 조금씩 크게(★1 0.88 → ★5 1.0)
+      const grow = 0.88 + (0.12 * meta.tier(unitOfKey(look))) / MAX_TIER; // ⭐ 진화할수록 아주 조금씩 크게(★1 0.88 → 초월 7 1.0)
       const sc = Math.min((stageH - 26) / Math.max(1, d.footY - box.top), (stageW - 14) / Math.max(1, box.right - box.left), d.scale * 4) * grow;
       const spr = this.add
         .sprite(sx - ((box.left + box.right) / 2 - d.frameWidth / 2) * sc, y + stageH / 2 - 14, textureKey(look), f0)

@@ -1,13 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { MAX_TIER, UNIT_TIERS, evolvedKey, levelCap, migrateTier, nextUnitTier, readyToEvolve, starText, tierFromLevel, tierKey, tierPerks, unitOfKey, unitPreloadKeys } from '../src/systems/evolution';
+import { MAX_TIER, UNIT_TIERS, tierBodyScale, evolvedKey, levelCap, migrateTier, nextUnitTier, readyToEvolve, starText, tierFromLevel, tierKey, tierPerks, unitOfKey, unitPreloadKeys } from '../src/systems/evolution';
 
 describe('⭐ 유닛 진화 5단계 + 돌파', () => {
-  it('단계 기준 레벨 0 · 5 · 12 · 20 · 30', () => {
-    expect(UNIT_TIERS.map((t) => t.min)).toEqual([0, 5, 12, 20, 30]);
-    expect(MAX_TIER).toBe(4);
+  it('단계 기준 레벨 0 · 5 · 10 · 20 · 30 … 100', () => {
+    expect(UNIT_TIERS.map((t) => t.min)).toEqual([0, 5, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100]);
+    expect(MAX_TIER).toBe(11);
     expect(tierFromLevel(4)).toBe(0);
     expect(tierFromLevel(12)).toBe(2);
     expect(tierFromLevel(31)).toBe(4);
+    expect(tierFromLevel(100)).toBe(11);
   });
   it('레벨은 다음 단계 시작 레벨에서 멈춤 → 진화해야 다시 강화', () => {
     expect(levelCap(0)).toBe(5);
@@ -27,9 +28,10 @@ describe('⭐ 유닛 진화 5단계 + 돌파', () => {
   it('예전 저장 이전 — 이미 얻은 단계는 안 잃음', () => {
     expect(migrateTier(3)).toBe(0);
     expect(migrateTier(7)).toBe(1);
-    expect(migrateTier(10)).toBe(2); // 예전 ★3(Lv10) 유지 — 새 기준(Lv12)보다 낮아도
+    expect(migrateTier(10)).toBe(2);
     expect(migrateTier(25)).toBe(3);
     expect(migrateTier(33)).toBe(4);
+    expect(migrateTier(55)).toBe(6);
   });
   it('단계 보너스', () => {
     expect(tierPerks(0)).toEqual({ mult: 1, skillPower: 1, skillFewer: 0, atkSpeed: 1, crit: 0 });
@@ -38,6 +40,11 @@ describe('⭐ 유닛 진화 5단계 + 돌파', () => {
     expect(tierPerks(4).atkSpeed).toBe(1.2);
     expect(tierPerks(4).mult).toBeGreaterThan(tierPerks(3).mult);
     expect(starText(1)).toBe('★★☆☆☆');
+    expect(starText(7)).toBe('★★★★★🌟3');
+    expect(tierPerks(7).skillFewer).toBe(2);
+    expect(tierPerks(11).crit).toBe(0.2);
+    expect(tierBodyScale(2)).toBe(1);
+    expect(tierBodyScale(11)).toBeLessThan(1.12);
   });
 
   it('그림 키 이름', () => {

@@ -10,7 +10,7 @@ import { UNIT_SCALE } from '../entities/Fighter';
 import { FOOD_BASE, energyMax, energyRate, popBonus } from '../systems/baseUpgrades';
 import { summonCooldown } from '../systems/pacing';
 import { anyDevFlag, devFlags } from '../systems/dev';
-import { UNIT_TIERS, tierPerks } from '../systems/evolution';
+import { UNIT_TIERS, tierBodyScale, tierPerks } from '../systems/evolution';
 import { enemyLevel, hexColor, pickVariant, variantTable } from '../systems/enemyVariants';
 import { STAGES, WORLDS, goldMultFor } from '../systems/worlds';
 import { BOSSES, BOSS_KEYS, bossForStage } from '../systems/bosses';
@@ -710,7 +710,7 @@ export class BattleScene extends Phaser.Scene {
       this.puff(sx, 0xd8c8a0);
     }
     u.setStars(UNIT_TIERS[meta.tier(type)].stars); // ⭐ 진화 단계(★★부터 머리 위 표시, ★4 금빛·★5 무지개 오라)
-    if (!totem && meta.tier(type) >= 3) u.setBodyScale(1 + 0.025 * (meta.tier(type) - 2)); // ★4·★5는 ★3 그림이라 아주 조금 크게
+    if (!totem && meta.tier(type) >= 3) u.setBodyScale(tierBodyScale(meta.tier(type))); // ★4부터는 ★3 그림이라 아주 조금씩 크게
     u.pop = base.pop;
     sfx(this, 'spawn');
     this.track('spawns');

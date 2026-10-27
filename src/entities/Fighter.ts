@@ -3,6 +3,7 @@ import type { CombatStats, Side } from '../types';
 import { applyDamage } from '../systems/combat';
 import { buildChar, visualOf } from './visuals';
 import { animKey, resolveState, spriteOfLook, textureKey, type AnimState, type SpriteDef } from '../systems/sprites';
+import { headStars } from '../systems/evolution';
 
 /** 📱 유닛 표시 배율 — 휴대폰에서 잘 보이게 전체 크기 확대(능력치·사거리는 그대로) */
 export const UNIT_SCALE = 1.5;
@@ -224,7 +225,7 @@ export class Fighter {
 
   /** ⭐ 진화 단계 표시(★★ 이상만, HP 바 위) */
   setStars(n: number): void {
-    this.stars.setText('★'.repeat(n)).setVisible(n >= 2).setColor(n >= 5 ? '#ff9af0' : '#ffd34d');
+    this.stars.setText(headStars(n)).setVisible(n >= 2).setColor(n >= 5 ? '#ff9af0' : '#ffd34d'); // 초월은 🌟N
     this.scene.tweens.killTweensOf(this.aura);
     this.auraHue?.remove();
     this.auraHue = null;
