@@ -20,6 +20,9 @@ export class Fighter {
   private hpBg: Phaser.GameObjects.Rectangle;
   private hpBar: Phaser.GameObjects.Rectangle;
   private stars: Phaser.GameObjects.Text; // ⭐ 진화 단계
+  private aura: Phaser.GameObjects.Ellipse; // ⭐ ★4 금빛 · ★5 무지개 발밑 오라
+  private footY = 0;
+  private auraHue: Phaser.Tweens.Tween | null = null;
   private sprite: Phaser.GameObjects.Sprite | null = null;
   private spriteDef: SpriteDef | null = null;
   private anim: AnimState = 'idle';
@@ -52,7 +55,8 @@ export class Fighter {
       .text(0, -60, '', { fontFamily: 'sans-serif', fontSize: '11px', fontStyle: 'bold', color: '#ffd34d', stroke: '#3a2a00', strokeThickness: 3 })
       .setOrigin(0.5)
       .setVisible(false);
-    this.root = scene.add.container(0, 0, [this.char, this.flash, this.hpBg, this.hpBar, this.stars]).setVisible(false);
+    this.aura = scene.add.ellipse(0, 0, 78, 22, 0xffd34d, 0.5).setVisible(false);
+    this.root = scene.add.container(0, 0, [this.aura, this.char, this.flash, this.hpBg, this.hpBar, this.stars]).setVisible(false);
   }
 
   /** 텍스처·애니 이름(스킨 적용 시 '유닛@스킨') */
@@ -109,6 +113,11 @@ export class Fighter {
     this.hpBg.setY(barY);
     this.hpBar.setY(barY);
     this.stars.setY(barY - 9).setVisible(false);
+    this.footY = footOffset;
+    this.scene.tweens.killTweensOf(this.aura);
+    this.auraHue?.remove();
+    this.auraHue = null;
+    this.aura.setVisible(false);
 
     this.root.setPosition(x, y).setVisible(true);
     this.updateHp();
@@ -215,7 +224,31 @@ export class Fighter {
 
   /** ⭐ 진화 단계 표시(★★ 이상만, HP 바 위) */
   setStars(n: number): void {
-    this.stars.setText('★'.repeat(n)).setVisible(n >= 2);
+    this.stars.setText('★'.repeat(n)).setVisible(n >= 2).setColor(n >= 5 ? '#ff9af0' : '#ffd34d');
+    this.scene.tweens.killTweensOf(this.aura);
+    this.auraHue?.remove();
+    this.auraHue = null;
+    if (n < 4) {
+      this.aura.setVisible(false);
+      return;
+    }
+    // ★4 마스터 = 금빛 · ★5 각성 = 분홍↔하늘 무지개 — 발밑에서 숨 쉬듯 빛남
+    this.aura.setPosition(0, this.footY + 2).setFillStyle(n >= 5 ? 0xff7af0 : 0xffd34d, 0.55).setStrokeStyle(2, n >= 5 ? 0x7af0ff : 0xfff2a0, 0.9).setScale(1).setAlpha(0.8).setVisible(true);
+    this.scene.tweens.add({ targets: this.aura, scaleX: 1.25, scaleY: 1.4, alpha: 0.35, duration: n >= 5 ? 520 : 760, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
+    if (n >= 5) {
+      let hue = 0;
+      this.auraHue = this.scene.tweens.addCounter({
+        from: 0,
+        to: 1,
+        duration: 1800,
+        repeat: -1,
+        onUpdate: () => {
+          if (!this.aura.visible || !this.root.visible) return;
+          hue = (hue + 0.006) % 1;
+          this.aura.setFillStyle(Phaser.Display.Color.HSVToRGB(hue, 0.55, 1).color, 0.55);
+        },
+      });
+    }
   }
 
   /** 👾 변종 — 기본 색 · 크기(전용 그림이 없을 때 빌린 그림을 바꿔 보이게) */
@@ -303,5 +336,8 @@ export class Fighter {
     this.active = false;
     this.root.setVisible(false);
     this.sprite?.stop();
+    this.scene.tweens.killTweensOf(this.aura);
+    this.auraHue?.remove();
+    this.auraHue = null;
   }
 }

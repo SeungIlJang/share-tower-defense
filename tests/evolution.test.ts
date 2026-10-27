@@ -1,16 +1,43 @@
 import { describe, expect, it } from 'vitest';
-import { evolvedKey, nextUnitTier, starText, tierKey, unitOfKey, unitPreloadKeys, unitTier } from '../src/systems/evolution';
+import { MAX_TIER, UNIT_TIERS, evolvedKey, levelCap, migrateTier, nextUnitTier, readyToEvolve, starText, tierFromLevel, tierKey, tierPerks, unitOfKey, unitPreloadKeys } from '../src/systems/evolution';
 
-describe('⭐ 유닛 진화', () => {
-  it('강화 레벨 → 단계', () => {
-    expect(unitTier(0)).toBe(0);
-    expect(unitTier(4)).toBe(0);
-    expect(unitTier(5)).toBe(1);
-    expect(unitTier(10)).toBe(2);
-    expect(unitTier(30)).toBe(2);
-    expect(nextUnitTier(3)?.min).toBe(5);
-    expect(nextUnitTier(12)).toBeNull();
-    expect(starText(6)).toBe('★★☆');
+describe('⭐ 유닛 진화 5단계 + 돌파', () => {
+  it('단계 기준 레벨 0 · 5 · 12 · 20 · 30', () => {
+    expect(UNIT_TIERS.map((t) => t.min)).toEqual([0, 5, 12, 20, 30]);
+    expect(MAX_TIER).toBe(4);
+    expect(tierFromLevel(4)).toBe(0);
+    expect(tierFromLevel(12)).toBe(2);
+    expect(tierFromLevel(31)).toBe(4);
+  });
+  it('레벨은 다음 단계 시작 레벨에서 멈춤 → 진화해야 다시 강화', () => {
+    expect(levelCap(0)).toBe(5);
+    expect(levelCap(2)).toBe(20);
+    expect(levelCap(MAX_TIER)).toBe(Infinity);
+    expect(readyToEvolve(4, 0)).toBe(false);
+    expect(readyToEvolve(5, 0)).toBe(true);
+    expect(readyToEvolve(40, MAX_TIER)).toBe(false);
+    expect(nextUnitTier(1)?.stars).toBe(3);
+    expect(nextUnitTier(MAX_TIER)).toBeNull();
+  });
+  it('진화 비용 — ★2는 골드만, ★3부터 조각도', () => {
+    expect(UNIT_TIERS[1].shards).toBe(0);
+    expect(UNIT_TIERS.slice(2).every((t) => t.shards > 0 && t.gold > 0)).toBe(true);
+    for (let i = 2; i < UNIT_TIERS.length; i++) expect(UNIT_TIERS[i].gold).toBeGreaterThan(UNIT_TIERS[i - 1].gold);
+  });
+  it('예전 저장 이전 — 이미 얻은 단계는 안 잃음', () => {
+    expect(migrateTier(3)).toBe(0);
+    expect(migrateTier(7)).toBe(1);
+    expect(migrateTier(10)).toBe(2); // 예전 ★3(Lv10) 유지 — 새 기준(Lv12)보다 낮아도
+    expect(migrateTier(25)).toBe(3);
+    expect(migrateTier(33)).toBe(4);
+  });
+  it('단계 보너스', () => {
+    expect(tierPerks(0)).toEqual({ mult: 1, skillPower: 1, skillFewer: 0, atkSpeed: 1, crit: 0 });
+    expect(tierPerks(2).skillPower).toBe(1.25);
+    expect(tierPerks(3).skillFewer).toBe(1);
+    expect(tierPerks(4).atkSpeed).toBe(1.2);
+    expect(tierPerks(4).mult).toBeGreaterThan(tierPerks(3).mult);
+    expect(starText(1)).toBe('★★☆☆☆');
   });
 
   it('그림 키 이름', () => {
@@ -21,19 +48,19 @@ describe('⭐ 유닛 진화', () => {
     expect(unitOfKey('mage_t2')).toBe('mage');
   });
 
-  it('그림이 없으면 아래 단계로', () => {
-    const has = (k: string): boolean => ['mage', 'mage_t2', 'mage@legend'].includes(k);
-    expect(evolvedKey('mage', 12, false, has)).toBe('mage_t2'); // t3 없음 → t2
-    expect(evolvedKey('mage', 6, false, has)).toBe('mage_t2');
-    expect(evolvedKey('mage', 2, false, has)).toBe('mage');
-    expect(evolvedKey('mage', 12, true, has)).toBe('mage@legend'); // 전설 t3·t2 없음 → 전설 기본
-    expect(evolvedKey('rogue', 12, true, has)).toBeNull(); // 전설 그림 자체가 없음
-    expect(evolvedKey('rogue', 12, false, has)).toBe('rogue');
+  it('그림이 없으면 아래 단계로(★4·★5는 ★3 그림)', () => {
+    const has = (k: string): boolean => ['mage', 'mage_t2', 'mage_t3', 'mage@legend'].includes(k);
+    expect(evolvedKey('mage', 4, false, has)).toBe('mage_t3');
+    expect(evolvedKey('mage', 1, false, has)).toBe('mage_t2');
+    expect(evolvedKey('mage', 0, false, has)).toBe('mage');
+    expect(evolvedKey('mage', 3, true, has)).toBe('mage@legend');
+    expect(evolvedKey('rogue', 3, true, has)).toBeNull();
+    expect(evolvedKey('rogue', 3, false, has)).toBe('rogue');
   });
 
   it('시작할 때 받을 그림 — 지금 단계만', () => {
     const inM = (k: string): boolean => ['mage', 'mage_t2', 'mage_t3', 'mage@legend', 'mage@legend_t2', 'archer'].includes(k);
-    const keys = unitPreloadKeys(['mage', 'archer'], inM, (u) => (u === 'mage' ? 7 : 0), (u) => (u === 'mage' ? 'legend' : null));
+    const keys = unitPreloadKeys(['mage', 'archer'], inM, (u) => (u === 'mage' ? 1 : 0), (u) => (u === 'mage' ? 'legend' : null));
     expect([...keys].sort()).toEqual(['archer', 'mage', 'mage@legend_t2', 'mage_t2']);
   });
 });

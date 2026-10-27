@@ -13,7 +13,7 @@ import { BASE_MAX_LV, BASE_UPGRADES } from '../systems/baseUpgrades';
 import { ALLY_CASTLE_TIERS, CASTLE_MAX_LV, CASTLE_RATE_MAX_LV, allyCastleGun, allyCastleTier, castleHpMult, castleLook } from '../systems/castle';
 import { RANK_MAX, rankMult, rankUpCost } from '../systems/chests';
 import { EQUIP_MAX, GRADE_COLORS, GRADE_NAMES, HERO_WEAPONS, RINGS, equipUpCost } from '../systems/equipment';
-import { UNIT_TIERS, evolvedKey, nextUnitTier, starText, unitTier } from '../systems/evolution';
+import { UNIT_TIERS, evolvedKey, levelCap, nextUnitTier, readyToEvolve, starText, tierPerks } from '../systems/evolution';
 import { AURA_MAX_LV, AURA_RADIUS, HERO_MAX_LV, HERO_SKILLS, HERO_TIERS, SKILL_MAX_LV, auraBonus, heroLvMult, heroSkillPower, heroTier, heroUpCost, nextHeroTier } from '../systems/hero';
 import { VIEW_W } from '../systems/view';
 import { UNIT_GROUPS, unitGroup, type UnitGroup } from '../systems/unitGroups';
@@ -221,17 +221,28 @@ export class UpgradeScene extends Phaser.Scene {
       const owned = meta.ownsUnit(key);
       const price = unitPrice(keys.indexOf(key)); // 값은 전체 순서 기준 그대로
       const lv = meta.level(key);
-      const look = owned ? ensureSkin(this, key, meta.equippedSkin(key), lv) : key; // 👗 착용 스킨 · ⭐ 진화 단계 얼굴
-      this.needEvolutionArt(key, lv);
+      const tier = meta.tier(key);
+      const look = owned ? ensureSkin(this, key, meta.equippedSkin(key), tier) : key; // 👗 착용 스킨 · ⭐ 진화 단계 얼굴
+      this.needEvolutionArt(key, tier);
       const icon = this.textures.exists(iconKey(look)) ? this.add.image(0, 0, iconKey(look)) : null;
+      // ⭐ 돌파 — 이 단계 최고 레벨이면 강화 대신 진화(골드 + 그 유닛 카드 조각)
+      const next = nextUnitTier(tier);
+      const evo = owned && readyToEvolve(lv, tier);
+      const tm = tierPerks(tier).mult;
+      const st = (base: number, l: number): number => Math.round(scaleStat(base, l) * tm);
+      const have = meta.shards[key] ?? 0;
+      const desc =
+        evo && next
+          ? `⭐ ${next.name} 진화! ${next.perk}\n${next.shards ? `🃏 조각 ${have}/${next.shards}${have < next.shards ? ' — 보물 상자에서 모아요' : ' ✅'}` : '골드만 있으면 바로 진화!'}`
+          : `❤️ ${st(u.hp, lv)}  ⚔️ ${st(u.atk, lv)}  ▶  ❤️ ${st(u.hp, lv + 1)}  ⚔️ ${st(u.atk, lv + 1)}${next ? `   ⭐ Lv${levelCap(tier)}에 ${next.name} 진화` : '   🔥 최고 단계'}`;
       this.card(
         i,
         shown.length,
         icon,
-        `${u.name} ${starText(lv)} Lv.${lv}`,
-        `❤️ ${scaleStat(u.hp, lv)}  ⚔️ ${scaleStat(u.atk, lv)}  ▶  ❤️ ${scaleStat(u.hp, lv + 1)}  ⚔️ ${scaleStat(u.atk, lv + 1)}${nextUnitTier(lv) ? `   ⭐Lv${nextUnitTier(lv)!.min} 진화` : ''}`,
-        owned ? `강화 🪙${meta.nextCost(key)}` : `🛒 구매\n🪙${price}`,
-        owned ? meta.canUpgrade(key) : meta.gold >= price,
+        `${u.name} ${starText(tier)} Lv.${lv}`,
+        desc,
+        !owned ? `🛒 구매\n🪙${price}` : evo && next ? `⭐ 진화\n🪙${next.gold}` : `강화 🪙${meta.nextCost(key)}`,
+        !owned ? meta.gold >= price : evo ? meta.canEvolve(key) : meta.canUpgrade(key),
         !owned,
         () => {
           if (!owned) {
@@ -242,12 +253,19 @@ export class UpgradeScene extends Phaser.Scene {
             }
             return;
           }
-          const before = unitTier(meta.level(key));
+          if (evo && next) {
+            if (meta.evolve(key)) {
+              this.render();
+              const t = UNIT_TIERS[meta.tier(key)];
+              this.evolveFx(`${u.name} ${'★'.repeat(t.stars)} ${t.name}`); // ⭐ 진화!
+              this.toast(`💪 ${t.perk}`);
+            } else if (have < next.shards) this.toast(`🃏 ${u.name} 조각이 ${next.shards - have}개 더 필요해요 — 보물 상자·광고 상자에서 모아요`);
+            else this.toast(`🪙 골드가 ${next.gold - meta.gold} 부족해요`);
+            return;
+          }
           if (meta.upgrade(key)) {
             sfx(this, 'weapon');
             this.render();
-            const after = unitTier(meta.level(key));
-            if (after > before) this.evolveFx(`${u.name} ${'★'.repeat(UNIT_TIERS[after].stars)} ${UNIT_TIERS[after].name}`); // ⭐ 진화!
           }
         },
         this.skillLabel(key, lv),
@@ -441,7 +459,7 @@ export class UpgradeScene extends Phaser.Scene {
       g.lineStyle(equipped ? 5 : 3, o.color, 1).strokeRoundedRect(x - w / 2, y - 130, w, 250, 18);
       layer.add(g);
       // 미리보기 — 첫 프레임
-      const look = o.id === '?' ? null : ensureSkin(this, key, o.id, meta.level(key)); // ⭐ 지금 진화 단계로 미리보기
+      const look = o.id === '?' ? null : ensureSkin(this, key, o.id, meta.tier(key)); // ⭐ 지금 진화 단계로 미리보기
       const def = look ? spriteOf(look) ?? spriteOf(key) : null;
       if (look && def && this.textures.exists(textureKey(look))) {
         const img = this.add.image(x, y - 40, textureKey(look), def.anims.idle!.frames[0]);
@@ -663,9 +681,9 @@ export class UpgradeScene extends Phaser.Scene {
   }
 
   /** ⭐ 진화 단계 그림을 아직 안 받았으면 받고 다시 그림 */
-  private needEvolutionArt(unit: string, lv: number): void {
+  private needEvolutionArt(unit: string, tier: number): void {
     const inManifest = (k: string): boolean => !!spriteOf(k);
-    const want = [evolvedKey(unit, lv, false, inManifest), meta.equippedSkin(unit) === 'legend' ? evolvedKey(unit, lv, true, inManifest) : null];
+    const want = [evolvedKey(unit, tier, false, inManifest), meta.equippedSkin(unit) === 'legend' ? evolvedKey(unit, tier, true, inManifest) : null];
     const missing = want.find((k): k is string => !!k && !this.textures.exists(textureKey(k)));
     if (missing) loadLook(this, missing, () => this.scene.isActive() && this.render());
   }

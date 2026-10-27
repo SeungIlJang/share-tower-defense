@@ -46,7 +46,7 @@ export class PreloadScene extends Phaser.Scene {
     // 👗 전설 스킨 등 '유닛@스킨' 그림은 착용 중인 것만(나머지는 스킨 창에서 열 때 받음)
     // ⭐ 유닛 그림은 유닛마다 기본(★1) + 지금 진화 단계(+ 전설 착용 시 전설 단계)만
     const unitNames = Object.keys(unitsData);
-    const unitKeys = unitPreloadKeys(unitNames, (k) => !!manifest[k], (u) => meta.level(u), (u) => meta.equippedSkin(u));
+    const unitKeys = unitPreloadKeys(unitNames, (k) => !!manifest[k], (u) => meta.tier(u), (u) => meta.equippedSkin(u));
     const needed = types.filter((t) => {
       if (unitNames.includes(unitOfKey(t))) return unitKeys.has(t);
       const [unit, skin] = t.split('@');
