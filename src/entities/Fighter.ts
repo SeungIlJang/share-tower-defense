@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import type { CombatStats, Side } from '../types';
 import { applyDamage } from '../systems/combat';
 import { buildChar, visualOf } from './visuals';
-import { animKey, resolveState, spriteOf, textureKey, type AnimState, type SpriteDef } from '../systems/sprites';
+import { animKey, resolveState, spriteOfLook, textureKey, type AnimState, type SpriteDef } from '../systems/sprites';
 
 /** 📱 유닛 표시 배율 — 휴대폰에서 잘 보이게 전체 크기 확대(능력치·사거리는 그대로) */
 export const UNIT_SCALE = 1.5;
@@ -88,7 +88,7 @@ export class Fighter {
     this.char.x = 0;
     this.char.scaleX = side === 'enemy' ? -1 : 1;
     this.sprite = null;
-    this.spriteDef = spriteOf(look) ?? spriteOf(type) ?? null; // 전설 스킨은 자기 시트 정보
+    this.spriteDef = spriteOfLook(look, type) ?? null; // 전설 스킨은 자기 시트 · 레어는 원본(진화 단계) 시트
     const v = visualOf(type);
     const footOffset = v.bodyH / 2; // 벡터 캐릭터와 같은 높이에 발을 둠
     let barY = -v.bodyH / 2 - 20;

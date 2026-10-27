@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import unitsData from '../data/units.json';
 import type { UnitStats } from '../types';
 import { unitPrice, weaponPrice } from '../systems/unlocks';
-import { animKey, iconKey, spriteOf, textureKey } from '../systems/sprites';
+import { animKey, iconKey, spriteOf, spriteOfLook, textureKey } from '../systems/sprites';
 import { meta, scaleStat } from '../systems/upgrades';
 import { bgm, sfx } from '../systems/sound';
 import { WEAPONS, weaponChargeMult, weaponDurationMult, weaponPowerMult } from '../systems/weapons';
@@ -13,7 +13,7 @@ import { BASE_MAX_LV, BASE_UPGRADES } from '../systems/baseUpgrades';
 import { ALLY_CASTLE_TIERS, CASTLE_MAX_LV, CASTLE_RATE_MAX_LV, allyCastleGun, allyCastleTier, castleHpMult, castleLook } from '../systems/castle';
 import { RANK_MAX, rankMult, rankUpCost } from '../systems/chests';
 import { EQUIP_MAX, GRADE_COLORS, GRADE_NAMES, HERO_WEAPONS, RINGS, equipUpCost } from '../systems/equipment';
-import { UNIT_TIERS, evolvedKey, levelCap, nextUnitTier, readyToEvolve, starText, tierPerks } from '../systems/evolution';
+import { UNIT_TIERS, evolvedKey, levelCap, nextUnitTier, readyToEvolve, starText, tierPerks, unitOfKey } from '../systems/evolution';
 import { AURA_MAX_LV, AURA_RADIUS, HERO_MAX_LV, HERO_SKILLS, HERO_TIERS, SKILL_MAX_LV, auraBonus, heroLvMult, heroSkillPower, heroTier, heroUpCost, nextHeroTier } from '../systems/hero';
 import { VIEW_W } from '../systems/view';
 import { UNIT_GROUPS, unitGroup, type UnitGroup } from '../systems/unitGroups';
@@ -337,12 +337,13 @@ export class UpgradeScene extends Phaser.Scene {
     const stageH = h - 22;
     parts.push(this.add.rectangle(sx, y, stageW, stageH, 0x0f1626).setStrokeStyle(1, 0x2a3656));
     parts.push(this.add.ellipse(sx, y + stageH / 2 - 16, 96, 16, 0x000000, 0.4)); // 발밑 그림자
-    const d = look ? spriteOf(look) : null;
+    const d = look ? spriteOfLook(look) : null;
     if (d && look && this.textures.exists(textureKey(look))) {
       // 그림이 실제로 차지하는 칸(빈 여백 제외)을 무대에 꽉 차게 — 발은 무대 바닥에
       const f0 = d.anims.idle!.frames[0];
       const box = this.contentBox(textureKey(look), f0) ?? { left: 0, top: 0, right: d.frameWidth, bottom: d.footY };
-      const sc = Math.min((stageH - 26) / Math.max(1, d.footY - box.top), (stageW - 14) / Math.max(1, box.right - box.left), d.scale * 4);
+      const grow = 0.88 + 0.03 * meta.tier(unitOfKey(look)); // ⭐ 진화할수록 아주 조금씩 크게(★1 0.88 → ★5 1.0)
+      const sc = Math.min((stageH - 26) / Math.max(1, d.footY - box.top), (stageW - 14) / Math.max(1, box.right - box.left), d.scale * 4) * grow;
       const spr = this.add
         .sprite(sx - ((box.left + box.right) / 2 - d.frameWidth / 2) * sc, y + stageH / 2 - 14, textureKey(look), f0)
         .setOrigin(0.5, d.footY / d.frameHeight)
@@ -460,10 +461,17 @@ export class UpgradeScene extends Phaser.Scene {
       layer.add(g);
       // 미리보기 — 첫 프레임
       const look = o.id === '?' ? null : ensureSkin(this, key, o.id, meta.tier(key)); // ⭐ 지금 진화 단계로 미리보기
-      const def = look ? spriteOf(look) ?? spriteOf(key) : null;
+      const def = look ? spriteOfLook(look, key) : null;
       if (look && def && this.textures.exists(textureKey(look))) {
-        const img = this.add.image(x, y - 40, textureKey(look), def.anims.idle!.frames[0]);
-        img.setScale(Math.min(110 / def.frameHeight, 150 / def.frameWidth));
+        // 그림마다 여백이 달라 크기가 들쭉날쭉 → 실제 그림 높이로 맞추고, 등급이 오를수록 아주 조금씩 크게(기본 1 · 레어 1.04 · 전설 1.08)
+        const f0 = def.anims.idle!.frames[0];
+        const box = this.contentBox(textureKey(look), f0) ?? { left: 0, top: 0, right: def.frameWidth, bottom: def.frameHeight };
+        const grow = o.id === 'legend' ? 1.08 : o.id ? 1.04 : 1;
+        const sc = Math.min((96 * grow) / Math.max(1, box.bottom - box.top), (170 * grow) / Math.max(1, box.right - box.left));
+        const img = this.add
+          .image(x - ((box.left + box.right) / 2 - def.frameWidth / 2) * sc, y + 14, textureKey(look), f0)
+          .setOrigin(0.5, box.bottom / def.frameHeight) // 발을 같은 줄에
+          .setScale(sc);
         layer.add(img);
       } else {
         layer.add(this.add.text(x, y - 40, '❔', { fontSize: '54px', padding: { top: 12, bottom: 4 } }).setOrigin(0.5).setAlpha(0.5));

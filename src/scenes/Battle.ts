@@ -710,6 +710,7 @@ export class BattleScene extends Phaser.Scene {
       this.puff(sx, 0xd8c8a0);
     }
     u.setStars(UNIT_TIERS[meta.tier(type)].stars); // ⭐ 진화 단계(★★부터 머리 위 표시, ★4 금빛·★5 무지개 오라)
+    if (!totem && meta.tier(type) >= 3) u.setBodyScale(1 + 0.025 * (meta.tier(type) - 2)); // ★4·★5는 ★3 그림이라 아주 조금 크게
     u.pop = base.pop;
     sfx(this, 'spawn');
     this.track('spawns');

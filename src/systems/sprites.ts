@@ -120,3 +120,8 @@ export const sprites: { manifest: SpriteManifest } = { manifest: {} };
 export function spriteOf(type: string): SpriteDef | undefined {
   return sprites.manifest[type];
 }
+
+/** 그림 키의 시트 정보 — 색만 바꾼 레어 스킨('soldier_t2@rare')은 원본('soldier_t2') 시트 그대로 */
+export function spriteOfLook(look: string, type = look): SpriteDef | undefined {
+  return sprites.manifest[look] ?? sprites.manifest[look.replace(/@[a-z]+$/, '')] ?? sprites.manifest[type];
+}
