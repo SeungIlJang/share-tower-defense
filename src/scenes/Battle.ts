@@ -2409,7 +2409,7 @@ ${info.desc}`, { fontFamily: 'sans-serif', fontSize: '24px', fontStyle: 'bold', 
       this.tweens.add({ targets: glow, alpha: 0, duration: 600, onComplete: () => glow.destroy() });
     };
     // 💥 효과 팩 그림이 있는 기술 — 시전자 발밑에서 왼쪽(우리 쪽)으로 펼쳐짐, 범위에 맞춰 늘림(소리 포함)
-    const PACK: Partial<Record<string, FxKey>> = { slam: 'slam', frost: 'frost', breath: 'breath', hellfire: 'hellfire', eruption: 'eruption', charge: 'charge' };
+    const PACK: Partial<Record<string, FxKey>> = { slam: 'slam', frost: 'frost', breath: 'breath', hellfire: 'hellfire', eruption: 'eruption', charge: 'charge', roots: 'roots', poison: 'poison', raise: 'raise', shards: 'shards', shadow: 'shadow' };
     const packKey = PACK[def.skill];
     if (packKey) {
       const sx = Phaser.Math.Clamp(def.reach[0] / 300, 1.15, 1.8); // 게임 속 보스는 크게 그려져서 최소 1.15배
@@ -2418,13 +2418,14 @@ ${info.desc}`, { fontFamily: 'sans-serif', fontSize: '24px', fontStyle: 'bold', 
         else if (def.skill === 'hellfire') this.cameras.main.shake(400, 0.014);
         else if (def.skill !== 'breath' && def.skill !== 'charge') this.cameras.main.shake(300, 0.01);
         if (def.skill === 'charge') e.moveBy(-Math.min(def.reach[0] * 0.6, Math.max(0, e.x - (this.playerBase.x + BASE_FRONT + 40)))); // ⚡ 돌진
+        if (def.skill === 'roots' || def.skill === 'raise') this.bossSummon(e, def); // 🍄 버섯 · 💀 해골 소환은 그대로
         return;
       }
     }
     switch (def.skill) {
       case 'roots':
         fx(0x6ad84a, '🌿');
-        for (let i = 0; i < (def.summon?.n ?? 2); i++) this.time.delayedCall(i * 250, () => !this.over && e.active && this.spawnEnemy(def.summon?.type ?? 'mushroom', false, e.x - 50 - i * 40, true));
+        this.bossSummon(e, def);
         sfx(this, 'boom');
         break;
       case 'slam':
@@ -2453,7 +2454,7 @@ ${info.desc}`, { fontFamily: 'sans-serif', fontSize: '24px', fontStyle: 'bold', 
         sfx(this, 'boom_big');
         break;
       case 'raise':
-        for (let i = 0; i < (def.summon?.n ?? 3); i++) this.time.delayedCall(i * 200, () => !this.over && this.spawnEnemy(def.summon?.type ?? 'skeleton', false, e.x - 60 - i * 40, true));
+        this.bossSummon(e, def);
         fx(0x5aff9a, '💀');
         sfx(this, 'magic');
         break;
@@ -2472,6 +2473,19 @@ ${info.desc}`, { fontFamily: 'sans-serif', fontSize: '24px', fontStyle: 'bold', 
         fx(0x9a5aff, '🌑');
         sfx(this, 'magic');
         break;
+    }
+  }
+
+  /** 🍄 뿌리 묶기(버섯) · 💀 해골 부활 — 보스 앞에 졸개 소환 */
+  private bossSummon(e: Enemy, def: (typeof BOSSES)[string]): void {
+    const raise = def.skill === 'raise';
+    const n = def.summon?.n ?? (raise ? 3 : 2);
+    const type = def.summon?.type ?? (raise ? 'skeleton' : 'mushroom');
+    for (let i = 0; i < n; i++) {
+      this.time.delayedCall(i * (raise ? 200 : 250), () => {
+        if (this.over || (!raise && !e.active)) return;
+        this.spawnEnemy(type, false, e.x - (raise ? 60 : 50) - i * 40, true);
+      });
     }
   }
 

@@ -169,6 +169,81 @@
    "volume": 0.5,
    "concurrency": 2,
    "cooldownMs": 180
+  },
+  "roots": {
+   "texture": "sprites/Fx_roots.png",
+   "audio": "audio/Sfx_roots.wav",
+   "frameWidth": 384,
+   "frameHeight": 192,
+   "frames": 12,
+   "fps": 9.23076923076923,
+   "pivot": {
+    "x": 340,
+    "y": 160
+   },
+   "volume": 0.5,
+   "concurrency": 2,
+   "cooldownMs": 180
+  },
+  "poison": {
+   "texture": "sprites/Fx_poison.png",
+   "audio": "audio/Sfx_poison.wav",
+   "frameWidth": 384,
+   "frameHeight": 192,
+   "frames": 12,
+   "fps": 9.23076923076923,
+   "pivot": {
+    "x": 340,
+    "y": 160
+   },
+   "volume": 0.42,
+   "concurrency": 2,
+   "cooldownMs": 180
+  },
+  "raise": {
+   "texture": "sprites/Fx_raise.png",
+   "audio": "audio/Sfx_raise.wav",
+   "frameWidth": 384,
+   "frameHeight": 192,
+   "frames": 12,
+   "fps": 9.23076923076923,
+   "pivot": {
+    "x": 340,
+    "y": 160
+   },
+   "volume": 0.42,
+   "concurrency": 2,
+   "cooldownMs": 180
+  },
+  "shards": {
+   "texture": "sprites/Fx_shards.png",
+   "audio": "audio/Sfx_shards.wav",
+   "frameWidth": 384,
+   "frameHeight": 192,
+   "frames": 12,
+   "fps": 10,
+   "pivot": {
+    "x": 340,
+    "y": 160
+   },
+   "volume": 0.4,
+   "concurrency": 2,
+   "cooldownMs": 180
+  },
+  "shadow": {
+   "texture": "sprites/Fx_shadow.png",
+   "audio": "audio/Sfx_shadow.wav",
+   "frameWidth": 384,
+   "frameHeight": 192,
+   "frames": 12,
+   "fps": 8.888888888888888,
+   "pivot": {
+    "x": 340,
+    "y": 160
+   },
+   "volume": 0.42,
+   "concurrency": 2,
+   "cooldownMs": 180
   }
  }
 }
