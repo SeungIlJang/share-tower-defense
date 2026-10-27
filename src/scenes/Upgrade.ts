@@ -13,6 +13,7 @@ import { BASE_MAX_LV, BASE_UPGRADES } from '../systems/baseUpgrades';
 import { ALLY_CASTLE_TIERS, CASTLE_MAX_LV, CASTLE_RATE_MAX_LV, allyCastleGun, allyCastleTier, castleHpMult, castleLook } from '../systems/castle';
 import { RANK_MAX, rankMult, rankUpCost } from '../systems/chests';
 import { EQUIP_MAX, GRADE_COLORS, GRADE_NAMES, HERO_WEAPONS, RINGS, equipUpCost } from '../systems/equipment';
+import { MILESTONE_TEXT, milestoneBonus, milestoneKind, milestonesAt, nextMilestone } from '../systems/milestones';
 import { MAX_TIER, UNIT_TIERS, evolvedKey, levelCap, nextUnitTier, readyToEvolve, starText, tierPerks, unitOfKey } from '../systems/evolution';
 import { AURA_MAX_LV, AURA_RADIUS, HERO_MAX_LV, HERO_SKILLS, HERO_TIERS, SKILL_MAX_LV, auraBonus, heroLvMult, heroSkillPower, heroTier, heroUpCost, nextHeroTier } from '../systems/hero';
 import { VIEW_W } from '../systems/view';
@@ -139,14 +140,15 @@ export class UpgradeScene extends Phaser.Scene {
     extra = '', // 제목 오른쪽 작은 글씨(유닛 스킬)
     skin?: { label: string; color: number; onClick: () => void }, // 👗 스킨 버튼
     chip?: { label: string; color: number; onClick: () => void; pulse?: boolean }, // 🃏 카드 랭크(제목 줄 오른쪽)
-    look?: string // 큰 칸이면 아이콘 대신 이 그림(전신, 대기 동작)
+    look?: string, // 큰 칸이면 아이콘 대신 이 그림(전신, 대기 동작)
+    ms?: { text: string; ratio: number } // 🎁 다음 보상 진행 막대
   ): void {
     const { x, y, h } = this.cell(i, count);
     const parts: Phaser.GameObjects.GameObject[] = [
       this.add.rectangle(x, y, 600, h - 8, 0x1a2338).setStrokeStyle(2, 0x33406a),
     ];
     if (h >= 130) {
-      this.bigCard(parts, x, y, h, icon, title, desc, btnLabel, canUp, dim, onUp, extra, skin, chip, look);
+      this.bigCard(parts, x, y, h, icon, title, desc, btnLabel, canUp, dim, onUp, extra, skin, chip, look, ms);
       return;
     }
     // 3줄: 제목(크게) / 수치 / 스킬·스킨 — 휴대폰에서도 잘 보이게 큰 글씨·밝은 색·검은 테두리
@@ -229,8 +231,10 @@ export class UpgradeScene extends Phaser.Scene {
       const next = nextUnitTier(tier);
       const evo = owned && readyToEvolve(lv, tier);
       const tm = tierPerks(tier).mult;
-      const st = (base: number, l: number): number => Math.round(scaleStat(base, l) * tm);
+      const st = (base: number, l: number): number => Math.round(scaleStat(base, l) * tm * milestoneBonus(l).stats); // ⭐ 진화 · 🎁 보상 포함
       const have = meta.shards[key] ?? 0;
+      const nm = nextMilestone(lv, UNIT_TIERS[tier].min);
+      const ms = owned && !evo ? { text: `🎁 Lv${nm.lv} ${nm.text}`, ratio: nm.ratio } : undefined;
       const desc =
         evo && next
           ? `⭐ ${next.name} 진화! ${next.perk}\n${next.shards ? `🃏 조각 ${have}/${next.shards}${have < next.shards ? ' — 보물 상자에서 모아요' : ' ✅'}` : '골드만 있으면 바로 진화!'}`
@@ -263,15 +267,21 @@ export class UpgradeScene extends Phaser.Scene {
             else this.toast(`🪙 골드가 ${next.gold - meta.gold} 부족해요`);
             return;
           }
+          const got = milestonesAt(meta.level(key));
           if (meta.upgrade(key)) {
             sfx(this, 'weapon');
             this.render();
+            if (milestonesAt(meta.level(key)) > got) {
+              sfx(this, 'levelup');
+              this.toast(`🎁 ${u.name} Lv${meta.level(key)} 보상! ${MILESTONE_TEXT[milestoneKind(got)]}`);
+            }
           }
         },
         this.skillLabel(key, lv),
         owned ? this.skinButton(key) : undefined,
         owned ? this.rankChip(key) : undefined,
-        look
+        look,
+        ms
       );
     });
   }
@@ -330,7 +340,8 @@ export class UpgradeScene extends Phaser.Scene {
     extra: string,
     skin?: { label: string; color: number; onClick: () => void },
     chip?: { label: string; color: number; onClick: () => void; pulse?: boolean },
-    look?: string
+    look?: string,
+    ms?: { text: string; ratio: number }
   ): void {
     const sx = x - 222; // 무대 가운데
     const stageW = 148;
@@ -359,6 +370,12 @@ export class UpgradeScene extends Phaser.Scene {
       this.add.text(tx, y - h / 2 + 30, title, { fontFamily: 'sans-serif', fontSize: '24px', fontStyle: 'bold', color: dim ? '#aab6c8' : '#ffffff', stroke: '#000000', strokeThickness: 4 }).setOrigin(0, 0.5),
       this.add.text(tx, y - 4, desc.replace(/\s+⭐/, '\n⭐'), { fontFamily: 'sans-serif', fontSize: '16px', fontStyle: 'bold', color: '#d6e2f5', wordWrap: { width: 300 }, lineSpacing: 2 }).setOrigin(0, 0.5)
     );
+    if (ms) {
+      // 🎁 다음 보상 — 글씨 + 작은 막대
+      parts.push(this.add.text(tx, y + 27, ms.text, { fontFamily: 'sans-serif', fontSize: '13px', fontStyle: 'bold', color: '#9ad8ff' }).setOrigin(0, 0.5));
+      parts.push(this.add.rectangle(tx + 210, y + 27, 90, 8, 0x0f1626).setOrigin(0, 0.5).setStrokeStyle(1, 0x3a4a6a));
+      parts.push(this.add.rectangle(tx + 210, y + 27, Math.max(2, 90 * ms.ratio), 8, 0x5ab8ff).setOrigin(0, 0.5));
+    }
     if (extra) parts.push(this.add.text(tx, y + h / 2 - 30, extra, { fontFamily: 'sans-serif', fontSize: '15px', fontStyle: 'bold', color: '#ffe680', wordWrap: { width: 300 } }).setOrigin(0, 0.5));
     const pill = (label: string, color: number, px: number, py: number, fn: () => void): Phaser.GameObjects.Text => {
       const t = this.add

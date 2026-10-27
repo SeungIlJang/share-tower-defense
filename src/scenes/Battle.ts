@@ -11,6 +11,7 @@ import { FOOD_BASE, energyMax, energyRate, popBonus } from '../systems/baseUpgra
 import { summonCooldown } from '../systems/pacing';
 import { anyDevFlag, devFlags } from '../systems/dev';
 import { UNIT_TIERS, tierBodyScale, tierPerks } from '../systems/evolution';
+import { milestoneBonus, milestoneCost } from '../systems/milestones';
 import { enemyLevel, hexColor, pickVariant, variantTable } from '../systems/enemyVariants';
 import { STAGES, WORLDS, goldMultFor } from '../systems/worlds';
 import { BOSSES, BOSS_KEYS, bossForStage } from '../systems/bosses';
@@ -519,7 +520,7 @@ export class BattleScene extends Phaser.Scene {
   private buildHud(): Hud {
     // ⚔️ 출전 덱 유닛 + (아직 안 산 유닛은 '구매' 안내용) — 덱에 없는 보유 유닛은 숨김
     const shown = Object.fromEntries(Object.keys(UNITS).filter((k) => this.deck.includes(k) || !meta.ownsUnit(k)).map((k) => [k, UNITS[k]]));
-    const deckFirst = Object.fromEntries([...this.deck.map((k) => [k, UNITS[k]] as const), ...Object.entries(shown).filter(([k]) => !this.deck.includes(k))]);
+    const deckFirst = Object.fromEntries([...this.deck.map((k) => [k, UNITS[k]] as const), ...Object.entries(shown).filter(([k]) => !this.deck.includes(k))].map(([k, u]) => [k, { ...u, cost: this.unitCost(k) }])); // 🎁 소환 비용 보상 반영
     return new Hud(
       this,
       deckFirst,
@@ -680,13 +681,13 @@ export class BattleScene extends Phaser.Scene {
       return;
     }
     // 💎 소환 할인 / 🎁 무료 소환 / 💎 마나 순환(각성: 5번째마다 공짜)
-    const energyCost = this.nextSummonFree() ? 0 : Math.round(base.cost * magicMult(this.skills.magic ?? 0));
+    const energyCost = this.nextSummonFree() ? 0 : Math.round(this.unitCost(type) * magicMult(this.skills.magic ?? 0));
     if (!this.energy.spend(energyCost)) {
       this.hud.deny(type, 'energy'); // 에너지 부족 안내
       return;
     }
     const m0 = applyUpgrade(base, meta.level(type)); // 영구 강화 적용
-    const rm = rankMult(meta.rank(type)) * tierPerks(meta.tier(type)).mult; // 🃏 카드 랭크 · ⭐ 진화 단계
+    const rm = rankMult(meta.rank(type)) * tierPerks(meta.tier(type)).mult * milestoneBonus(meta.level(type)).stats; // 🃏 카드 랭크 · ⭐ 진화 단계 · 🎁 보상
     const m = { ...m0, hp: Math.round(m0.hp * rm), atk: Math.round(m0.atk * rm), atkSpeed: m0.atkSpeed * tierPerks(meta.tier(type)).atkSpeed }; // 🔥 각성: 공격 속도
     this.usedUnits[type] = (this.usedUnits[type] ?? 0) + 1;
     const perfect = this.feat.perfect && Math.abs(this.beat - 0.5) <= BattleScene.PERFECT_WIN; // ⏱️ 타이밍 명중(🎓 6관문부터)
@@ -696,7 +697,7 @@ export class BattleScene extends Phaser.Scene {
     const bm = 1 + (this.battleUpg[type] ?? 0) * 0.2; // 🛠️ 전장 강화
     if (this.freeSummons > 0) this.freeSummons--;
     this.summonCount++;
-    if (!devFlags.noCooldown) this.summonCd[type] = summonCooldown(base.cost); // ⏱️ 같은 유닛 재소환 대기(🛠️ 치트면 없음)
+    if (!devFlags.noCooldown) this.summonCd[type] = this.unitCooldown(type); // ⏱️ 같은 유닛 재소환 대기(🛠️ 치트면 없음 · 🎁 대기 보상)
     const vm = vigorMult(this.skills.vigor ?? 0); // ❤️ 튼튼한 몸
     const stats = { ...m, hp: Math.round(m.hp * bm * pm * vm), atk: Math.round(m.atk * bm * pm) };
     const u = this.unitPool.acquire();
@@ -768,10 +769,18 @@ export class BattleScene extends Phaser.Scene {
     return m;
   }
 
+  /** 🎁 진화 사이 보상 반영 — 소환 비용 · 재소환 대기 */
+  private unitCost(k: string): number {
+    return milestoneCost(UNITS[k].cost, meta.level(k));
+  }
+  private unitCooldown(k: string): number {
+    return summonCooldown(UNITS[k].cost) * milestoneBonus(meta.level(k)).cooldown;
+  }
+
   /** ⏱️ 유닛별 남은 대기 비율(1=방금 소환, 0=준비됨) */
   private cdMap(): Record<string, number> {
     const m: Record<string, number> = {};
-    for (const [k, left] of Object.entries(this.summonCd)) if (left > 0) m[k] = left / summonCooldown(UNITS[k].cost);
+    for (const [k, left] of Object.entries(this.summonCd)) if (left > 0) m[k] = left / this.unitCooldown(k);
     return m;
   }
 
@@ -780,7 +789,7 @@ export class BattleScene extends Phaser.Scene {
     const food = this.usedFood();
     for (const k of Object.keys(UNITS)) {
       const u = UNITS[k];
-      const ec = this.nextSummonFree() ? 0 : Math.round(u.cost * magicMult(this.skills.magic ?? 0));
+      const ec = this.nextSummonFree() ? 0 : Math.round(this.unitCost(k) * magicMult(this.skills.magic ?? 0));
       m[k] = this.energy.amount >= ec && food + u.pop <= this.foodMax && (this.summonCd[k] ?? 0) <= 0;
     }
     return m;
@@ -1194,7 +1203,7 @@ export class BattleScene extends Phaser.Scene {
   /** ✨ 유닛 스킬 발동 — 효과 적용 + 스킬 동작 + 이펙트 그림 + 이름 표시 */
   private castSkill(u: Unit | Enemy, target: Unit | Enemy, lv: number, atkMul: number): void {
     const sk = UNIT_SKILLS[u.type];
-    const power = u.stats.atk * atkMul * skillMult(lv) * synergyMult(this.synergies, u.type, 'atk') * (u.side === 'ally' ? tierPerks(meta.tier(u.type)).skillPower : 1); // ⭐ ★3부터 스킬 위력
+    const power = u.stats.atk * atkMul * skillMult(lv) * synergyMult(this.synergies, u.type, 'atk') * (u.side === 'ally' ? tierPerks(meta.tier(u.type)).skillPower * milestoneBonus(meta.level(u.type)).skill : 1); // ⭐ ★3부터 스킬 위력 · 🎁 보상
     this.track('skills');
     const hit = (e: Unit | Enemy, mul = 1): void => {
       if (e.active) e.takeDamage(computeDamage(power * mul, e.stats.def));
