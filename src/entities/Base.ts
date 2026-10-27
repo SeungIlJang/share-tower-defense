@@ -131,6 +131,18 @@ export class Base {
     }
   }
 
+  /** 🏰 무너짐 — 흔들리다 주저앉으며 흐려짐(적 성 함락 연출) */
+  collapse(ms = 1100): void {
+    this.hpBar.setVisible(false);
+    const s = this.sprite ?? this.rect;
+    if (!s) return;
+    this.scene.tweens.killTweensOf(s);
+    const x = s.x;
+    this.scene.tweens.add({ targets: s, x: x + 6, duration: 45, yoyo: true, repeat: 5 });
+    this.scene.tweens.add({ targets: s, y: s.y + s.displayHeight * 0.55, angle: 6, alpha: 0.15, delay: 260, duration: ms, ease: 'Quad.easeIn' });
+    if (this.shadow) this.scene.tweens.add({ targets: this.shadow, alpha: 0, scaleX: 1.4, delay: 260, duration: ms });
+  }
+
   get destroyed(): boolean {
     return this.hp <= 0;
   }

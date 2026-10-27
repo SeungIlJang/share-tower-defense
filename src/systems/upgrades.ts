@@ -11,6 +11,8 @@ import { normalizeDeck } from './counters';
 import { EQUIP_MAX, equipUpCost, isWeapon, type RingKey, type WeaponKey } from './equipment';
 import { CODEX_MILESTONES, claimableMilestone, discoverReward, mergeKills } from './codex';
 import { CASTLE_MAX_LV, CASTLE_RATE_MAX_LV, castleUpCost } from './castle';
+import { earnedTitles, type TitleCtx } from './titles';
+import { weekIndex, weeklyStepOf } from './weekly';
 
 /** 강화 순수 계산 (Vitest 검증) */
 
@@ -91,6 +93,11 @@ export class MetaProgress {
   equip: Record<string, number> = { mace: 1 }; // 🛡️ 영웅 장비 등급(0/없음 = 미보유)
   weaponEq: WeaponKey = 'mace'; // 장착 무기
   ringEq: RingKey | null = null; // 장착 반지
+  freeChestDay = -1; // 📺 오늘의 무료 상자 받은 날
+  title: string | null = null; // 🏷️ 달고 있는 칭호
+  titlesSeen: string[] = []; // 🏷️ 이미 본(새 칭호 표시 끈) 칭호
+  weekly = { week: -1, total: 0 }; // 👑 이번 주 보스에게 준 누적 피해(보스 체력 배수)
+  weeklyBest = 0; // 👑 주간 보스 최고 단계
   lastDaily = -1; // 마지막 일일보상 수령 day index
   streak = 0; // 연속 출석
   lastSeen = 0; // 마지막 접속(ms) — 방치 보상 기준
@@ -109,6 +116,49 @@ export class MetaProgress {
   /** 📅 오늘(현지 자정 기준 날짜 index) */
   today(): number {
     return this.dayIndex();
+  }
+
+  /** 📺 오늘의 무료 상자(광고) */
+  canFreeChest(): boolean {
+    return this.freeChestDay !== this.dayIndex();
+  }
+  markFreeChest(): void {
+    this.freeChestDay = this.dayIndex();
+    this.save();
+  }
+
+  /** 🏷️ 칭호 */
+  titleCtx(): TitleCtx {
+    return { clearedMax: this.clearedMax, endlessBest: this.endlessBest, codexFound: this.codexFound, chestsOpened: this.chestsOpened, totalStars: this.totalStars, weeklyBest: this.weeklyBest };
+  }
+  get titles(): string[] {
+    return earnedTitles(this.titleCtx());
+  }
+  get newTitles(): string[] {
+    return this.titles.filter((k) => !this.titlesSeen.includes(k));
+  }
+  markTitlesSeen(): void {
+    this.titlesSeen = [...new Set([...this.titlesSeen, ...this.titles])];
+    this.save();
+  }
+  setTitle(k: string | null): void {
+    if (k !== null && !this.titles.includes(k)) return;
+    this.title = k;
+    this.save();
+  }
+
+  /** 👑 이번 주 누적(주가 바뀌면 0부터) */
+  weeklyTotal(): number {
+    return this.weekly.week === weekIndex(this.dayIndex()) ? this.weekly.total : 0;
+  }
+  /** 👑 이번 판 피해(보스 체력 배수) 더하기 → 전·후 누적 */
+  addWeekly(units: number): { before: number; after: number } {
+    const before = this.weeklyTotal();
+    const after = before + Math.max(0, units);
+    this.weekly = { week: weekIndex(this.dayIndex()), total: after };
+    this.weeklyBest = Math.max(this.weeklyBest, weeklyStepOf(after));
+    this.save();
+    return { before, after };
   }
 
   /** 📅 오늘의 도전 첫 승리 → true(보너스 지급 대상) */
@@ -563,6 +613,11 @@ export class MetaProgress {
         equip?: Record<string, number>;
         weaponEq?: WeaponKey;
         ringEq?: RingKey | null;
+        freeChestDay?: number;
+        title?: string | null;
+        titlesSeen?: string[];
+        weekly?: { week: number; total: number };
+        weeklyBest?: number;
         lastDaily?: number;
         streak?: number;
         lastSeen?: number;
@@ -596,6 +651,11 @@ export class MetaProgress {
       this.weaponEq = obj.weaponEq ?? 'mace';
       this.ringEq = obj.ringEq ?? null;
       this.tips = obj.tips ?? (this.clearedMax > 0 ? ['summon', 'hero'] : []); // 예전 저장 = 기본 안내는 본 것으로
+      this.freeChestDay = obj.freeChestDay ?? -1;
+      this.title = obj.title ?? null;
+      this.titlesSeen = obj.titlesSeen ?? [];
+      this.weekly = obj.weekly ?? { week: -1, total: 0 };
+      this.weeklyBest = obj.weeklyBest ?? 0;
       this.lastDaily = obj.lastDaily ?? -1;
       this.streak = obj.streak ?? 0;
       this.lastSeen = obj.lastSeen ?? 0;
@@ -652,6 +712,11 @@ export class MetaProgress {
         equip: this.equip,
         weaponEq: this.weaponEq,
         ringEq: this.ringEq,
+        freeChestDay: this.freeChestDay,
+        title: this.title,
+        titlesSeen: this.titlesSeen,
+        weekly: this.weekly,
+        weeklyBest: this.weeklyBest,
         lastDaily: this.lastDaily,
         streak: this.streak,
         lastSeen: this.lastSeen,

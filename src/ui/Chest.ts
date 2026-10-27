@@ -25,7 +25,19 @@ function drawChest(s: Phaser.Scene, tier: number): { box: Phaser.GameObjects.Con
 }
 
 /** 🎁 결과 화면 왼쪽 상자 카드 — 탭하면 흔들 → 펑 → 보상 공개 */
-export function chestCard(s: Phaser.Scene, x: number, y: number, loot: ChestLoot, unitName: (k: string) => string): void {
+export function chestCard(s: Phaser.Scene, x: number, y: number, loot: ChestLoot, unitName: (k: string) => string, z = 0): void {
+  // z: 창 위에 띄울 때 — 이 카드가 만든 것(나중에 생기는 보상 줄 포함)을 모두 z만큼 위로
+  const before = new Set(s.children.list);
+  const lifted = new WeakSet<Phaser.GameObjects.GameObject>();
+  const lift = (): void => {
+    if (!z) return;
+    for (const o of s.children.list) {
+      if (before.has(o) || lifted.has(o)) continue;
+      lifted.add(o);
+      const d = o as Phaser.GameObjects.GameObject & { depth: number; setDepth?: (n: number) => unknown };
+      d.setDepth?.(z + (d.depth ?? 0));
+    }
+  };
   const d = CHESTS[loot.tier];
   const g = s.add.graphics();
   g.fillStyle(0xffffff, 0.92).fillRoundedRect(x - 130, y - 150, 260, 300, 28);
@@ -69,10 +81,12 @@ export function chestCard(s: Phaser.Scene, x: number, y: number, loot: ChestLoot
         sfx(s, loot.tier >= 2 ? 'win' : 'levelup');
         s.tweens.add({ targets: box, y: y - 82, scale: 0.7, alpha: 0.35, duration: 400, delay: 250 });
         reveal();
+        lift();
       },
     });
   };
   hit.on('pointerdown', open);
+  lift();
 
   const reveal = (): void => {
     const rows: { icon: string | null; text: string; sub: string; sheet?: [string, number] }[] = [{ icon: null, text: `🪙 +${loot.gold}`, sub: '' }];
@@ -97,4 +111,26 @@ export function chestCard(s: Phaser.Scene, x: number, y: number, loot: ChestLoot
       s.tweens.add({ targets: row, scale: 1, delay: 350 + i * 220, duration: 260, ease: 'Back.easeOut', onStart: () => sfx(s, 'coin', 1 + i * 0.1) });
     });
   };
+}
+
+/** 🎁 창으로 띄우는 상자(광고 상자·무료 상자) — 열고 나서 닫기 */
+export function chestPopup(s: Phaser.Scene, loot: ChestLoot, unitName: (k: string) => string, onClose?: () => void): void {
+  const Z = 400;
+  const before = new Set(s.children.list);
+  const dim = s.add.rectangle(640, 360, 4000, 720, 0x000000, 0.6).setDepth(Z).setInteractive();
+  chestCard(s, 640, 340, loot, unitName, Z + 1);
+  const close = s.add
+    .text(640, 528, '닫기', { fontFamily: 'sans-serif', fontSize: '22px', fontStyle: 'bold', color: '#ffffff', backgroundColor: '#4a8bff', padding: { x: 26, y: 8 } })
+    .setOrigin(0.5)
+    .setDepth(Z + 20)
+    .setInteractive({ useHandCursor: true });
+  void dim;
+  close.on('pointerdown', () => {
+    for (const o of [...s.children.list]) {
+      if (before.has(o)) continue;
+      s.tweens.killTweensOf(o);
+      o.destroy();
+    }
+    onClose?.();
+  });
 }

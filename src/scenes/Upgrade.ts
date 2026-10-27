@@ -681,7 +681,7 @@ export class UpgradeScene extends Phaser.Scene {
 
   /** ✨ 진화 연출 */
   private evolveFx(name: string, head = '✨ 진화!'): void {
-    sfx(this, 'levelup');
+    sfx(this, 'evolve');
     const flash = this.add.rectangle(640, 360, VIEW_W, 720, 0xfff6c0, 0.7).setDepth(300);
     this.tweens.add({ targets: flash, alpha: 0, duration: 700, onComplete: () => flash.destroy() });
     const t = this.add

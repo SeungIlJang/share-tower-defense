@@ -16,7 +16,7 @@ import { STAGES, WORLDS, goldMultFor } from '../systems/worlds';
 import { BOSSES, BOSS_KEYS, bossForStage } from '../systems/bosses';
 import { COUNTER_MULT, DECK_SIZE, counterMult, enemyKind, UNIT_COUNTER, type EnemyKind } from '../systems/counters';
 import { dailyBonus, dailyRule, dailyStage, dailyStageId, dailyUnits, type DailyRule } from '../systems/daily';
-import { chestForEndless, chestForStage, rankMult, rollChest, type ChestLoot } from '../systems/chests';
+import { chestForEndless, chestForStage, rankMult, type ChestLoot } from '../systems/chests';
 import { VOLLEY_CD, VOLLEY_MAX, VOLLEY_MULT, VOLLEY_NAMES, castleArchers, ALLY_CASTLE_TIERS, ENEMY_CASTLE_TIERS, allyCastleGun, allyCastleTier, castleHpMult, castleLook, castleTarget, enemyCastleGun, enemyCastleTier, type CastleShot } from '../systems/castle';
 import { HERO_TYPE, HERO_TIERS, HERO_FALLBACK_LOOKS, heroTier, heroBodyScale, HERO_REGEN, HERO_SKILLS, AURA_ATK, AURA_GUARD, AURA_RADIUS, MANA_MAX, MANA_REGEN, MANA_START, MACE_MULT, MACE_RANGE, RALLY_SEC, RALLY_SPEED, HOLY_HEAL, HOLY_HERO_HEAL, HOLY_PUSH, HERO_ENEMY_HP, heroStats, heroLvMult, heroMoveRange, HERO_DRAG_MULT, heroSkillPower, auraRadius, inAura, maceTargets, stepToward } from '../systems/hero';
 import { HERO_PANEL_X, HERO_BTN_R, HERO_BTN_Y } from '../ui/Hud';
@@ -31,7 +31,7 @@ import { LevelUpOverlay } from '../ui/LevelUp';
 import { TipPointer } from '../ui/Tutorial';
 import { fxWarning, playFx, resetFx, type FxKey } from '../systems/fx';
 import { KNOCK_MS, KNOCK_PX, knockChance } from '../systems/knockdown';
-import { HERO_WEAPONS, burnMult, chainCount, frostSec, goldMaceMult, ringMult, ringPct, rollEquip, scepterHeal, weaponPower, type RingKey } from '../systems/equipment';
+import { HERO_WEAPONS, burnMult, chainCount, frostSec, goldMaceMult, ringMult, scepterHeal, weaponPower, type RingKey } from '../systems/equipment';
 import { TOTEMS, TOTEM_LIFE, isTotem, totemHeal, totemX } from '../systems/totems';
 import { VIEW_L, VIEW_OFF, VIEW_R, VIEW_W, uiX } from '../systems/view';
 import { LOOK_HOLD, SCREEN_W, followX, walkMult, worldWidth } from '../systems/camera';
@@ -58,6 +58,8 @@ import { starsFor, STAR_GOLD } from '../systems/stars';
 import { activeSynergies, synergyMult, type Synergy } from '../systems/synergy';
 import type { Stats } from '../systems/missions';
 import { endlessStage, endlessWaveAt, endlessMult, endlessReward } from '../systems/endless';
+import { grantNewChest } from '../systems/chestGrant';
+import { WEEKLY_HP, WEEKLY_SEC, WEEKLY_STEPS, newSteps, weekIndex, weeklyBoss, weeklyStage, weeklyStageId, weeklyStepOf } from '../systems/weekly';
 
 /** 배경 색(하늘 · 레인 · 레인 선) — 월드·모드별 */
 const THEMES = {
@@ -225,6 +227,9 @@ export class BattleScene extends Phaser.Scene {
   // ⏩ 배속(×1/×2, 판이 바뀌어도 유지) · 보스 처치 슬로모션
   private static speed = 1;
   private slowmo = 1;
+  private weekly: { boss: string; left: number; unit: number; foe: Enemy | null; text: Phaser.GameObjects.Text | null } | null = null; // 👑 주간 보스
+  private finishing = false; // 🏰 적 성이 무너지는 중(결과 화면 전)
+  private heroLook = HERO_TYPE; // 컷인 얼굴
   private speedBtn!: Phaser.GameObjects.Text;
   // 🔥 특수 무기 — 게이지(해금된 것만) + 효과 지속 시각(전투 시계 기준)
   private weapons: (WeaponCharge | null)[] = []; // 구매 안 한 무기 = null
@@ -243,8 +248,16 @@ export class BattleScene extends Phaser.Scene {
     super('Battle');
   }
 
-  init(data: { stageId: number; mode?: 'endless' | 'daily' }): void {
+  init(data: { stageId: number; mode?: 'endless' | 'daily' | 'weekly' }): void {
     this.endless = data.mode === 'endless';
+    // 👑 주간 보스 — 깬 마지막 월드 보스 관문의 일반 적 + 이번 주 보스(쓰러지지 않음)
+    this.weekly = null;
+    if (data.mode === 'weekly') {
+      this.weekly = { boss: weeklyBoss(weekIndex(meta.today())), left: WEEKLY_SEC, unit: 1, foe: null, text: null };
+      this.stage = weeklyStage(STAGES.find((s) => s.id === weeklyStageId(meta.clearedMax)) ?? STAGES[9]);
+      this.rule = null;
+      return;
+    }
     this.stage = this.endless ? endlessStage() : STAGES.find((s) => s.id === data.stageId) ?? STAGES[0];
     // 📅 오늘의 도전 — 오늘 규칙 + 깬 관문 근처
     this.rule = data.mode === 'daily' ? dailyRule(meta.today()) : null;
@@ -291,6 +304,7 @@ export class BattleScene extends Phaser.Scene {
 
   create(): void {
     this.over = false;
+    this.finishing = false;
     resetFx();
     this.totemEnd = new Map();
     this.burns = [];
@@ -324,12 +338,12 @@ export class BattleScene extends Phaser.Scene {
     this.kills = {};
     this.metNew = new Set();
     this.reached = reachedStage(this.endless ? 99 : this.stage.id, meta.clearedMax);
-    for (const k of Object.keys(this.feat) as Feature[]) this.feat[k] = featureOn(k, this.reached, this.endless || !!this.rule);
+    for (const k of Object.keys(this.feat) as Feature[]) this.feat[k] = featureOn(k, this.reached, this.endless || !!this.rule || !!this.weekly);
 
     // 배경 + 레인
     const [sky, lane, line] = this.endless ? THEMES.endless : WORLDS[(this.stage.world ?? 1) - 1].battle; // 🗺️ 월드별 배경색
     // 🎥 전장 폭(1~3관문은 화면 한 장) · 카메라 범위 · 넓어진 만큼 이동 속도 보정
-    const W = Math.max(VIEW_W, worldWidth(this.stage.id, this.endless, !!this.rule)); // 📱 넓은 휴대폰이면 작은 전장도 화면 폭만큼
+    const W = Math.max(VIEW_W, worldWidth(this.stage.id, this.endless, !!this.rule || !!this.weekly)); // 📱 넓은 휴대폰이면 작은 전장도 화면 폭만큼
     this.worldW = W;
     this.walkK = walkMult(W);
     this.lookX = null;
@@ -345,8 +359,8 @@ export class BattleScene extends Phaser.Scene {
     this.playerBase = new Base(this, 105, LANE_Y - 10, Math.round(this.stage.baseHp * castleHpMult(meta.castleLevel('castle'))), 0x2f6fe0, [castleLook('ally', ct), 'base_ally'], 1 + 0.04 * ct);
     this.enemyTier = enemyCastleTier(this.endless, this.stage.id, 0);
     // 무한 모드: 적 기지는 부서지지 않는 생산 기지(버틴 웨이브가 기록)
-    this.sRule = this.endless || this.rule ? 'normal' : stageRule(this.stage.id);
-    const tough = this.sRule === 'hold' || this.sRule === 'breach'; // 수성·돌파는 적 성을 부술 필요 없음
+    this.sRule = this.endless || this.rule || this.weekly ? 'normal' : stageRule(this.stage.id);
+    const tough = this.sRule === 'hold' || this.sRule === 'breach' || !!this.weekly; // 수성·돌파·주간 보스는 적 성을 부술 필요 없음
     this.enemyBase = new Base(this, W - 105, LANE_Y - 10, this.endless || tough ? 1e9 : this.stage.baseHp, 0xc0392b, [castleLook('enemy', this.enemyTier), 'base_enemy'], 1 + 0.04 * this.enemyTier);
     this.allyGunT = 1;
     this.enemyGunT = 2.5;
@@ -363,6 +377,7 @@ export class BattleScene extends Phaser.Scene {
     this.volleyHit.on('pointerdown', () => this.castleVolley());
     this.spawnHero();
     this.setupRule(tough);
+    this.setupWeekly();
     this.devHud();
     this.waveNo = 0;
     this.waveText = null;
@@ -559,7 +574,7 @@ export class BattleScene extends Phaser.Scene {
       close();
       this.paused = false;
       this.commitRun();
-      this.scene.restart({ stageId: this.endless ? 0 : this.stage.id, mode: this.endless ? 'endless' : this.rule ? 'daily' : undefined });
+      this.scene.restart({ stageId: this.endless ? 0 : this.stage.id, mode: this.endless ? 'endless' : this.rule ? 'daily' : this.weekly ? 'weekly' : undefined });
     });
     const mute = item(450, this.sound.mute ? '🔇 소리 꺼짐' : '🔊 소리 켜짐', '#20304e', () => {
       setMute(this, !this.sound.mute);
@@ -824,7 +839,7 @@ export class BattleScene extends Phaser.Scene {
     if (elite || (!BOSS.has(type) && (this.endless || this.stage.id >= 2) && Math.random() < ELITE_CHANCE)) this.makeElite(e);
     if (BOSS.has(type)) {
       this.cameras.main.shake(300, 0.012);
-      sfx(this, 'alert');
+      sfx(this, 'boss'); // 👑 보스 등장 전용 소리
       const t = this.add
         .text(640, 210, `👑 ${BOSSES[type]?.name ?? '보스'} 등장!`, { fontFamily: 'sans-serif', fontSize: '44px', fontStyle: 'bold', color: '#ff5a6e' })
         .setOrigin(0.5)
@@ -835,6 +850,16 @@ export class BattleScene extends Phaser.Scene {
 
   private updateBossBar(): void {
     const boss = this.enemies.find((e) => e.active && BOSS.has(e.type));
+    if (boss && this.weekly && boss === this.weekly.foe) {
+      const total = meta.weeklyTotal() + this.weeklyUnits();
+      const st = weeklyStepOf(total);
+      const next = WEEKLY_STEPS[st];
+      const prev = st > 0 ? WEEKLY_STEPS[st - 1].need : 0;
+      this.bossBarBg.setVisible(true);
+      this.bossFill.setVisible(true).setSize(404 * (next ? Math.min(1, (total - prev) / (next.need - prev)) : 1), 14);
+      this.bossText.setVisible(true).setText(`👑 ${boss.stats.name}  💥 ×${total.toFixed(2)}${next ? `  → ${st + 1}단계 ×${next.need}` : '  ✅ 모든 단계!'}`);
+      return;
+    }
     if (boss) {
       this.bossBarBg.setVisible(true);
       this.bossFill.setVisible(true).setSize(404 * Math.max(0, boss.hp / boss.maxHp), 14);
@@ -1003,6 +1028,7 @@ export class BattleScene extends Phaser.Scene {
     this.cleanupDead();
     this.updateBossBar();
     this.updateCamera(dt);
+    this.updateWeekly(dt);
     this.hud.updateHero(
       this.mana.amount,
       this.mana.max,
@@ -1374,6 +1400,7 @@ export class BattleScene extends Phaser.Scene {
   private spawnHero(): void {
     const tier = heroTier(meta.heroLevel('hero')); // 👑 진화 단계
     const look = [HERO_TIERS[tier].look, ...HERO_FALLBACK_LOOKS].find((l) => this.textures.exists(textureKey(l))) ?? HERO_TYPE;
+    this.heroLook = look;
     this.hero = new Unit(this);
     const base = heroStats(this.stage.id, this.endless ? 1 : this.stage.enemyMult ?? 1);
     const hm = heroLvMult(meta.heroLevel('hero')); // 👑 영구 강화
@@ -1853,7 +1880,7 @@ ${info.desc}`, { fontFamily: 'sans-serif', fontSize: '24px', fontStyle: 'bold', 
     this.volleyT = VOLLEY_CD;
     this.tipDone('volley');
     const dmg = gun.dmg * VOLLEY_MULT;
-    this.banner(VOLLEY_NAMES[tier] + '!', 0xffd34d);
+    this.cutIn(VOLLEY_NAMES[tier] + '!', 0x6ab8ff, 'castle'); // 🏰 성 특수 공격 컷인
     this.cameras.main.shake(250, 0.006);
     sfx(this, 'weapon');
     this.playerBase.recoil();
@@ -1994,7 +2021,10 @@ ${info.desc}`, { fontFamily: 'sans-serif', fontSize: '24px', fontStyle: 'bold', 
     this.hero.skillMotion(); // 진화 그림의 스킬 동작
     if (sk.key === 'mace') this.throwMace(pw);
     else if (sk.key === 'rally') this.rally(pw);
-    else if (sk.key === 'holy') this.holyLight(pw);
+    else if (sk.key === 'holy') {
+      this.cutIn('✨ 성스러운 빛!', 0xffd34d); // L 필살기 컷인
+      this.holyLight(pw);
+    }
   }
 
   /** 📯 돌격 함성 — 오라 안 유닛 공격 속도 증가(지속 = 5초 × 위력) */
@@ -2522,6 +2552,111 @@ ${info.desc}`, { fontFamily: 'sans-serif', fontSize: '24px', fontStyle: 'bold', 
     };
   }
 
+  /** 👑 주간 보스 — 2초 뒤 보스 등장(체력 무한), 위에 남은 시간 */
+  private setupWeekly(): void {
+    const w = this.weekly;
+    if (!w) return;
+    w.left = WEEKLY_SEC;
+    w.foe = null;
+    w.text = this.add
+      .text(640, 92, '', { fontFamily: 'sans-serif', fontSize: '20px', fontStyle: 'bold', color: '#ffe680', backgroundColor: '#0d1424cc', padding: { x: 12, y: 5 } })
+      .setOrigin(0.5)
+      .setDepth(101);
+    this.banner(`👑 주간 보스 · ${WEEKLY_SEC}초 동안 피해를 쌓아라!`, 0xff8a9a);
+    this.time.delayedCall(2000, () => {
+      if (this.over || !this.weekly) return;
+      this.spawnEnemy(w.boss);
+      const e = this.enemies[this.enemies.length - 1];
+      if (!e || e.type !== w.boss) return;
+      w.unit = Math.max(1, e.maxHp); // 피해 1배 = 이 관문 보스 체력
+      e.maxHp = WEEKLY_HP;
+      e.hp = WEEKLY_HP;
+      w.foe = e;
+    });
+  }
+
+  /** 이번 판 피해(보스 체력 배수) */
+  private weeklyUnits(): number {
+    const w = this.weekly;
+    if (!w?.foe) return 0;
+    return Math.max(0, WEEKLY_HP - Math.max(0, w.foe.hp)) / w.unit;
+  }
+
+  private updateWeekly(dt: number): void {
+    const w = this.weekly;
+    if (!w || this.over || this.finishing) return;
+    w.left = Math.max(0, w.left - dt);
+    const sec = Math.ceil(w.left);
+    w.text?.setText(`⏱️ ${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}   💥 이번 판 ×${this.weeklyUnits().toFixed(2)}`).setColor(w.left <= 10 ? '#ff7a8a' : '#ffe680');
+    if (w.left <= 0) {
+      this.banner('⏱️ 시간 종료!', 0xffe14d);
+      this.end(true);
+    }
+  }
+
+  /** 🏰 적 성 함락 — 슬로모션 속에 성이 흔들리다 무너지고 먼지·파편, 1.6초 뒤 결과 */
+  private castleFall(): void {
+    if (this.finishing) return;
+    this.finishing = true;
+    const b = this.enemyBase;
+    const bx = b.cx;
+    if (this.worldW > VIEW_W) {
+      this.lookX = bx - VIEW_W * 0.62; // 🎥 무너지는 성을 화면에
+      this.lookT = 99;
+    }
+    this.slowmo = 0.35;
+    this.applySpeed();
+    this.cameras.main.flash(220, 255, 240, 200);
+    this.cameras.main.shake(900, 0.016);
+    sfx(this, 'collapse');
+    sfx(this, 'boom_big');
+    b.collapse(1100);
+    for (let i = 0; i < 7; i++) {
+      this.time.delayedCall(i * 110, () => {
+        this.puff(bx + Phaser.Math.Between(-70, 70), i % 2 ? 0xb8a890 : 0x8a7a68);
+        if (i % 3 === 0) this.burst(bx + Phaser.Math.Between(-50, 50), 0xffb84a, 90);
+      });
+    }
+    for (const e of this.enemies) if (e.active && !BOSS.has(e.type)) e.moveBy(40); // 남은 적은 움찔 물러남
+    const t = this.add
+      .text(640, 210, '🏰 함락!', { fontFamily: 'sans-serif', fontSize: '64px', fontStyle: 'bold', color: '#ffe14d', stroke: '#7a3a00', strokeThickness: 10 })
+      .setOrigin(0.5)
+      .setDepth(110)
+      .setScale(0.3);
+    this.tweens.add({ targets: t, scale: 1, duration: 200, ease: 'Back.easeOut' });
+    // 슬로모션 영향 없이 실제 1.6초 뒤 결과(브라우저 타이머)
+    window.setTimeout(() => {
+      if (!this.scene.isActive() || this.over) return;
+      this.slowmo = 1;
+      this.applySpeed();
+      this.end(true);
+    }, 1600);
+  }
+
+  /** ✨ 필살 컷인 — 화면을 가로지르는 띠 + 영웅(또는 성) 그림 + 기술 이름, 0.6초 */
+  private cutIn(title: string, color: number, who: 'hero' | 'castle' = 'hero'): void {
+    const key = who === 'hero' ? this.heroLook : this.playerBase.look;
+    const d = key ? spriteOf(key) : null;
+    const c = this.add.container(0, 0).setDepth(108);
+    const band = this.add.rectangle(640, 300, VIEW_W + 200, 118, 0x0d1424, 0.88).setAngle(-6);
+    const edge1 = this.add.rectangle(640, 300 - 62, VIEW_W + 200, 6, color).setAngle(-6);
+    const edge2 = this.add.rectangle(640, 300 + 62, VIEW_W + 200, 6, color).setAngle(-6);
+    c.add([band, edge1, edge2]);
+    // 속도선
+    for (let i = 0; i < 9; i++) c.add(this.add.rectangle(Phaser.Math.Between(-200, 1480), Phaser.Math.Between(255, 345), Phaser.Math.Between(60, 180), 2, 0xffffff, 0.35).setAngle(-6));
+    if (d && this.textures.exists(textureKey(key))) {
+      const sc = Math.min(230 / d.footY, 300 / d.frameWidth);
+      const spr = this.add.sprite(330, 372, textureKey(key), d.anims.idle!.frames[0]).setOrigin(0.5, d.footY / d.frameHeight).setScale(sc);
+      if (this.anims.exists(animKey(key, 'skill'))) spr.play(animKey(key, 'skill'));
+      c.add(spr);
+    }
+    c.add(this.add.text(560, 300, title, { fontFamily: 'sans-serif', fontSize: '50px', fontStyle: 'bold', color: '#ffffff', stroke: `#${color.toString(16).padStart(6, '0')}`, strokeThickness: 10 }).setOrigin(0, 0.5).setAngle(-6));
+    sfx(this, 'cutin');
+    c.x = -VIEW_W;
+    this.tweens.add({ targets: c, x: 0, duration: 140, ease: 'Cubic.easeOut' });
+    this.tweens.add({ targets: c, x: VIEW_W, alpha: 0, delay: 520, duration: 160, ease: 'Cubic.easeIn', onComplete: () => c.destroy() });
+  }
+
   /** 👑 보스 처치 — 잠깐 슬로모션 + 화면 번쩍 + 문구 */
   private bossDown(x: number): void {
     this.slowmo = 0.3;
@@ -2603,8 +2738,9 @@ ${info.desc}`, { fontFamily: 'sans-serif', fontSize: '24px', fontStyle: 'bold', 
   }
 
   private checkEnd(): void {
-    // 승리 = 적 생산기지 파괴 / 패배 = 우리 기지 파괴
-    if (!this.endless && this.enemyBase.destroyed) return this.end(true);
+    if (this.finishing) return;
+    // 승리 = 적 생산기지 파괴(무너지는 연출 뒤 결과) / 패배 = 우리 기지 파괴
+    if (!this.endless && this.enemyBase.destroyed) return this.castleFall();
     // 🎯 특수 관문 승패
     if (this.sRule === 'escort' && this.wagon) {
       if (this.wagon.hp <= 0) {
@@ -2702,20 +2838,35 @@ ${info.desc}`, { fontFamily: 'sans-serif', fontSize: '24px', fontStyle: 'bold', 
 
   /** 🎁 상자 내용 정하고 바로 지급(결과 화면은 여는 연출만) */
   private openChest(tier: ChestLoot['tier'], goldMult: number): ChestLoot {
-    const owned = Object.keys(UNITS).filter((k) => meta.ownsUnit(k));
-    // 💍 행운의 반지: 확률로 상자 한 등급 위
-    const up = Math.random() < (ringPct('ring_luck', meta.ringEq === 'ring_luck' ? meta.equipGrade('ring_luck') : 0) * 2) / 100;
-    const t = Math.min(3, tier + (up ? 1 : 0)) as ChestLoot['tier'];
-    const loot = rollChest(t, owned, this.usedUnits, goldMult, Math.random);
-    loot.equip = rollEquip(t, Math.random); // 🛡️ 영웅 장비
-    meta.grantChest(loot);
-    return loot;
+    return grantNewChest(tier, goldMult, this.usedUnits);
   }
 
   private end(win: boolean): void {
     this.over = true;
     this.picking = false;
     this.levelUp.hide();
+    if (this.weekly) {
+      // 👑 이번 판 피해를 이번 주 누적에 더하고, 새로 넘은 단계 보상 지급
+      const units = this.weeklyUnits();
+      const { before, after } = meta.addWeekly(units);
+      const steps = newSteps(before, after);
+      const gm = goldMultFor(this.stage.id);
+      let earned = this.runGold;
+      let chest: ChestLoot | null = null;
+      for (const i of steps) {
+        earned += Math.round(WEEKLY_STEPS[i].gold * gm);
+        const c = WEEKLY_STEPS[i].chest;
+        if (c !== null) chest = this.openChest(c, gm);
+      }
+      meta.addGold(earned);
+      this.commitRun();
+      bgm(this, null);
+      sfx(this, steps.length ? 'win' : 'lose');
+      this.slowmo = 1;
+      const boss = this.weekly.boss;
+      this.time.delayedCall(600, () => this.scene.start('Result', { win: steps.length > 0, stageId: this.stage.id, earned, mode: 'weekly', weekly: { boss, units, before, after, steps }, chest }));
+      return;
+    }
     if (this.endless) {
       // ♾️ 버틴 웨이브 기록 + 보상(웨이브×20 + 처치 골드 20%)
       const wave = Math.max(1, this.waveNo);

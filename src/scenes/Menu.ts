@@ -7,6 +7,12 @@ import { GROUND_Y, cuteButton, drawSky } from '../ui/cute';
 import { openKeypad } from '../ui/Keypad';
 import { DEV_PIN_LEN, checkDevPin } from '../systems/dev';
 import { VIEW_W } from '../systems/view';
+import { TITLES, titleName } from '../systems/titles';
+import { showRewarded } from '../systems/ads';
+import { grantNewChest } from '../systems/chestGrant';
+import { goldMultFor } from '../systems/worlds';
+import { chestPopup } from '../ui/Chest';
+import unitsData from '../data/units.json';
 
 /** 메인 화면 행진에 나오는 아군(오른쪽으로) / 적(왼쪽으로) */
 const PARADE_ALLY = ['knight', 'soldier', 'archer', 'cleric', 'mage', 'spear'];
@@ -18,6 +24,8 @@ export class MenuScene extends Phaser.Scene {
   }
 
   create(): void {
+    this.chip = null;
+    this.chipDot = null;
     drawSky(this);
     bgm(this, 'bgm_menu');
     this.drawParade();
@@ -32,8 +40,9 @@ export class MenuScene extends Phaser.Scene {
     if (meta.hasCodexClaim()) this.badge(codex);
 
     // 받을 게 있으면 뱃지(+ 보상은 자동 오픈)
+    this.titleChip();
+    if (meta.canClaimDaily() || meta.pendingIdle() > 0 || meta.canFreeChest()) this.badge(reward);
     if (meta.canClaimDaily() || meta.pendingIdle() > 0) {
-      this.badge(reward);
       this.time.delayedCall(250, () => this.openRewards());
     }
     if (meta.hasClaimable(ACHIEVEMENTS)) this.badge(mission);
@@ -51,7 +60,7 @@ export class MenuScene extends Phaser.Scene {
     });
   }
 
-  private badge(btn: Phaser.GameObjects.Container): void {
+  private badge(btn: Phaser.GameObjects.Container): Phaser.GameObjects.Container {
     const badge = this.add
       .container(btn.x + 88, btn.y - 26, [
         this.add.circle(0, 0, 13, 0xff4d6a).setStrokeStyle(3, 0xffffff),
@@ -59,6 +68,7 @@ export class MenuScene extends Phaser.Scene {
       ])
       .setDepth(30);
     this.tweens.add({ targets: badge, scale: 1.2, duration: 450, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
+    return badge;
   }
 
   /** 📋 미션 창 — [오늘의 미션] 3개 / [업적] 목록, 진행 막대 + 받기 */
@@ -242,6 +252,68 @@ export class MenuScene extends Phaser.Scene {
     this.tweens.add({ targets: sub, angle: { from: -1.2, to: 1.2 }, duration: 1600, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
   }
 
+  /** 🏷️ 칭호 — 왼쪽 위 이름표(새 칭호면 빨간 점), 누르면 고르기 */
+  private chip: Phaser.GameObjects.Container | null = null;
+  private chipDot: Phaser.GameObjects.Container | null = null;
+
+  private titleChip(): void {
+    this.chip?.destroy();
+    this.chipDot?.destroy();
+    this.chipDot = null;
+    const name = titleName(meta.title);
+    const has = meta.titles.length > 0;
+    const chip = cuteButton(this, 150, 40, 250, 46, name ?? (has ? '🏷️ 칭호 달기' : '🏷️ 칭호'), 0xffffff, 0xc8d0e0, name ? '19px' : '20px', () => this.openTitles());
+    (chip.list[1] as Phaser.GameObjects.Text).setColor('#4a3a8a');
+    if (meta.newTitles.length) this.chipDot = this.badge(chip);
+    this.chip = chip;
+  }
+
+  private openTitles(): void {
+    meta.markTitlesSeen();
+    const layer = this.add.container(0, 0).setDepth(100);
+    const dim = this.add.rectangle(640, 360, VIEW_W, 720, 0x000000, 0.45).setInteractive();
+    const g = this.add.graphics();
+    g.fillStyle(0xffffff, 0.97).fillRoundedRect(140, 30, 1000, 660, 36);
+    g.lineStyle(6, 0xa07aff, 1).strokeRoundedRect(140, 30, 1000, 660, 36);
+    layer.add([dim, g, this.add.text(640, 76, '🏷️ 칭호', { fontFamily: 'sans-serif', fontSize: '40px', fontStyle: 'bold', color: '#7a4ad8' }).setOrigin(0.5)]);
+    layer.add(this.add.text(640, 116, `${meta.titles.length} / ${TITLES.length}  ·  얻은 칭호를 눌러 달아요`, { fontFamily: 'sans-serif', fontSize: '18px', fontStyle: 'bold', color: '#8a7aa8' }).setOrigin(0.5));
+    const earned = new Set(meta.titles);
+    TITLES.forEach((t, i) => {
+      const col = i % 3;
+      const row = Math.floor(i / 3);
+      const x = 320 + col * 320;
+      const y = 172 + row * 92;
+      const on = earned.has(t.key);
+      const cur = meta.title === t.key;
+      const c = this.add.container(x, y);
+      const bg = this.add.graphics();
+      bg.fillStyle(cur ? 0xffd34d : on ? 0xf0e8ff : 0xeef0f4, 1).fillRoundedRect(-148, -38, 296, 76, 18);
+      bg.lineStyle(3, cur ? 0xe8a000 : on ? 0xa07aff : 0xd0d4dc, 1).strokeRoundedRect(-148, -38, 296, 76, 18);
+      c.add(bg);
+      c.add(this.add.text(0, -12, on ? t.name : `🔒 ${t.name.replace(/^\S+\s/, '')}`, { fontFamily: 'sans-serif', fontSize: '21px', fontStyle: 'bold', color: on ? '#3a2a6a' : '#9aa0b0' }).setOrigin(0.5));
+      c.add(this.add.text(0, 18, cur ? '✔ 달고 있어요' : t.how, { fontFamily: 'sans-serif', fontSize: '14px', fontStyle: 'bold', color: cur ? '#8a5a00' : '#8a92a8' }).setOrigin(0.5));
+      if (on) {
+        const hit = this.add.rectangle(0, 0, 296, 76, 0xffffff, 0.001).setInteractive({ useHandCursor: true });
+        hit.on('pointerdown', () => {
+          meta.setTitle(cur ? null : t.key);
+          sfx(this, 'click');
+          layer.destroy();
+          this.titleChip();
+        });
+        c.add(hit);
+      }
+      layer.add(c);
+    });
+    const close = this.add.text(1100, 70, '✕', { fontFamily: 'sans-serif', fontSize: '40px', fontStyle: 'bold', color: '#7a4ad8', padding: { x: 10, y: 4 } }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+    const shut = (): void => {
+      layer.destroy();
+      this.titleChip(); // 이름표 새로 그림(새 칭호 점 끔)
+    };
+    close.on('pointerdown', shut);
+    dim.on('pointerdown', shut);
+    layer.add(close);
+  }
+
   /** 🎁 보상 창 — 일일 출석(7일 달력) + 방치 보상, 미션 창과 같은 귀여운 카드 */
   private openRewards(): void {
     const layer = this.add.container(0, 0).setDepth(100);
@@ -292,7 +364,7 @@ export class MenuScene extends Phaser.Scene {
       dailyTitle.setText(`📅 일일 출석  ·  연속 ${meta.dailyDayNumber()}일째`);
     };
     drawDays();
-    const dailyBtn = cuteButton(this, 640, 396, 340, 66, canDaily ? '오늘 출석 받기!' : '내일 또 만나요 ⏰', canDaily ? 0x5cd88a : 0xc0c8d0, canDaily ? 0x2fa25a : 0x9098a8, '28px', () => {
+    const dailyBtn = cuteButton(this, 455, 396, 320, 66, canDaily ? '오늘 출석 받기!' : '내일 또 만나요 ⏰', canDaily ? 0x5cd88a : 0xc0c8d0, canDaily ? 0x2fa25a : 0x9098a8, '28px', () => {
       const got = meta.claimDaily();
       if (got <= 0) return;
       sfx(this, 'coin', 2);
@@ -305,6 +377,28 @@ export class MenuScene extends Phaser.Scene {
     dailyBtn.setDepth(101);
     if (!canDaily) dailyBtn.disableInteractive().setAlpha(0.7);
     layer.add(dailyBtn);
+    // 📺 오늘의 무료 상자 — 하루 1번, 광고 보고 은 상자
+    const freeOk = meta.canFreeChest();
+    const freeBtn = cuteButton(this, 825, 396, 330, 66, freeOk ? '📺 무료 은 상자 받기' : '무료 상자 내일 또 ⏰', freeOk ? 0xa07aff : 0xc0c8d0, freeOk ? 0x7a4ad8 : 0x9098a8, '24px', () => {
+      if (!meta.canFreeChest()) return;
+      freeBtn.disableInteractive();
+      (freeBtn.list[1] as Phaser.GameObjects.Text).setText('⏳ 광고…');
+      void showRewarded().then((ok) => {
+        if (!ok) {
+          (freeBtn.list[1] as Phaser.GameObjects.Text).setText('📺 무료 은 상자 받기');
+          freeBtn.setInteractive({ useHandCursor: true });
+          return;
+        }
+        meta.markFreeChest();
+        (freeBtn.list[1] as Phaser.GameObjects.Text).setText('무료 상자 내일 또 ⏰');
+        freeBtn.setAlpha(0.7);
+        const loot = grantNewChest(1, goldMultFor(Math.max(1, meta.clearedMax)));
+        chestPopup(this, loot, (k) => (unitsData as Record<string, { name: string }>)[k]?.name ?? k, () => goldLbl.setText(`보유 🪙 ${meta.gold}`));
+      });
+    });
+    freeBtn.setDepth(101);
+    if (!freeOk) freeBtn.disableInteractive().setAlpha(0.7);
+    layer.add(freeBtn);
 
     // 💤 방치 보상 — 쌓인 시간 막대
     card(462, 210, 0xfff6e0);

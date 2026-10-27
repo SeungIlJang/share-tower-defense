@@ -22,11 +22,15 @@ export const SFX = [
   'levelup',
   'win',
   'lose',
+  'boss', // 👑 보스 등장(합성 — tools/synth_sfx.py)
+  'evolve', // ⭐ 진화·랭크업
+  'collapse', // 🏰 적 성 무너짐
+  'cutin', // ✨ 필살 컷인
 ] as const;
 export type SfxKey = (typeof SFX)[number];
 export type BgmKey = 'bgm_menu' | 'bgm_battle';
 
-const VOLUME: Partial<Record<SfxKey, number>> = { hit: 0.25, slash: 0.3, arrow: 0.25, coin: 0.25, spawn: 0.4, magic: 0.3 };
+const VOLUME: Partial<Record<SfxKey, number>> = { hit: 0.25, slash: 0.3, arrow: 0.25, coin: 0.25, spawn: 0.4, magic: 0.3, boss: 0.55, evolve: 0.45, collapse: 0.6, cutin: 0.4 };
 const GAP_MS: Partial<Record<SfxKey, number>> = { hit: 70, slash: 70, arrow: 70, magic: 90, coin: 60 };
 const last: Partial<Record<SfxKey, number>> = {};
 const MUTE_KEY = 'ld_mute';
