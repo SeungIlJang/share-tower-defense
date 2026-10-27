@@ -1,6 +1,6 @@
 apply plugin: 'com.android.application'
 
-// 업로드 키 — android/keystore.properties (git 제외). 없으면 서명 없이 빌드
+// ?�로??????android/keystore.properties (git ?�외). ?�으�??�명 ?�이 빌드
 def keystorePropsFile = rootProject.file('keystore.properties')
 def keystoreProps = new Properties()
 if (keystorePropsFile.exists()) keystorePropsFile.withInputStream { keystoreProps.load(it) }
@@ -12,7 +12,7 @@ android {
         applicationId "com.moduseries.linedefense"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 5
+        versionCode 6
         versionName "1.2"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
