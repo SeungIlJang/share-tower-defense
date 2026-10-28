@@ -239,9 +239,7 @@ export class Hud {
     };
     const tap = (o: Phaser.GameObjects.Rectangle, fn: () => void): void => {
       o.setInteractive({ useHandCursor: true });
-      o.on('pointerup', () => {
-        if (!this.dragged) fn(); // 끌어서 넘긴 경우는 소환 안 함
-      });
+      this.pressTap(o, fn);
     };
     keys.forEach((key, i) => {
       const cx = ROW_X0 + CARD_W / 2 + i * (CARD_W + CARD_GAP);
@@ -318,13 +316,27 @@ export class Hud {
       const name = scene.add.text(tx, wy, w.name, { fontFamily: 'sans-serif', fontSize: w.name.length >= 4 ? '15px' : '17px', fontStyle: 'bold', color: '#cfe0ff' }).setOrigin(0, 0.5);
       wStrip.add([gauge, icon, ring, name, num]);
       card.setInteractive({ useHandCursor: true });
-      card.on('pointerup', () => {
-        if (!this.dragged) onWeapon(i);
-      });
+      this.pressTap(card, () => onWeapon(i));
       this.weaponBtns.push({ index: i, cx, cy: wy, color: w.color, bg, gauge, ring, icon, wasReady: false });
     });
     if (features.weapon) this.scroller(wStrip, wy, W_CARD_H, WEAPONS.length * (W_CARD_W + CARD_GAP) - CARD_GAP, d);
     this.objs = scene.children.list.filter((o) => !before.has(o));
+  }
+
+  /**
+   * 👆 카드 탭 — 이 카드에서 '눌러서(down)' '뗀(up)' 경우만. 끌어서 넘긴 경우도 무시.
+   * (레벨업 카드 창처럼 위에 뜬 창을 누르면 창이 바로 닫혀서, 손을 뗄 때 아래 카드가 눌린 것으로 잡히던 문제)
+   */
+  private pressed: { o: Phaser.GameObjects.GameObject; at: number } | null = null;
+  private pressTap(o: Phaser.GameObjects.GameObject, fn: () => void): void {
+    o.on('pointerdown', (p: Phaser.Input.Pointer) => {
+      this.pressed = { o, at: p.downTime };
+    });
+    o.on('pointerup', (p: Phaser.Input.Pointer) => {
+      const ok = this.pressed?.o === o && this.pressed.at === p.downTime;
+      this.pressed = null;
+      if (ok && !this.dragged) fn();
+    });
   }
 
   /** HUD 통째로 지우기(전투 중 상점에서 산 것을 바로 반영할 때 다시 만듦) */
