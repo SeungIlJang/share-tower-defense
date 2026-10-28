@@ -10,6 +10,8 @@ import { VIEW_L, VIEW_OFF, VIEW_R, VIEW_W, uiX } from '../systems/view';
 
 export interface HudState {
   lv: number;
+  xp?: number; // 📈 이번 레벨 경험치
+  xpNext?: number; // 다음 레벨까지 필요한 경험치
   gold: number;
   energy: number;
   energyMax: number;
@@ -90,6 +92,7 @@ interface WeaponButton {
 const WEAPON_R = 34;
 export const HERO_PANEL_X = 1010 + VIEW_OFF; // 👑 영웅 스킬 버튼 x(적 성 그림 왼쪽 — 성 꼭대기·체력 바를 가리지 않게)
 export const HERO_BTN_R = 40;
+const XP_W = 120; // 📈 경험치 막대 길이
 export const HERO_BTN_Y = 114; // 적 기지 그림(위쪽 ~165)보다 위
 const W_CARD_W = 150; // 📱 특수 무기 카드(가로 스크롤)
 const W_CARD_H = 92;
@@ -106,6 +109,10 @@ const ROW_X0 = 4; // 카드 줄 왼쪽 여백
 export class Hud {
   private scene: Phaser.Scene;
   private lvText: Phaser.GameObjects.Text;
+  private xpFill!: Phaser.GameObjects.Rectangle;
+  private xpText!: Phaser.GameObjects.Text;
+  private xpShown = 0;
+  private lastLv = 0;
   private goldText: Phaser.GameObjects.Text;
   private radarG: Phaser.GameObjects.Graphics;
   private onLook: ((x: number) => void) | null = null; // 지도를 누르거나 끌면 그곳을 봄
@@ -156,7 +163,11 @@ export class Hud {
       .text(VIEW_L + 12, 52, '', { fontFamily: 'sans-serif', fontSize: '14px', fontStyle: 'bold', color: '#aef5ff', backgroundColor: '#0d1424cc', padding: { x: 8, y: 4 } })
       .setDepth(d + 1)
       .setVisible(false);
-    this.lvText = scene.add.text(VIEW_L + 64, 22, 'LV 1', { fontFamily: 'sans-serif', fontSize: '22px', fontStyle: 'bold', color: '#ffd34d' }).setOrigin(0, 0.5).setDepth(d + 1);
+    this.lvText = scene.add.text(VIEW_L + 64, 14, 'LV 1', { fontFamily: 'sans-serif', fontSize: '20px', fontStyle: 'bold', color: '#ffd34d' }).setOrigin(0, 0.5).setDepth(d + 1);
+    // 📈 경험치 막대 — LV 아래(적을 잡을수록 차오르고, 다 차면 레벨업)
+    scene.add.rectangle(VIEW_L + 64, 34, XP_W + 4, 14, 0x000000, 0.6).setOrigin(0, 0.5).setStrokeStyle(1, 0x5a4a20).setDepth(d + 1);
+    this.xpFill = scene.add.rectangle(VIEW_L + 66, 34, 0, 10, 0xffd34d).setOrigin(0, 0.5).setDepth(d + 2);
+    this.xpText = scene.add.text(VIEW_L + 64 + XP_W + 10, 34, '', { fontFamily: 'sans-serif', fontSize: '13px', fontStyle: 'bold', color: '#e8d8a0' }).setOrigin(0, 0.5).setDepth(d + 2);
     // 🗺️ 전장 지도(아군 파랑·적 빨강·보스 금색·영웅 노랑, 흰 네모 = 지금 보는 곳) — 누르거나 끌면 그곳을 봄
     scene.add.rectangle(this.vsX + this.vsW / 2, 22, this.vsW + 6, 30, 0x000000, 0.55).setStrokeStyle(1, 0x3a4560).setDepth(d);
     this.radarG = scene.add.graphics().setDepth(d + 1);
@@ -511,6 +522,20 @@ export class Hud {
 
   update(s: HudState): void {
     this.lvText.setText(`LV ${s.lv}`);
+    if (s.xpNext) {
+      const target = Phaser.Math.Clamp((s.xp ?? 0) / s.xpNext, 0, 1);
+      if (s.lv > this.lastLv && this.lastLv > 0) {
+        // 레벨업 — 막대가 꽉 찼다가 비우고 LV 글씨가 통통
+        this.xpShown = 0;
+        this.scene.tweens.add({ targets: this.lvText, scale: 1.35, duration: 140, yoyo: true, ease: 'Back.easeOut' });
+        this.xpFill.setFillStyle(0xffffff);
+        this.scene.time.delayedCall(180, () => this.xpFill.active && this.xpFill.setFillStyle(0xffd34d));
+      }
+      this.lastLv = s.lv;
+      this.xpShown += (target - this.xpShown) * 0.2; // 부드럽게 차오름
+      this.xpFill.setSize(XP_W * this.xpShown, 10);
+      this.xpText.setText(`${Math.floor(s.xp ?? 0)}/${s.xpNext}`);
+    }
     this.goldText.setText(`🪙 ${s.gold}`);
     if (s.radar) this.drawRadar(s.radar);
     this.energyFill.setSize(396 * Phaser.Math.Clamp(s.energy / s.energyMax, 0, 1), 18);

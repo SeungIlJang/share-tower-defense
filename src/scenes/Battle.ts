@@ -385,7 +385,7 @@ export class BattleScene extends Phaser.Scene {
     if (this.endless) {
       this.add.text(this.enemyBase.x, this.enemyBase.top - 26, '∞', { fontFamily: 'sans-serif', fontSize: '30px', fontStyle: 'bold', color: '#d8b0ff', stroke: '#2a1a4a', strokeThickness: 5 }).setOrigin(0.5).setDepth(60);
       this.waveText = this.add
-        .text(285, 22, '', { fontFamily: 'sans-serif', fontSize: '17px', fontStyle: 'bold', color: '#d8b0ff', stroke: '#000000', strokeThickness: 3 }) // LV와 VS 바 사이(골드와 안 겹치게)
+        .text(335, 22, '', { fontFamily: 'sans-serif', fontSize: '17px', fontStyle: 'bold', color: '#d8b0ff', stroke: '#000000', strokeThickness: 3 }) // LV와 VS 바 사이(골드와 안 겹치게)
         .setOrigin(0.5)
         .setDepth(101);
     }
@@ -1047,6 +1047,8 @@ export class BattleScene extends Phaser.Scene {
     );
     this.hud.update({
       lv: this.level,
+      xp: this.xp,
+      xpNext: this.xpNext,
       gold: this.runGold,
       energy: this.energy.amount,
       energyMax: this.energy.max,
