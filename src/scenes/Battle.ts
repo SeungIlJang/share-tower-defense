@@ -2244,8 +2244,25 @@ ${info.desc}`, { fontFamily: 'sans-serif', fontSize: '24px', fontStyle: 'bold', 
     for (const u of this.units) if (u.active) u.heal(Math.round(u.maxHp * 0.2));
     if (this.hero?.active) this.hero.heal(Math.round(this.hero.maxHp * 0.2));
     for (const e of this.enemies) if (e.active && !BOSS.has(e.type)) e.moveBy(Math.min(40, Math.max(0, this.enemyBase.x - BASE_FRONT - e.x)));
-    const ring = this.add.circle(this.playerBase.x + 80, LANE_Y - 30, 30).setStrokeStyle(8, 0xffe14d).setDepth(85);
-    this.tweens.add({ targets: ring, scale: 14, alpha: 0, duration: 650, onComplete: () => ring.destroy() });
+    // 금빛 고리 — 확대(scale) 대신 반지름만 키워서 다시 그림(두께 일정 → 줄무늬 없음)
+    const cx = this.playerBase.x + 80;
+    const ring = this.add.graphics().setDepth(85);
+    this.tweens.addCounter({
+      from: 30,
+      to: 420,
+      duration: 650,
+      ease: 'Cubic.easeOut',
+      onUpdate: (tw) => {
+        const r = tw.getValue() ?? 30;
+        const k = (r - 30) / 390;
+        ring.clear();
+        ring.lineStyle(10 - 4 * k, 0xffe14d, 1 - k);
+        ring.strokeCircle(cx, LANE_Y - 30, r);
+        ring.lineStyle(3, 0xffffff, (1 - k) * 0.7);
+        ring.strokeCircle(cx, LANE_Y - 30, r * 0.94);
+      },
+      onComplete: () => ring.destroy(),
+    });
     const flash = this.add.rectangle(640, 360, VIEW_W, 720, 0xfff6c0, 0.35).setDepth(98);
     this.tweens.add({ targets: flash, alpha: 0, duration: 400, onComplete: () => flash.destroy() });
   }
