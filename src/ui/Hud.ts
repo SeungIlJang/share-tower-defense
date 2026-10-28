@@ -7,6 +7,7 @@ import { HERO_SKILLS } from '../systems/hero';
 import { KIND_INFO, UNIT_COUNTER } from '../systems/counters';
 import { fromRadar, toRadar } from '../systems/camera';
 import { VIEW_L, VIEW_OFF, VIEW_R, VIEW_W, uiX } from '../systems/view';
+import { FEATURES } from '../systems/tutorial';
 
 export interface HudState {
   lv: number;
@@ -215,6 +216,15 @@ export class Hud {
       scene.add.rectangle(this.beatX + this.beatW / 2, beatY, this.beatW, 12, 0x2a3348).setDepth(d + 1);
       scene.add.rectangle(this.beatX + this.beatW / 2, beatY, this.beatW * 0.16, 12, 0x3fd06a).setDepth(d + 1); // 퍼펙트 존
       this.beatMark = scene.add.triangle(this.beatX + this.beatW / 2, beatY, 0, -10, 10, -10, 5, 2, 0xffffff).setDepth(d + 2);
+    } else {
+      // 🔒 아직 안 열림 — 빈칸 대신 다음에 열릴 기능 미리 알림
+      const at = FEATURES.find((f) => f.key === 'perfect')?.stage ?? 6;
+      scene.add.rectangle(this.beatX + this.beatW / 2, beatY - 4, this.beatW + 4, 26, 0x000000, 0.35).setStrokeStyle(1, 0x3a4560, 0.8).setDepth(d);
+      scene.add
+        .text(this.beatX + this.beatW / 2, beatY - 4, `🔒 ${at}관문에서 ⏱️ PERFECT 소환이 열려요`, { fontFamily: 'sans-serif', fontSize: '14px', fontStyle: 'bold', color: '#8a96b8' })
+        .setOrigin(0.5)
+        .setAlpha(0.85)
+        .setDepth(d + 1);
     }
 
     // 하단 1단: 유닛 카드(큰 카드, 가로 스크롤) — 보유 유닛 먼저, 나머지는 잠금
