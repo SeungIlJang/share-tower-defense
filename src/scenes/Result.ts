@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { meta } from '../systems/upgrades';
-import { showRewarded } from '../systems/ads';
+import { maybeInterstitial, showRewarded } from '../systems/ads';
 import { cuteButton, cuteTitle, drawSky } from '../ui/cute';
 import { sfx } from '../systems/sound';
 import unitsData from '../data/units.json';
@@ -60,6 +60,7 @@ export class ResultScene extends Phaser.Scene {
       return;
     }
     const { win, earned, stars = 0, prevStars = 0, starGold = 0, stageId } = this.resultData;
+    if (!win && this.resultData.mode !== 'daily') void maybeInterstitial(meta.clearedMax); // 💥 게임오버 전면(3번 지면 1번 · 3분 간격 · 5관문 이후)
     const daily = this.resultData.mode === 'daily';
     drawSky(this, { stars: win ? 18 : 4 });
 
