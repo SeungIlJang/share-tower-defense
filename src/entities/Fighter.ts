@@ -224,7 +224,7 @@ export class Fighter {
   }
 
   /** ⭐ 진화 단계 표시(★★ 이상만, HP 바 위) */
-  setStars(n: number): void {
+  setStars(n: number, branch: 'atk' | 'def' | null = null): void {
     this.stars.setText(headStars(n)).setVisible(n >= 2).setColor(n >= 5 ? '#ff9af0' : '#ffd34d'); // 초월은 🌟N
     this.scene.tweens.killTweensOf(this.aura);
     this.auraHue?.remove();
@@ -234,7 +234,7 @@ export class Fighter {
       return;
     }
     // ★4 마스터 = 금빛 · ★5 각성 = 분홍↔하늘 무지개 — 발밑에서 숨 쉬듯 빛남
-    this.aura.setPosition(0, this.footY + 2).setFillStyle(n >= 5 ? 0xff7af0 : 0xffd34d, 0.55).setStrokeStyle(2, n >= 5 ? 0x7af0ff : 0xfff2a0, 0.9).setScale(1).setAlpha(0.8).setVisible(true);
+    this.aura.setPosition(0, this.footY + 2).setFillStyle(n >= 5 ? 0xff7af0 : branch === 'atk' ? 0xff6a4a : branch === 'def' ? 0x4aa8ff : 0xffd34d, 0.55).setStrokeStyle(2, n >= 5 ? 0x7af0ff : 0xfff2a0, 0.9).setScale(1).setAlpha(0.8).setVisible(true);
     this.scene.tweens.add({ targets: this.aura, scaleX: 1.25, scaleY: 1.4, alpha: 0.35, duration: n >= 5 ? 520 : 760, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
     if (n >= 5) {
       let hue = 0;

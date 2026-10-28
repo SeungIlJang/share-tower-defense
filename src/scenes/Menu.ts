@@ -8,7 +8,7 @@ import { openKeypad } from '../ui/Keypad';
 import { DEV_PIN_LEN, checkDevPin } from '../systems/dev';
 import { VIEW_W } from '../systems/view';
 import { TITLES, titleName } from '../systems/titles';
-import { showRewarded } from '../systems/ads';
+import { hideBanner, showMenuBanner, showRewarded } from '../systems/ads';
 import { grantNewChest } from '../systems/chestGrant';
 import { goldMultFor } from '../systems/worlds';
 import { chestPopup } from '../ui/Chest';
@@ -41,6 +41,8 @@ export class MenuScene extends Phaser.Scene {
 
     // 받을 게 있으면 뱃지(+ 보상은 자동 오픈)
     this.titleChip();
+    void showMenuBanner(); // 🪧 메인 화면 하단 배너(다른 화면으로 가면 치움)
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => void hideBanner());
     if (meta.canClaimDaily() || meta.pendingIdle() > 0 || meta.canFreeChest()) this.badge(reward);
     if (meta.canClaimDaily() || meta.pendingIdle() > 0) {
       this.time.delayedCall(250, () => this.openRewards());

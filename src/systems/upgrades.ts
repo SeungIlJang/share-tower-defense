@@ -13,7 +13,7 @@ import { CODEX_MILESTONES, claimableMilestone, discoverReward, mergeKills } from
 import { CASTLE_MAX_LV, CASTLE_RATE_MAX_LV, castleUpCost } from './castle';
 import { earnedTitles, type TitleCtx } from './titles';
 import { weekIndex, weeklyStepOf } from './weekly';
-import { levelCap, migrateTier, nextUnitTier, readyToEvolve } from './evolution';
+import { BRANCH_CHANGE_GOLD, BRANCH_TIER, evoCost, levelCap, migrateTier, readyToEvolve, unitPerks, type Branch } from './evolution';
 import { track, trackUser } from './analytics';
 
 /** 강화 순수 계산 (Vitest 검증) */
@@ -95,7 +95,8 @@ export class MetaProgress {
   equip: Record<string, number> = { mace: 1 }; // 🛡️ 영웅 장비 등급(0/없음 = 미보유)
   weaponEq: WeaponKey = 'mace'; // 장착 무기
   ringEq: RingKey | null = null; // 장착 반지
-  evo: Record<string, number> = {}; // ⭐ 유닛별 진화 단계(0~4)
+  evo: Record<string, number> = {}; // ⭐ 유닛별 진화 단계(0~11)
+  branch: Record<string, Branch> = {}; // 🔀 ★4부터 갈래(공격형·방어형)
   freeChestDay = -1; // 📺 오늘의 무료 상자 받은 날
   title: string | null = null; // 🏷️ 달고 있는 칭호
   titlesSeen: string[] = []; // 🏷️ 이미 본(새 칭호 표시 끈) 칭호
@@ -252,20 +253,40 @@ export class MetaProgress {
   }
 
   canEvolve(type: string): boolean {
-    const n = nextUnitTier(this.tier(type));
-    return !!n && readyToEvolve(this.level(type), this.tier(type)) && this.gold >= n.gold && (this.shards[type] ?? 0) >= n.shards;
+    const c = evoCost(type, this.tier(type));
+    return !!c && readyToEvolve(this.level(type), this.tier(type)) && this.gold >= c.gold && (this.shards[type] ?? 0) >= c.shards;
   }
 
-  /** ⭐ 진화 — 골드 + 그 유닛 조각 */
-  evolve(type: string): boolean {
+  /** ⭐ 진화 — 골드 + 그 유닛 조각(등급별 비용). ★4로 갈 때는 갈래(공격형·방어형)도 정함 */
+  evolve(type: string, branch?: Branch): boolean {
     if (!this.canEvolve(type)) return false;
-    const n = nextUnitTier(this.tier(type))!;
-    this.gold -= n.gold;
-    this.shards[type] = (this.shards[type] ?? 0) - n.shards;
+    const c = evoCost(type, this.tier(type))!;
+    this.gold -= c.gold;
+    this.shards[type] = (this.shards[type] ?? 0) - c.shards;
     this.evo[type] = this.tier(type) + 1;
+    if (branch && this.evo[type] >= BRANCH_TIER) this.branch[type] = branch;
     track('unit_evolve', { unit: type, tier: this.evo[type] });
     this.save();
     return true;
+  }
+
+  /** 🔀 갈래 — 처음 고르기는 무료, 바꾸기는 골드 */
+  branchOf(type: string): Branch | null {
+    return this.branch[type] ?? null;
+  }
+  setBranch(type: string, b: Branch): boolean {
+    if (this.tier(type) < BRANCH_TIER || this.branch[type] === b) return false;
+    const cost = this.branch[type] ? BRANCH_CHANGE_GOLD : 0;
+    if (this.gold < cost) return false;
+    this.gold -= cost;
+    this.branch[type] = b;
+    this.save();
+    return true;
+  }
+
+  /** 💪 유닛 최종 진화 보너스(단계·등급·갈래) */
+  perks(type: string): ReturnType<typeof unitPerks> {
+    return unitPerks(type, this.tier(type), this.branchOf(type));
   }
 
   upgrade(type: string): boolean {
@@ -646,6 +667,7 @@ export class MetaProgress {
         weaponEq?: WeaponKey;
         ringEq?: RingKey | null;
         evo?: Record<string, number>;
+        branch?: Record<string, Branch>;
         freeChestDay?: number;
         title?: string | null;
         titlesSeen?: string[];
@@ -686,6 +708,7 @@ export class MetaProgress {
       this.tips = obj.tips ?? (this.clearedMax > 0 ? ['summon', 'hero'] : []); // 예전 저장 = 기본 안내는 본 것으로
       // ⭐ 예전 저장(레벨로만 진화) → 단계 저장으로 옮김(이미 얻은 단계는 유지)
       this.evo = obj.evo ?? Object.fromEntries(Object.entries(this.levels).map(([k, lv]) => [k, migrateTier(lv)]));
+      this.branch = obj.branch ?? {};
       this.freeChestDay = obj.freeChestDay ?? -1;
       this.title = obj.title ?? null;
       this.titlesSeen = obj.titlesSeen ?? [];
@@ -748,6 +771,7 @@ export class MetaProgress {
         weaponEq: this.weaponEq,
         ringEq: this.ringEq,
         evo: this.evo,
+        branch: this.branch,
         freeChestDay: this.freeChestDay,
         title: this.title,
         titlesSeen: this.titlesSeen,

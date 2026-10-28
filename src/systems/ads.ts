@@ -118,3 +118,29 @@ export async function maybeInterstitial(clearedMax: number): Promise<void> {
     /* 못 불러오면 그냥 넘어감 */
   }
 }
+
+/** 🪧 하단 배너 — 메인 화면에서만(전투·강화 화면은 조작을 가려서 안 씀) */
+let bannerOn = false;
+export async function showMenuBanner(): Promise<void> {
+  if (!liveAds() || bannerOn) return;
+  await initAds();
+  if (!canRequest) return;
+  try {
+    const { AdMob, BannerAdPosition, BannerAdSize } = await import('@capacitor-community/admob');
+    await AdMob.showBanner({ adId: AD_IDS.banner, adSize: BannerAdSize.ADAPTIVE_BANNER, position: BannerAdPosition.BOTTOM_CENTER, margin: 0 });
+    bannerOn = true;
+  } catch {
+    /* 못 불러오면 없이 */
+  }
+}
+
+export async function hideBanner(): Promise<void> {
+  if (!bannerOn) return;
+  bannerOn = false;
+  try {
+    const { AdMob } = await import('@capacitor-community/admob');
+    await AdMob.removeBanner();
+  } catch {
+    /* 무시 */
+  }
+}

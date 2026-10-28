@@ -77,6 +77,63 @@ export function tierPerks(tier: number): { mult: number; skillPower: number; ski
   };
 }
 
+/** 🏷️ 유닛 등급 — 진화 비용·보너스가 다름(일반: 싸고 보너스 그대로 · 희귀 · 영웅: 비싸지만 보너스 큼). 설치물 = 희귀 */
+export type UnitGrade = 'common' | 'rare' | 'epic';
+export const UNIT_GRADE: Record<string, UnitGrade> = {
+  soldier: 'common', archer: 'common', knight: 'common', spear: 'common',
+  mage: 'rare', rogue: 'rare', cleric: 'rare', shield: 'rare',
+  earthmage: 'epic', darkmage: 'epic', cavalry: 'epic', cannon: 'epic',
+};
+export const GRADE_INFO: Record<UnitGrade, { name: string; color: number; cost: number; bonus: number }> = {
+  common: { name: '일반', color: 0x8a92a8, cost: 0.8, bonus: 1 },
+  rare: { name: '희귀', color: 0x4a9eff, cost: 1, bonus: 1.1 },
+  epic: { name: '영웅', color: 0xb07aff, cost: 1.25, bonus: 1.2 },
+};
+export function gradeOf(unit: string): UnitGrade {
+  return UNIT_GRADE[unit] ?? 'rare';
+}
+
+/** 다음 단계로 진화하는 비용(등급 반영) — 최고 단계면 null */
+export function evoCost(unit: string, tier: number): { gold: number; shards: number } | null {
+  const n = UNIT_TIERS[tier + 1];
+  if (!n) return null;
+  const k = GRADE_INFO[gradeOf(unit)].cost;
+  return { gold: Math.round((n.gold * k) / 50) * 50, shards: Math.round(n.shards * k) };
+}
+
+/** 🔀 ★4 마스터부터 갈래 — 공격형 · 방어형(강화 화면에서 골드로 바꿀 수 있음) */
+export type Branch = 'atk' | 'def';
+export const BRANCH_TIER = 3; // ★4
+export const BRANCH_CHANGE_GOLD = 1000;
+export const BRANCH_INFO: Record<Branch, { name: string; color: number; desc: string }> = {
+  atk: { name: '⚔️ 공격형', color: 0xff6a4a, desc: '⚔️ 공격 +15% · 💥 치명타 +5% (★5부터 공격 속도 +10%)' },
+  def: { name: '🛡️ 방어형', color: 0x4aa8ff, desc: '❤️ 체력 +25% · 🛡️ 방어 +5 (★5부터 체력 +35% · 방어 +10)' },
+};
+
+/** 💪 유닛 최종 보너스 — 단계 + 등급 + 갈래 */
+export function unitPerks(unit: string, tier: number, branch: Branch | null): { hp: number; atk: number; def: number; skillPower: number; skillFewer: number; atkSpeed: number; crit: number } {
+  const p = tierPerks(tier);
+  const m = 1 + (p.mult - 1) * GRADE_INFO[gradeOf(unit)].bonus;
+  const out = { hp: m, atk: m, def: 0, skillPower: p.skillPower, skillFewer: p.skillFewer, atkSpeed: p.atkSpeed, crit: p.crit };
+  if (tier >= BRANCH_TIER && branch === 'atk') {
+    out.atk *= 1.15;
+    out.crit += 0.05;
+    if (tier >= 4) out.atkSpeed *= 1.1;
+  } else if (tier >= BRANCH_TIER && branch === 'def') {
+    out.hp *= tier >= 4 ? 1.35 : 1.25;
+    out.def += tier >= 4 ? 10 : 5;
+  }
+  return out;
+}
+
+/** 단계 안내 글(등급 반영 수치) */
+export function perkText(unit: string, tier: number): string {
+  const t = UNIT_TIERS[tier];
+  if (!t?.perk) return '';
+  const pct = Math.round((t.mult - 1) * GRADE_INFO[gradeOf(unit)].bonus * 100);
+  return t.perk.replace(/❤️⚔️ \+\d+%/, `❤️⚔️ +${pct}%`);
+}
+
 /** ★ 표시 — ★1~★5는 ★★☆☆☆, 초월은 ★★★★★🌟N */
 export function starText(tier: number): string {
   const s = UNIT_TIERS[Math.max(0, Math.min(MAX_TIER, tier))].stars;

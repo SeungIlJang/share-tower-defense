@@ -10,7 +10,7 @@ import { UNIT_SCALE } from '../entities/Fighter';
 import { FOOD_BASE, energyMax, energyRate, popBonus } from '../systems/baseUpgrades';
 import { summonCooldown } from '../systems/pacing';
 import { anyDevFlag, devFlags } from '../systems/dev';
-import { UNIT_TIERS, tierBodyScale, tierPerks } from '../systems/evolution';
+import { UNIT_TIERS, tierBodyScale } from '../systems/evolution';
 import { milestoneBonus, milestoneCost } from '../systems/milestones';
 import { enemyLevel, hexColor, pickVariant, variantTable } from '../systems/enemyVariants';
 import { STAGES, WORLDS, goldMultFor } from '../systems/worlds';
@@ -691,8 +691,9 @@ export class BattleScene extends Phaser.Scene {
       return;
     }
     const m0 = applyUpgrade(base, meta.level(type)); // 영구 강화 적용
-    const rm = rankMult(meta.rank(type)) * tierPerks(meta.tier(type)).mult * milestoneBonus(meta.level(type)).stats; // 🃏 카드 랭크 · ⭐ 진화 단계 · 🎁 보상
-    const m = { ...m0, hp: Math.round(m0.hp * rm), atk: Math.round(m0.atk * rm), atkSpeed: m0.atkSpeed * tierPerks(meta.tier(type)).atkSpeed }; // 🔥 각성: 공격 속도
+    const pk = meta.perks(type); // ⭐ 진화(단계·등급·갈래)
+    const rm = rankMult(meta.rank(type)) * milestoneBonus(meta.level(type)).stats; // 🃏 카드 랭크 · 🎁 보상
+    const m = { ...m0, hp: Math.round(m0.hp * rm * pk.hp), atk: Math.round(m0.atk * rm * pk.atk), def: m0.def + pk.def, atkSpeed: m0.atkSpeed * pk.atkSpeed }; // 🔥 각성: 공격 속도
     this.usedUnits[type] = (this.usedUnits[type] ?? 0) + 1;
     const perfect = this.feat.perfect && Math.abs(this.beat - 0.5) <= BattleScene.PERFECT_WIN; // ⏱️ 타이밍 명중(🎓 6관문부터)
     this.tipDone('summon');
@@ -714,7 +715,7 @@ export class BattleScene extends Phaser.Scene {
       this.totemEnd.set(u, this.clock + TOTEM_LIFE);
       this.puff(sx, 0xd8c8a0);
     }
-    u.setStars(UNIT_TIERS[meta.tier(type)].stars); // ⭐ 진화 단계(★★부터 머리 위 표시, ★4 금빛·★5 무지개 오라)
+    u.setStars(UNIT_TIERS[meta.tier(type)].stars, meta.branchOf(type)); // ⭐ 진화 단계(★★부터 머리 위 표시, ★4 금빛·★5 무지개 오라)
     if (!totem && meta.tier(type) >= 3) u.setBodyScale(tierBodyScale(meta.tier(type))); // ★4부터는 ★3 그림이라 아주 조금씩 크게
     u.pop = base.pop;
     sfx(this, 'spawn');
@@ -1123,7 +1124,7 @@ export class BattleScene extends Phaser.Scene {
     }
     const lv = meta.level(u.type);
     u.swings++;
-    if (lv > 0 && isSkillSwing(u.swings, lv, tierPerks(meta.tier(u.type)).skillFewer)) {
+    if (lv > 0 && isSkillSwing(u.swings, lv, meta.perks(u.type).skillFewer)) {
       this.castSkill(u, best, lv, 1); // ✨ 치유의 빛: 주변 아군 전체
       u.cooldown = attackCooldown(u.stats.atkSpeed) * hasteMult(this.skills.haste ?? 0);
       return true;
@@ -1146,7 +1147,7 @@ export class BattleScene extends Phaser.Scene {
       att.swings++;
       const inA = this.inHeroAura(att.x);
       const lv = Math.max(meta.level(att.type), inA ? 1 : 0); // ⭕ 오라 안에선 Lv0 유닛도 스킬을 씀
-      if (lv > 0 && UNIT_SKILLS[att.type] && isSkillSwing(att.swings, lv, (inA ? this.skills.auraSkill ?? 0 : 0) + tierPerks(meta.tier(att.type)).skillFewer, inA)) {
+      if (lv > 0 && UNIT_SKILLS[att.type] && isSkillSwing(att.swings, lv, (inA ? this.skills.auraSkill ?? 0 : 0) + meta.perks(att.type).skillFewer, inA)) {
         if (inA) this.auraSpark(att.x); // ⭕ 오라 특수기 표시
         const resonance = inA && awakened(this.skills, 'auraSkill') ? 1.5 : 1; // 🌟 오라 공명
         this.castSkill(att, def, lv, (berserk ? BERSERK_ATK : 1) * powerMult(this.skills.power ?? 0) * (inA ? AURA_ATK * AURA_SKILL_POWER : 1) * resonance);
@@ -1157,7 +1158,7 @@ export class BattleScene extends Phaser.Scene {
       }
     }
     const ally = att.side === 'ally';
-    const crit = ally && Math.random() < critChance(this.skills.crit ?? 0) + (this.ring('ring_luck') - 1) + tierPerks(meta.tier(att.type)).crit; // 💥 치명타(🎯 스킬 · 💍 행운의 반지 · 🔥 각성)
+    const crit = ally && Math.random() < critChance(this.skills.crit ?? 0) + (this.ring('ring_luck') - 1) + meta.perks(att.type).crit; // 💥 치명타(🎯 스킬 · 💍 행운의 반지 · 🔥 각성)
     const critMul = awakened(this.skills, 'power') ? CRIT_MULT_AWAKE : CRIT_MULT; // 💪 일격필살
     const attInAura = ally && this.inHeroAura(att.x);
     const lowHp = attInAura && att.hp / att.maxHp < 0.3 && (this.skills.auraBerserk ?? 0) > 0; // 😡 광폭 오라
@@ -1220,7 +1221,7 @@ export class BattleScene extends Phaser.Scene {
   /** ✨ 유닛 스킬 발동 — 효과 적용 + 스킬 동작 + 이펙트 그림 + 이름 표시 */
   private castSkill(u: Unit | Enemy, target: Unit | Enemy, lv: number, atkMul: number): void {
     const sk = UNIT_SKILLS[u.type];
-    const power = u.stats.atk * atkMul * skillMult(lv) * synergyMult(this.synergies, u.type, 'atk') * (u.side === 'ally' ? tierPerks(meta.tier(u.type)).skillPower * milestoneBonus(meta.level(u.type)).skill : 1); // ⭐ ★3부터 스킬 위력 · 🎁 보상
+    const power = u.stats.atk * atkMul * skillMult(lv) * synergyMult(this.synergies, u.type, 'atk') * (u.side === 'ally' ? meta.perks(u.type).skillPower * milestoneBonus(meta.level(u.type)).skill : 1); // ⭐ ★3부터 스킬 위력 · 🎁 보상
     this.track('skills');
     const hit = (e: Unit | Enemy, mul = 1): void => {
       if (e.active) e.takeDamage(computeDamage(power * mul, e.stats.def));

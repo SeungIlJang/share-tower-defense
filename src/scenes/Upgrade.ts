@@ -14,7 +14,7 @@ import { ALLY_CASTLE_TIERS, CASTLE_MAX_LV, CASTLE_RATE_MAX_LV, allyCastleGun, al
 import { RANK_MAX, rankMult, rankUpCost } from '../systems/chests';
 import { EQUIP_MAX, GRADE_COLORS, GRADE_NAMES, HERO_WEAPONS, RINGS, equipUpCost } from '../systems/equipment';
 import { MILESTONE_TEXT, milestoneBonus, milestoneKind, milestonesAt, nextMilestone } from '../systems/milestones';
-import { MAX_TIER, UNIT_TIERS, evolvedKey, levelCap, nextUnitTier, readyToEvolve, starText, tierPerks, unitOfKey } from '../systems/evolution';
+import { BRANCH_CHANGE_GOLD, BRANCH_INFO, BRANCH_TIER, GRADE_INFO, MAX_TIER, UNIT_TIERS, evoCost, evolvedKey, gradeOf, levelCap, nextUnitTier, perkText, readyToEvolve, starText, unitOfKey, type Branch } from '../systems/evolution';
 import { AURA_MAX_LV, AURA_RADIUS, HERO_MAX_LV, HERO_SKILLS, HERO_TIERS, SKILL_MAX_LV, auraBonus, heroLvMult, heroSkillPower, heroTier, heroUpCost, nextHeroTier } from '../systems/hero';
 import { VIEW_W } from '../systems/view';
 import { UNIT_GROUPS, unitGroup, type UnitGroup } from '../systems/unitGroups';
@@ -103,11 +103,40 @@ export class UpgradeScene extends Phaser.Scene {
   private gridTop = GRID_TOP;
   private cellMax = 110; // 칸 최대 높이(유닛 탭은 묶음별 6칸 이하라 크게)
 
+  /** 탭 안 묶음(소분류) — 한 화면 카드를 줄여 크게 보여 줌 */
+  private static weaponGroup: 'attack' | 'support' = 'attack';
+  private static heroGroup: 'hero' | 'skill' = 'hero';
+
+  private subTabs(list: { key: string; label: string; up?: boolean }[], cur: string, set: (k: string) => void): void {
+    list.forEach((g, gi) => {
+      const on = g.key === cur;
+      const t = this.add
+        .text(640 + (gi - (list.length - 1) / 2) * 170, GRID_TOP + 12, `${g.label}${g.up ? ' ⬆' : ''}`, {
+          fontFamily: 'sans-serif',
+          fontSize: '17px',
+          fontStyle: 'bold',
+          color: on ? '#1a2338' : '#cfe0ff',
+          backgroundColor: on ? '#ffd34d' : '#26324e',
+          padding: { x: 14, y: 4 },
+        })
+        .setOrigin(0.5)
+        .setInteractive({ useHandCursor: true });
+      t.on('pointerdown', () => {
+        if (on) return;
+        set(g.key);
+        sfx(this, 'click');
+        this.render();
+      });
+      this.layer.add(t);
+    });
+  }
+
   private render(): void {
     this.layer.removeAll(true);
-    this.gridH = this.tab === 'hero' ? 372 : this.tab === 'units' ? GRID_H - SUB_H : GRID_H;
-    this.gridTop = this.tab === 'units' ? GRID_TOP + SUB_H : GRID_TOP;
-    this.cellMax = this.tab === 'units' ? 160 : 110;
+    // 모든 탭 — 묶음 줄 아래 큰 카드(영웅 묶음은 아래 진화 줄 자리, 기지는 아래 성 진화 줄 자리만큼 낮게)
+    this.gridTop = this.tab === 'base' ? GRID_TOP : GRID_TOP + SUB_H; // 기지 탭은 묶음 줄 없음
+    this.gridH = this.tab === 'hero' && UpgradeScene.heroGroup === 'hero' ? 372 - SUB_H : this.tab === 'base' ? 380 : GRID_H - SUB_H;
+    this.cellMax = 160;
     this.goldText.setText(`보유 🪙 ${meta.gold}`);
     for (const [key, t] of Object.entries(this.tabBtns) as [Tab, Phaser.GameObjects.Text][]) {
       const on = key === this.tab;
@@ -141,14 +170,15 @@ export class UpgradeScene extends Phaser.Scene {
     skin?: { label: string; color: number; onClick: () => void }, // 👗 스킨 버튼
     chip?: { label: string; color: number; onClick: () => void; pulse?: boolean }, // 🃏 카드 랭크(제목 줄 오른쪽)
     look?: string, // 큰 칸이면 아이콘 대신 이 그림(전신, 대기 동작)
-    ms?: { text: string; ratio: number } // 🎁 다음 보상 진행 막대
+    ms?: { text: string; ratio: number }, // 🎁 다음 보상 진행 막대
+    badges?: { label: string; color: number; onClick?: () => void; pulse?: boolean }[] // 🏷️ 등급 · 🔀 갈래
   ): void {
     const { x, y, h } = this.cell(i, count);
     const parts: Phaser.GameObjects.GameObject[] = [
       this.add.rectangle(x, y, 600, h - 8, 0x1a2338).setStrokeStyle(2, 0x33406a),
     ];
     if (h >= 130) {
-      this.bigCard(parts, x, y, h, icon, title, desc, btnLabel, canUp, dim, onUp, extra, skin, chip, look, ms);
+      this.bigCard(parts, x, y, h, icon, title, desc, btnLabel, canUp, dim, onUp, extra, skin, chip, look, ms, badges);
       return;
     }
     // 3줄: 제목(크게) / 수치 / 스킬·스킨 — 휴대폰에서도 잘 보이게 큰 글씨·밝은 색·검은 테두리
@@ -194,29 +224,14 @@ export class UpgradeScene extends Phaser.Scene {
   private renderUnits(): void {
     const keys = Object.keys(UNITS);
     // 🛡️ 근접 · 원거리 · 설치물 — 고른 묶음만 크게
-    UNIT_GROUPS.forEach((g, gi) => {
-      const on = g.key === UpgradeScene.group;
-      const n = keys.filter((k) => unitGroup(UNITS[k]) === g.key);
-      const up = n.some((k) => (meta.ownsUnit(k) ? meta.canUpgrade(k) : false));
-      const t = this.add
-        .text(470 + gi * 170, GRID_TOP + 12, `${g.label} ${n.length}${up ? ' ⬆' : ''}`, {
-          fontFamily: 'sans-serif',
-          fontSize: '17px',
-          fontStyle: 'bold',
-          color: on ? '#1a2338' : '#cfe0ff',
-          backgroundColor: on ? '#ffd34d' : '#26324e',
-          padding: { x: 14, y: 4 },
-        })
-        .setOrigin(0.5)
-        .setInteractive({ useHandCursor: true });
-      t.on('pointerdown', () => {
-        if (UpgradeScene.group === g.key) return;
-        UpgradeScene.group = g.key;
-        sfx(this, 'click');
-        this.render();
-      });
-      this.layer.add(t);
-    });
+    this.subTabs(
+      UNIT_GROUPS.map((g) => {
+        const n = keys.filter((k) => unitGroup(UNITS[k]) === g.key);
+        return { key: g.key, label: `${g.label} ${n.length}`, up: n.some((k) => (meta.ownsUnit(k) ? meta.canUpgrade(k) || meta.canEvolve(k) : false)) };
+      }),
+      UpgradeScene.group,
+      (k) => (UpgradeScene.group = k as UnitGroup)
+    );
     const shown = keys.filter((k) => unitGroup(UNITS[k]) === UpgradeScene.group);
     shown.forEach((key, i) => {
       const u = UNITS[key];
@@ -230,22 +245,23 @@ export class UpgradeScene extends Phaser.Scene {
       // ⭐ 돌파 — 이 단계 최고 레벨이면 강화 대신 진화(골드 + 그 유닛 카드 조각)
       const next = nextUnitTier(tier);
       const evo = owned && readyToEvolve(lv, tier);
-      const tm = tierPerks(tier).mult;
-      const st = (base: number, l: number): number => Math.round(scaleStat(base, l) * tm * milestoneBonus(l).stats); // ⭐ 진화 · 🎁 보상 포함
+      const pk = meta.perks(key); // ⭐ 진화(단계·등급·갈래)
+      const st = (base: number, l: number, m: number): number => Math.round(scaleStat(base, l) * m * milestoneBonus(l).stats); // ⭐ 진화 · 🎁 보상 포함
       const have = meta.shards[key] ?? 0;
+      const cost = evoCost(key, tier); // 🏷️ 등급별 진화 비용
       const nm = nextMilestone(lv, UNIT_TIERS[tier].min);
       const ms = owned && !evo ? { text: `🎁 Lv${nm.lv} ${nm.text}`, ratio: nm.ratio } : undefined;
       const desc =
         evo && next
-          ? `⭐ ${next.name} 진화! ${next.perk}\n${next.shards ? `🃏 조각 ${have}/${next.shards}${have < next.shards ? ' — 보물 상자에서 모아요' : ' ✅'}` : '골드만 있으면 바로 진화!'}`
-          : `❤️ ${st(u.hp, lv)}  ⚔️ ${st(u.atk, lv)}  ▶  ❤️ ${st(u.hp, lv + 1)}  ⚔️ ${st(u.atk, lv + 1)}${next ? `   ⭐ Lv${levelCap(tier)}에 ${next.name} 진화` : '   🔥 최고 단계'}`;
+          ? `⭐ ${next.name} 진화! ${tier + 1 === BRANCH_TIER ? '🔀 공격형·방어형 고르기' : perkText(key, tier + 1)}\n${cost?.shards ? `🃏 조각 ${have}/${cost.shards}${have < cost.shards ? ' — 보물 상자에서 모아요' : ' ✅'}` : '골드만 있으면 바로 진화!'}`
+          : `❤️ ${st(u.hp, lv, pk.hp)}  ⚔️ ${st(u.atk, lv, pk.atk)}  ▶  ❤️ ${st(u.hp, lv + 1, pk.hp)}  ⚔️ ${st(u.atk, lv + 1, pk.atk)}${next ? `   ⭐ Lv${levelCap(tier)}에 ${next.name} 진화` : '   🔥 최고 단계'}`;
       this.card(
         i,
         shown.length,
         icon,
         `${u.name} ${starText(tier)} Lv.${lv}`,
         desc,
-        !owned ? `🛒 구매\n🪙${price}` : evo && next ? `⭐ 진화\n🪙${next.gold}` : `강화 🪙${meta.nextCost(key)}`,
+        !owned ? `🛒 구매\n🪙${price}` : evo && cost ? `⭐ 진화\n🪙${cost.gold}` : `강화 🪙${meta.nextCost(key)}`,
         !owned ? meta.gold >= price : evo ? meta.canEvolve(key) : meta.canUpgrade(key),
         !owned,
         () => {
@@ -257,14 +273,21 @@ export class UpgradeScene extends Phaser.Scene {
             }
             return;
           }
-          if (evo && next) {
-            if (meta.evolve(key)) {
+          if (evo && next && cost) {
+            if (!meta.canEvolve(key)) {
+              if (have < cost.shards) this.toast(`🃏 ${u.name} 조각이 ${cost.shards - have}개 더 필요해요 — 보물 상자·광고 상자에서 모아요`);
+              else this.toast(`🪙 골드가 ${cost.gold - meta.gold} 부족해요`);
+              return;
+            }
+            const done = (b?: Branch): void => {
+              if (!meta.evolve(key, b)) return;
               this.render();
               const t = UNIT_TIERS[meta.tier(key)];
-              this.evolveFx(`${u.name} ${'★'.repeat(t.stars)} ${t.name}`); // ⭐ 진화!
-              this.toast(`💪 ${t.perk}`);
-            } else if (have < next.shards) this.toast(`🃏 ${u.name} 조각이 ${next.shards - have}개 더 필요해요 — 보물 상자·광고 상자에서 모아요`);
-            else this.toast(`🪙 골드가 ${next.gold - meta.gold} 부족해요`);
+              this.evolveFx(`${u.name} ${'★'.repeat(Math.min(5, t.stars))} ${t.name}`); // ⭐ 진화!
+              this.toast(`💪 ${perkText(key, meta.tier(key))}${b ? ` · ${BRANCH_INFO[b].name}` : ''}`);
+            };
+            if (tier + 1 === BRANCH_TIER) this.openBranchPicker(key, done); // 🔀 ★4 — 갈래 고르고 진화
+            else done();
             return;
           }
           const got = milestonesAt(meta.level(key));
@@ -281,9 +304,72 @@ export class UpgradeScene extends Phaser.Scene {
         owned ? this.skinButton(key) : undefined,
         owned ? this.rankChip(key) : undefined,
         look,
-        ms
+        ms,
+        this.unitBadges(key, owned, tier)
       );
     });
+  }
+
+  /** 🏷️ 등급 배지 + 🔀 갈래 배지(★4부터 — 아직 안 골랐으면 반짝, 누르면 고르기/바꾸기) */
+  private unitBadges(key: string, owned: boolean, tier: number): { label: string; color: number; onClick?: () => void; pulse?: boolean }[] {
+    const g = GRADE_INFO[gradeOf(key)];
+    const out: { label: string; color: number; onClick?: () => void; pulse?: boolean }[] = [{ label: g.name, color: g.color }];
+    if (owned && tier >= BRANCH_TIER) {
+      const b = meta.branchOf(key);
+      out.push({
+        label: b ? BRANCH_INFO[b].name : '🔀 갈래 고르기!',
+        color: b ? BRANCH_INFO[b].color : 0xe8a000,
+        pulse: !b,
+        onClick: () =>
+          this.openBranchPicker(key, (nb) => {
+            if (meta.setBranch(key, nb)) {
+              sfx(this, 'levelup');
+              this.toast(`🔀 ${UNITS[key].name} → ${BRANCH_INFO[nb].name}`);
+            } else if (meta.branchOf(key) !== nb) this.toast(`🪙 갈래 바꾸기는 ${BRANCH_CHANGE_GOLD}골드가 필요해요`);
+            this.render();
+          }),
+      });
+    }
+    return out;
+  }
+
+  /** 🔀 갈래 고르기 창 — 공격형 / 방어형 */
+  private openBranchPicker(key: string, pick: (b: Branch) => void): void {
+    const layer = this.add.container(0, 0).setDepth(250);
+    const dim = this.add.rectangle(640, 360, VIEW_W, 720, 0x000000, 0.6).setInteractive();
+    const g = this.add.graphics();
+    g.fillStyle(0xffffff, 0.97).fillRoundedRect(300, 150, 680, 420, 30);
+    layer.add([dim, g]);
+    const cur = meta.branchOf(key);
+    const change = !!cur && meta.tier(key) >= BRANCH_TIER;
+    layer.add(this.add.text(640, 196, `🔀 ${UNITS[key].name} 갈래 ${change ? '바꾸기' : '고르기'}`, { fontFamily: 'sans-serif', fontSize: '30px', fontStyle: 'bold', color: '#3a2a6a' }).setOrigin(0.5));
+    layer.add(this.add.text(640, 234, change ? `바꾸기 🪙${BRANCH_CHANGE_GOLD}` : '★4 마스터부터 둘 중 하나 — 나중에 골드로 바꿀 수 있어요', { fontFamily: 'sans-serif', fontSize: '16px', fontStyle: 'bold', color: '#8a7aa8' }).setOrigin(0.5));
+    (['atk', 'def'] as Branch[]).forEach((b, i) => {
+      const info = BRANCH_INFO[b];
+      const x = 480 + i * 320;
+      const c = this.add.container(x, 380);
+      const bg = this.add.graphics();
+      const on = cur === b;
+      bg.fillStyle(on ? 0xf0f0f0 : 0xf6f6fa, 1).fillRoundedRect(-140, -110, 280, 220, 20);
+      bg.lineStyle(on ? 6 : 4, info.color, 1).strokeRoundedRect(-140, -110, 280, 220, 20);
+      c.add(bg);
+      c.add(this.add.text(0, -70, info.name, { fontFamily: 'sans-serif', fontSize: '28px', fontStyle: 'bold', color: `#${info.color.toString(16).padStart(6, '0')}` }).setOrigin(0.5));
+      c.add(this.add.text(0, 0, info.desc.replace(' (', '\n('), { fontFamily: 'sans-serif', fontSize: '16px', fontStyle: 'bold', color: '#3a3a5a', align: 'center', wordWrap: { width: 250 } }).setOrigin(0.5));
+      c.add(this.add.text(0, 80, on ? '✔ 지금 갈래' : '고르기', { fontFamily: 'sans-serif', fontSize: '18px', fontStyle: 'bold', color: '#ffffff', backgroundColor: on ? '#9098a8' : `#${info.color.toString(16).padStart(6, '0')}`, padding: { x: 18, y: 6 } }).setOrigin(0.5));
+      if (!on) {
+        const hit = this.add.rectangle(0, 0, 280, 220, 0xffffff, 0.001).setInteractive({ useHandCursor: true });
+        hit.on('pointerdown', () => {
+          layer.destroy();
+          pick(b);
+        });
+        c.add(hit);
+      }
+      layer.add(c);
+    });
+    const close = this.add.text(950, 176, '✕', { fontFamily: 'sans-serif', fontSize: '36px', fontStyle: 'bold', color: '#7a6aa8', padding: { x: 8, y: 4 } }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+    close.on('pointerdown', () => layer.destroy());
+    dim.on('pointerdown', () => layer.destroy());
+    layer.add(close);
   }
 
   private static boxes = new Map<string, { left: number; top: number; right: number; bottom: number } | null>();
@@ -341,7 +427,8 @@ export class UpgradeScene extends Phaser.Scene {
     skin?: { label: string; color: number; onClick: () => void },
     chip?: { label: string; color: number; onClick: () => void; pulse?: boolean },
     look?: string,
-    ms?: { text: string; ratio: number }
+    ms?: { text: string; ratio: number },
+    badges?: { label: string; color: number; onClick?: () => void; pulse?: boolean }[]
   ): void {
     const sx = x - 222; // 무대 가운데
     const stageW = 148;
@@ -365,6 +452,10 @@ export class UpgradeScene extends Phaser.Scene {
       parts.push(spr);
       icon?.destroy();
     } else if (icon) parts.push(icon.setPosition(sx, y).setDisplaySize(96, 96).setAlpha(dim ? 0.5 : 1));
+    else {
+      const em = title.split(' ')[0]; // 👑 · ⭕ · 🍖 처럼 제목 앞 이모지
+      if (em && !/[가-힣A-Za-z0-9]/.test(em)) parts.push(this.add.text(sx, y - 4, em, { fontSize: '58px', padding: { top: 16, bottom: 6 } }).setOrigin(0.5).setAlpha(dim ? 0.5 : 1));
+    }
     const tx = x - 136;
     parts.push(
       this.add.text(tx, y - h / 2 + 30, title, { fontFamily: 'sans-serif', fontSize: '24px', fontStyle: 'bold', color: dim ? '#aab6c8' : '#ffffff', stroke: '#000000', strokeThickness: 4 }).setOrigin(0, 0.5),
@@ -391,6 +482,12 @@ export class UpgradeScene extends Phaser.Scene {
       if (chip.pulse) this.tweens.add({ targets: cb, scale: 1.12, duration: 420, yoyo: true, repeat: -1 });
     }
     if (skin) pill(skin.label, skin.color, sx + stageW / 2 - 30, y - stageH / 2 + 16, skin.onClick); // 무대 오른쪽 위
+    // 🏷️ 등급(무대 왼쪽 위) · 🔀 갈래(무대 아래)
+    (badges ?? []).forEach((bd, bi) => {
+      const t = pill(bd.label, bd.color, bi === 0 ? sx - stageW / 2 + 26 : sx, bi === 0 ? y - stageH / 2 + 16 : y + stageH / 2 - 14, bd.onClick ?? (() => {}));
+      if (!bd.onClick) t.disableInteractive();
+      if (bd.pulse) this.tweens.add({ targets: t, scale: 1.12, duration: 420, yoyo: true, repeat: -1 });
+    });
     const by = y + 14;
     const btn = this.add
       .rectangle(x + 232, by, 118, Math.min(84, h - 64), canUp ? 0x2f7a4d : 0x3a3f55)
@@ -541,7 +638,16 @@ export class UpgradeScene extends Phaser.Scene {
 
   /** 👑 영웅 강화 — 영웅 레벨 · 오라 크기 · 영웅 스킬 해금/위력 */
   private renderHero(): void {
-    const count = 4 + HERO_SKILLS.length; // 영웅 · 오라 · ⚔️ 무기 · 💍 반지 · 스킬
+    this.subTabs(
+      [
+        { key: 'hero', label: '👑 영웅·장비' },
+        { key: 'skill', label: `✨ 영웅 스킬 ${HERO_SKILLS.length}` },
+      ],
+      UpgradeScene.heroGroup,
+      (k) => (UpgradeScene.heroGroup = k as 'hero' | 'skill')
+    );
+    const skillTab = UpgradeScene.heroGroup === 'skill';
+    const count = skillTab ? HERO_SKILLS.length : 4; // 영웅 · 오라 · ⚔️ 무기 · 💍 반지 / 스킬
     const pct = (m: number): string => `+${Math.round((m - 1) * 100)}%`;
     const up = (key: string, kind: 'hero' | 'aura' | 'skill', max: number): void => {
       const before = heroTier(meta.heroLevel('hero'));
@@ -560,14 +666,27 @@ export class UpgradeScene extends Phaser.Scene {
     };
     const hl = meta.heroLevel('hero');
     const nt = nextHeroTier(hl);
+    if (skillTab) {
+      HERO_SKILLS.forEach((sk, j) => this.heroSkillCard(sk, j, count, row));
+      return;
+    }
     row(0, 'hero', 'hero', HERO_MAX_LV, `👑 ${HERO_TIERS[heroTier(hl)].name}`, `❤️·⚔️ ${pct(heroLvMult(hl))} → ${pct(heroLvMult(hl + 1))}${nt ? `  ·  Lv${nt.min} 진화` : ''}`);
     this.heroEvolution(hl);
     const al = meta.heroLevel('aura');
     row(1, 'aura', 'aura', AURA_MAX_LV, '⭕ 오라 크기', `오라 반지름 ${AURA_RADIUS + auraBonus(al)}  →  ${AURA_RADIUS + auraBonus(al + 1)}`);
     this.equipCard(2, count, 'weapon'); // 🛡️ 영웅 장비
     this.equipCard(3, count, 'ring');
-    HERO_SKILLS.forEach((sk, j) => {
-      const i = 4 + j;
+  }
+
+  /** 👑 영웅 스킬 카드(해금 / 강화) */
+  private heroSkillCard(
+    sk: (typeof HERO_SKILLS)[number],
+    i: number,
+    count: number,
+    row: (i: number, key: string, kind: 'hero' | 'aura' | 'skill', max: number, title: string, desc: string) => void
+  ): void {
+    const pct = (m: number): string => `+${Math.round((m - 1) * 100)}%`;
+    {
       if (!meta.ownsHeroSkill(sk.key)) {
         this.card(i, count, null, `${sk.icon} ${sk.name}  (${sk.hotkey})`, `${sk.desc} · 💧${sk.mana}`, `🛒 해금\n🪙${sk.price}`, meta.gold >= sk.price, true, () => {
           if (meta.buyHeroSkill(sk.key, sk.price)) {
@@ -579,7 +698,7 @@ export class UpgradeScene extends Phaser.Scene {
       }
       const lv = meta.heroLevel(sk.key);
       row(i, sk.key, 'skill', SKILL_MAX_LV, `${sk.icon} ${sk.name}`, `${sk.desc} · 위력 ${pct(heroSkillPower(lv))} → ${pct(heroSkillPower(lv + 1))}`);
-    });
+    }
   }
 
   /** 🛡️ 장비 칸 카드(무기·반지) — 누르면 고르기 창 */
@@ -824,7 +943,19 @@ export class UpgradeScene extends Phaser.Scene {
 
   private renderWeapons(): void {
     const iconTex = textureKey('weapon_icons');
-    WEAPONS.forEach((w, i) => {
+    const SUPPORT = new Set(['heal', 'freeze', 'guard', 'berserk']);
+    const grp = (k: string): 'attack' | 'support' => (SUPPORT.has(k) ? 'support' : 'attack');
+    const upOf = (g: string): boolean => WEAPONS.some((w, i) => grp(w.key) === g && meta.gold >= (meta.ownsWeapon(w.key) ? meta.weaponNextCost(w.key) : weaponPrice(i)));
+    this.subTabs(
+      [
+        { key: 'attack', label: '💥 공격 5', up: upOf('attack') },
+        { key: 'support', label: '✨ 지원 4', up: upOf('support') },
+      ],
+      UpgradeScene.weaponGroup,
+      (k) => (UpgradeScene.weaponGroup = k as 'attack' | 'support')
+    );
+    const shown = WEAPONS.map((w, i) => ({ w, i })).filter((o) => grp(o.w.key) === UpgradeScene.weaponGroup);
+    shown.forEach(({ w, i }, slot) => {
       const lv = meta.weaponLevel(w.key);
       const icon = this.textures.exists(iconTex) ? this.add.image(0, 0, iconTex, i) : null;
       const sec = (l: number): string => (w.chargeSec * weaponChargeMult(l)).toFixed(1);
@@ -836,8 +967,8 @@ export class UpgradeScene extends Phaser.Scene {
       const owned = meta.ownsWeapon(w.key);
       const price = weaponPrice(i);
       this.card(
-        i,
-        WEAPONS.length,
+        slot,
+        shown.length,
         icon,
         `${w.name}  Lv.${lv}`,
         `${effect}  ·  충전 ${sec(lv)}초 → ${sec(lv + 1)}초`,

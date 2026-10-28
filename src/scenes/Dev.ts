@@ -14,6 +14,7 @@ import { sfx } from '../systems/sound';
 const UNITS = unitsData as Record<string, UnitStats>;
 import { STAGES, MAX_STAGE } from '../systems/worlds';
 import { VIEW_W } from '../systems/view';
+import { tierFromLevel } from '../systems/evolution';
 const UNIT_MAX_LV = 30; // 개발자 모드에서 올릴 수 있는 유닛·무기 최대 레벨
 const GOLD_MAX = 999_999_999;
 
@@ -186,6 +187,13 @@ export class DevScene extends Phaser.Scene {
       ['🔟 보스(10)', () => this.scene.start('Battle', { stageId: 10 }), 0x7a4ad8],
       ['🐉 보스(20)', () => this.scene.start('Battle', { stageId: 20 }), 0x7a4ad8],
     ]);
+    // 👑 주간 보스 · 📺 무료 상자 · 🏷️ 칭호
+    this.row(615, '👑 주간 보스 · 기타', `이번 주 ×${meta.weeklyTotal().toFixed(2)} · 최고 ${meta.weeklyBest}단계`, [
+      ['주간 +1배', () => this.edit((m) => m.addWeekly(1))],
+      ['주간 초기화', () => this.edit((m) => ((m.weekly = { week: -1, total: 0 }), (m.weeklyBest = 0))), 0x8a3a3a],
+      ['무료 상자 다시', () => this.edit((m) => (m.freeChestDay = -1), '📺 무료 상자 다시 받기')],
+      ['칭호 새로 보기', () => this.edit((m) => (m.titlesSeen = []))],
+    ]);
   }
 
   // ───────── 🛡️ 유닛
@@ -196,7 +204,7 @@ export class DevScene extends Phaser.Scene {
       ['병사만', () => this.edit((m) => (m.ownedUnits = [keys[0]])), 0x8a3a3a],
       ['모두 Lv+1', () => this.edit((m) => keys.forEach((k) => (m.levels[k] = clamp((m.levels[k] ?? 0) + 1, 0, UNIT_MAX_LV))))],
       ['모두 Lv10', () => this.edit((m) => keys.forEach((k) => (m.levels[k] = 10)))],
-      ['모두 Lv0', () => this.edit((m) => (m.levels = {})), 0x8a3a3a],
+      ['모두 Lv0', () => this.edit((m) => ((m.levels = {}), (m.evo = {}), (m.branch = {}))), 0x8a3a3a],
     ]);
     keys.forEach((k, i) => {
       const x = 640 + ((i % 4) - 1.5) * 285;
@@ -210,7 +218,7 @@ export class DevScene extends Phaser.Scene {
         this.render();
       }, 15);
       this.layer.add(own);
-      this.layer.add(this.add.text(x - 122, y + 22, `Lv ${lv}`, { fontFamily: 'sans-serif', fontSize: '22px', fontStyle: 'bold', color: '#ffe680' }).setOrigin(0, 0.5));
+      this.layer.add(this.add.text(x - 122, y + 22, `Lv ${lv} ★${meta.tier(k) + 1}`, { fontFamily: 'sans-serif', fontSize: '22px', fontStyle: 'bold', color: '#ffe680' }).setOrigin(0, 0.5));
       const step = (d: number) => (): void => {
         this.edit((m) => (m.levels[k] = clamp(lv + d, 0, UNIT_MAX_LV)));
         this.render();
@@ -337,6 +345,13 @@ export class DevScene extends Phaser.Scene {
         m.chestsOpened = 0;
       }), 0x8a3a3a],
     ], C);
+    // ⭐ 진화 — 레벨에 맞춰 단계 올리기(돌파 없이) · 조각 · 초기화
+    this.row(650, '⭐ 유닛 진화', '단계는 유닛 탭 ★표시', [
+      ['레벨에 맞춰 진화', () => this.edit((m) => Object.keys(UNITS).forEach((k) => (m.evo[k] = tierFromLevel(m.level(k)))), '⭐ 레벨만큼 진화'), 0x2f7a4d],
+      ['조각 +100', () => this.edit((m) => Object.keys(UNITS).forEach((k) => (m.shards[k] = (m.shards[k] ?? 0) + 100)), '🃏 조각 +100')],
+      ['갈래 초기화', () => this.edit((m) => (m.branch = {}))],
+      ['진화 초기화', () => this.edit((m) => (m.evo = {})), 0x8a3a3a],
+    ]);
     this.row(590, '🎓 안내', `본 안내 ${meta.tips.length}개`, [
       ['처음처럼 다시 보기', () => this.edit((m) => (m.tips = []), '🎓 안내 초기화'), 0x8a3a3a],
     ], C);

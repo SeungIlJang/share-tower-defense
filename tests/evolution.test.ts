@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { MAX_TIER, UNIT_TIERS, tierBodyScale, evolvedKey, levelCap, migrateTier, nextUnitTier, readyToEvolve, starText, tierFromLevel, tierKey, tierPerks, unitOfKey, unitPreloadKeys } from '../src/systems/evolution';
+import { GRADE_INFO, MAX_TIER, UNIT_TIERS, evoCost, gradeOf, perkText, unitPerks, tierBodyScale, evolvedKey, levelCap, migrateTier, nextUnitTier, readyToEvolve, starText, tierFromLevel, tierKey, tierPerks, unitOfKey, unitPreloadKeys } from '../src/systems/evolution';
 
 describe('⭐ 유닛 진화 5단계 + 돌파', () => {
   it('단계 기준 레벨 0 · 5 · 10 · 20 · 30 … 100', () => {
@@ -69,5 +69,25 @@ describe('⭐ 유닛 진화 5단계 + 돌파', () => {
     const inM = (k: string): boolean => ['mage', 'mage_t2', 'mage_t3', 'mage@legend', 'mage@legend_t2', 'archer'].includes(k);
     const keys = unitPreloadKeys(['mage', 'archer'], inM, (u) => (u === 'mage' ? 1 : 0), (u) => (u === 'mage' ? 'legend' : null));
     expect([...keys].sort()).toEqual(['archer', 'mage', 'mage@legend_t2', 'mage_t2']);
+  });
+
+  it('🏷️ 등급 — 일반은 싸고, 영웅은 비싸지만 보너스 큼', () => {
+    expect(gradeOf('soldier')).toBe('common');
+    expect(gradeOf('cannon')).toBe('epic');
+    expect(gradeOf('totem_fire')).toBe('rare');
+    expect(evoCost('soldier', 2)!.gold).toBeLessThan(evoCost('mage', 2)!.gold);
+    expect(evoCost('cannon', 2)!.shards).toBeGreaterThan(evoCost('mage', 2)!.shards);
+    expect(evoCost('mage', MAX_TIER)).toBeNull();
+    expect(unitPerks('cannon', 4, null).atk).toBeGreaterThan(unitPerks('soldier', 4, null).atk);
+    expect(perkText('cannon', 1)).toContain(`+${Math.round(10 * GRADE_INFO.epic.bonus)}%`);
+  });
+  it('🔀 갈래 — ★4부터 공격형·방어형', () => {
+    const base = unitPerks('mage', 3, null);
+    expect(unitPerks('mage', 2, 'atk').atk).toBe(unitPerks('mage', 2, null).atk); // ★3은 갈래 없음
+    expect(unitPerks('mage', 3, 'atk').atk).toBeCloseTo(base.atk * 1.15);
+    expect(unitPerks('mage', 3, 'def').hp).toBeCloseTo(base.hp * 1.25);
+    expect(unitPerks('mage', 3, 'def').def).toBe(5);
+    expect(unitPerks('mage', 4, 'def').def).toBe(10);
+    expect(unitPerks('mage', 4, 'atk').atkSpeed).toBeCloseTo(1.2 * 1.1);
   });
 });
