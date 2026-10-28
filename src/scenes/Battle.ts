@@ -37,7 +37,7 @@ import { TOTEMS, TOTEM_LIFE, isTotem, totemHeal, totemX } from '../systems/totem
 import { VIEW_L, VIEW_OFF, VIEW_R, VIEW_W, uiX } from '../systems/view';
 import { LOOK_HOLD, SCREEN_W, followX, walkMult, worldWidth } from '../systems/camera';
 import { RULE_INFO, targetBonus, targetTime, WAGON_BLOCK, WAGON_SPEED, breachGoal, holdProdMult, holdSeconds, stageRule, wagonHp, type StageRule } from '../systems/stageRules';
-import { HERO_TIP_STAGE, TIP_TEXT, featureOn, nextTip, reachedStage, type Feature, type TipKey } from '../systems/tutorial';
+import { FEATURES, HERO_TIP_STAGE, TIP_TEXT, featureOn, nextTip, reachedStage, type Feature, type TipKey } from '../systems/tutorial';
 import { showRewarded } from '../systems/ads';
 import {
   UNIT_SKILLS,
@@ -230,7 +230,8 @@ export class BattleScene extends Phaser.Scene {
   private static speed = 1;
   private slowmo = 1;
   private weekly: { boss: string; left: number; unit: number; foe: Enemy | null; text: Phaser.GameObjects.Text | null } | null = null; // 👑 주간 보스
-  private finishing = false; // 🏰 적 성이 무너지는 중(결과 화면 전)
+  private finishing = false;
+  private cardHintShown = false; // 🔒 레벨업 카드 잠김 안내(한 판에 한 번) // 🏰 적 성이 무너지는 중(결과 화면 전)
   private heroLook = HERO_TYPE; // 컷인 얼굴
   private speedBtn!: Phaser.GameObjects.Text;
   // 🔥 특수 무기 — 게이지(해금된 것만) + 효과 지속 시각(전투 시계 기준)
@@ -307,6 +308,7 @@ export class BattleScene extends Phaser.Scene {
   create(): void {
     this.over = false;
     this.finishing = false;
+    this.cardHintShown = false;
     resetFx();
     this.totemEnd = new Map();
     this.burns = [];
@@ -798,6 +800,7 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private gainXp(base: number): void {
+    if (this.over || this.finishing) return; // 🏰 함락 연출·결과 중엔 레벨업(카드 창) 없음
     this.xp += Math.round(base * mimicMult(this.skills.mimic ?? 0) * this.ring('ring_exp')); // 💍 경험의 반지
     while (this.xp >= this.xpNext && !this.picking) {
       this.xp -= this.xpNext;
@@ -810,6 +813,16 @@ export class BattleScene extends Phaser.Scene {
         this.choices = rollChoices(this.skills, Math.random);
         this.showLevelUp();
         break; // 한 번에 한 레벨만 선택(나머지는 선택 후 이어서)
+      }
+      if (!this.feat.levelup && !this.cardHintShown) {
+        // 🔒 아직 카드 기능이 안 열림 — 왜 카드가 안 나오는지 한 판에 한 번 알려 줌
+        this.cardHintShown = true;
+        const at = FEATURES.find((f) => f.key === 'levelup')?.stage ?? 5;
+        const t = this.add
+          .text(640, 128, `🔒 ${at - 1}관문을 깨면 레벨업 때 🃏 카드를 고를 수 있어요`, { fontFamily: 'sans-serif', fontSize: '18px', fontStyle: 'bold', color: '#ffe680', backgroundColor: '#0d1424cc', padding: { x: 12, y: 6 } })
+          .setOrigin(0.5)
+          .setDepth(110);
+        this.tweens.add({ targets: t, alpha: 0, delay: 2600, duration: 500, onComplete: () => t.destroy() });
       }
     }
   }
