@@ -100,9 +100,14 @@ def main():
     manifest.update(totem('totem_egg', 'Totem_egg_cannon.png', 50, fps, egg='totem_egg_ball'))
     manifest.update(totem('totem_fire', 'Totem_fire.png', 58, fps))
     manifest.update(totem('totem_heal', 'Totem_heal.png', 54, fps))
+    # ⭐ 설치물 진화 ★2·★3(같은 6×4 격자, 키 = '<설치물>_t2'·'_t3' — 진화 단계 그림 자동 선택)
+    for t in (2, 3):
+        manifest.update(totem(f'totem_egg_t{t}', f'Totem_egg_cannon_t{t}.png', 50, fps))
+        manifest.update(totem(f'totem_fire_t{t}', f'Totem_fire_t{t}.png', 58, fps))
+        manifest.update(totem(f'totem_heal_t{t}', f'Totem_heal_t{t}.png', 54, fps))
     with open(man_path, 'w', encoding='utf-8', newline='\n') as fp:
         fp.write(json.dumps(manifest, ensure_ascii=False, indent=2) + '\n')
-    for k in ('equip_weapon_icons', 'equip_ring_icons', 'totem_egg', 'totem_fire', 'totem_heal', 'totem_egg_ball'):
+    for k in ('equip_weapon_icons', 'equip_ring_icons', 'totem_egg', 'totem_fire', 'totem_heal', 'totem_egg_ball', 'totem_egg_t2', 'totem_egg_t3', 'totem_fire_t2', 'totem_fire_t3', 'totem_heal_t2', 'totem_heal_t3'):
         m = manifest[k]
         print(k, m['frameWidth'], m['frameHeight'], m['scale'])
 

@@ -7028,5 +7028,1709 @@
         "fps": 1
       }
     }
+  },
+  "soldier_t4": {
+    "file": "soldier_t4.png",
+    "filter": "linear",
+    "frameWidth": 285,
+    "frameHeight": 178,
+    "scale": 0.499,
+    "footY": 176,
+    "anims": {
+      "idle": {
+        "frames": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "fps": 5
+      },
+      "walk": {
+        "frames": [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "fps": 9
+      },
+      "attack": {
+        "frames": [
+          12,
+          13,
+          14,
+          15,
+          16
+        ],
+        "fps": 11
+      },
+      "death": {
+        "frames": [
+          18,
+          19,
+          20,
+          21
+        ],
+        "fps": 8
+      },
+      "skill": {
+        "frames": [
+          24,
+          25,
+          26,
+          27
+        ],
+        "fps": 10
+      }
+    },
+    "icon": "icon_soldier_t4.png"
+  },
+  "soldier_t5": {
+    "file": "soldier_t5.png",
+    "filter": "linear",
+    "frameWidth": 285,
+    "frameHeight": 178,
+    "scale": 0.5,
+    "footY": 177,
+    "anims": {
+      "idle": {
+        "frames": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "fps": 5
+      },
+      "walk": {
+        "frames": [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "fps": 9
+      },
+      "attack": {
+        "frames": [
+          12,
+          13,
+          14,
+          15,
+          16
+        ],
+        "fps": 11
+      },
+      "death": {
+        "frames": [
+          18,
+          19,
+          20,
+          21
+        ],
+        "fps": 8
+      },
+      "skill": {
+        "frames": [
+          24,
+          25,
+          26,
+          27
+        ],
+        "fps": 10
+      }
+    },
+    "icon": "icon_soldier_t5.png"
+  },
+  "archer_t4": {
+    "file": "archer_t4.png",
+    "filter": "linear",
+    "frameWidth": 254,
+    "frameHeight": 145,
+    "scale": 0.5,
+    "footY": 144,
+    "anims": {
+      "idle": {
+        "frames": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "fps": 5
+      },
+      "walk": {
+        "frames": [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "fps": 9
+      },
+      "attack": {
+        "frames": [
+          12,
+          13,
+          14,
+          15,
+          16
+        ],
+        "fps": 11
+      },
+      "death": {
+        "frames": [
+          18,
+          19,
+          20,
+          21
+        ],
+        "fps": 8
+      },
+      "skill": {
+        "frames": [
+          24,
+          25,
+          26,
+          27
+        ],
+        "fps": 10
+      }
+    },
+    "icon": "icon_archer_t4.png"
+  },
+  "archer_t5": {
+    "file": "archer_t5.png",
+    "filter": "linear",
+    "frameWidth": 246,
+    "frameHeight": 154,
+    "scale": 0.5,
+    "footY": 151,
+    "anims": {
+      "idle": {
+        "frames": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "fps": 5
+      },
+      "walk": {
+        "frames": [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "fps": 9
+      },
+      "attack": {
+        "frames": [
+          12,
+          13,
+          14,
+          15,
+          16
+        ],
+        "fps": 11
+      },
+      "death": {
+        "frames": [
+          18,
+          19,
+          20,
+          21
+        ],
+        "fps": 8
+      },
+      "skill": {
+        "frames": [
+          24,
+          25,
+          26,
+          27
+        ],
+        "fps": 10
+      }
+    },
+    "icon": "icon_archer_t5.png"
+  },
+  "knight_t4": {
+    "file": "knight_t4.png",
+    "filter": "linear",
+    "frameWidth": 295,
+    "frameHeight": 174,
+    "scale": 0.499,
+    "footY": 172,
+    "anims": {
+      "idle": {
+        "frames": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "fps": 5
+      },
+      "walk": {
+        "frames": [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "fps": 9
+      },
+      "attack": {
+        "frames": [
+          12,
+          13,
+          14,
+          15,
+          16
+        ],
+        "fps": 11
+      },
+      "death": {
+        "frames": [
+          18,
+          19,
+          20,
+          21
+        ],
+        "fps": 8
+      },
+      "skill": {
+        "frames": [
+          24,
+          25,
+          26,
+          27
+        ],
+        "fps": 10
+      }
+    },
+    "icon": "icon_knight_t4.png"
+  },
+  "knight_t5": {
+    "file": "knight_t5.png",
+    "filter": "linear",
+    "frameWidth": 294,
+    "frameHeight": 182,
+    "scale": 0.501,
+    "footY": 170,
+    "anims": {
+      "idle": {
+        "frames": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "fps": 5
+      },
+      "walk": {
+        "frames": [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "fps": 9
+      },
+      "attack": {
+        "frames": [
+          12,
+          13,
+          14,
+          15,
+          16
+        ],
+        "fps": 11
+      },
+      "death": {
+        "frames": [
+          18,
+          19,
+          20,
+          21
+        ],
+        "fps": 8
+      },
+      "skill": {
+        "frames": [
+          24,
+          25,
+          26,
+          27
+        ],
+        "fps": 10
+      }
+    },
+    "icon": "icon_knight_t5.png"
+  },
+  "spear_t4": {
+    "file": "spear_t4.png",
+    "filter": "linear",
+    "frameWidth": 269,
+    "frameHeight": 139,
+    "scale": 0.499,
+    "footY": 138,
+    "anims": {
+      "idle": {
+        "frames": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "fps": 5
+      },
+      "walk": {
+        "frames": [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "fps": 9
+      },
+      "attack": {
+        "frames": [
+          12,
+          13,
+          14,
+          15,
+          16
+        ],
+        "fps": 11
+      },
+      "death": {
+        "frames": [
+          18,
+          19,
+          20,
+          21
+        ],
+        "fps": 8
+      },
+      "skill": {
+        "frames": [
+          24,
+          25,
+          26,
+          27
+        ],
+        "fps": 10
+      }
+    },
+    "icon": "icon_spear_t4.png"
+  },
+  "spear_t5": {
+    "file": "spear_t5.png",
+    "filter": "linear",
+    "frameWidth": 280,
+    "frameHeight": 140,
+    "scale": 0.501,
+    "footY": 137,
+    "anims": {
+      "idle": {
+        "frames": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "fps": 5
+      },
+      "walk": {
+        "frames": [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "fps": 9
+      },
+      "attack": {
+        "frames": [
+          12,
+          13,
+          14,
+          15,
+          16
+        ],
+        "fps": 11
+      },
+      "death": {
+        "frames": [
+          18,
+          19,
+          20,
+          21
+        ],
+        "fps": 8
+      },
+      "skill": {
+        "frames": [
+          24,
+          25,
+          26,
+          27
+        ],
+        "fps": 10
+      }
+    },
+    "icon": "icon_spear_t5.png"
+  },
+  "mage_t4": {
+    "file": "mage_t4.png",
+    "filter": "linear",
+    "frameWidth": 262,
+    "frameHeight": 148,
+    "scale": 0.5,
+    "footY": 147,
+    "anims": {
+      "idle": {
+        "frames": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "fps": 5
+      },
+      "walk": {
+        "frames": [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "fps": 9
+      },
+      "attack": {
+        "frames": [
+          12,
+          13,
+          14,
+          15,
+          16
+        ],
+        "fps": 11
+      },
+      "death": {
+        "frames": [
+          18,
+          19,
+          20,
+          21
+        ],
+        "fps": 8
+      },
+      "skill": {
+        "frames": [
+          24,
+          25,
+          26,
+          27
+        ],
+        "fps": 10
+      }
+    },
+    "icon": "icon_mage_t4.png"
+  },
+  "mage_t5": {
+    "file": "mage_t5.png",
+    "filter": "linear",
+    "frameWidth": 251,
+    "frameHeight": 146,
+    "scale": 0.5,
+    "footY": 145,
+    "anims": {
+      "idle": {
+        "frames": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "fps": 5
+      },
+      "walk": {
+        "frames": [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "fps": 9
+      },
+      "attack": {
+        "frames": [
+          12,
+          13,
+          14,
+          15,
+          16
+        ],
+        "fps": 11
+      },
+      "death": {
+        "frames": [
+          18,
+          19,
+          20,
+          21
+        ],
+        "fps": 8
+      },
+      "skill": {
+        "frames": [
+          24,
+          25,
+          26,
+          27
+        ],
+        "fps": 10
+      }
+    },
+    "icon": "icon_mage_t5.png"
+  },
+  "rogue_t4": {
+    "file": "rogue_t4.png",
+    "filter": "linear",
+    "frameWidth": 249,
+    "frameHeight": 117,
+    "scale": 0.5,
+    "footY": 116,
+    "anims": {
+      "idle": {
+        "frames": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "fps": 5
+      },
+      "walk": {
+        "frames": [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "fps": 9
+      },
+      "attack": {
+        "frames": [
+          12,
+          13,
+          14,
+          15,
+          16
+        ],
+        "fps": 11
+      },
+      "death": {
+        "frames": [
+          18,
+          19,
+          20,
+          21
+        ],
+        "fps": 8
+      },
+      "skill": {
+        "frames": [
+          24,
+          25,
+          26,
+          27
+        ],
+        "fps": 10
+      }
+    },
+    "icon": "icon_rogue_t4.png"
+  },
+  "rogue_t5": {
+    "file": "rogue_t5.png",
+    "filter": "linear",
+    "frameWidth": 242,
+    "frameHeight": 119,
+    "scale": 0.502,
+    "footY": 116,
+    "anims": {
+      "idle": {
+        "frames": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "fps": 5
+      },
+      "walk": {
+        "frames": [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "fps": 9
+      },
+      "attack": {
+        "frames": [
+          12,
+          13,
+          14,
+          15,
+          16
+        ],
+        "fps": 11
+      },
+      "death": {
+        "frames": [
+          18,
+          19,
+          20,
+          21
+        ],
+        "fps": 8
+      },
+      "skill": {
+        "frames": [
+          24,
+          25,
+          26,
+          27
+        ],
+        "fps": 10
+      }
+    },
+    "icon": "icon_rogue_t5.png"
+  },
+  "cleric_t4": {
+    "file": "cleric_t4.png",
+    "filter": "linear",
+    "frameWidth": 198,
+    "frameHeight": 147,
+    "scale": 0.501,
+    "footY": 142,
+    "anims": {
+      "idle": {
+        "frames": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "fps": 5
+      },
+      "walk": {
+        "frames": [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "fps": 9
+      },
+      "attack": {
+        "frames": [
+          12,
+          13,
+          14,
+          15,
+          16
+        ],
+        "fps": 11
+      },
+      "death": {
+        "frames": [
+          18,
+          19,
+          20,
+          21
+        ],
+        "fps": 8
+      },
+      "skill": {
+        "frames": [
+          24,
+          25,
+          26,
+          27
+        ],
+        "fps": 10
+      }
+    },
+    "icon": "icon_cleric_t4.png"
+  },
+  "cleric_t5": {
+    "file": "cleric_t5.png",
+    "filter": "linear",
+    "frameWidth": 193,
+    "frameHeight": 146,
+    "scale": 0.5,
+    "footY": 140,
+    "anims": {
+      "idle": {
+        "frames": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "fps": 5
+      },
+      "walk": {
+        "frames": [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "fps": 9
+      },
+      "attack": {
+        "frames": [
+          12,
+          13,
+          14,
+          15,
+          16
+        ],
+        "fps": 11
+      },
+      "death": {
+        "frames": [
+          18,
+          19,
+          20,
+          21
+        ],
+        "fps": 8
+      },
+      "skill": {
+        "frames": [
+          24,
+          25,
+          26,
+          27
+        ],
+        "fps": 10
+      }
+    },
+    "icon": "icon_cleric_t5.png"
+  },
+  "earthmage_t4": {
+    "file": "earthmage_t4.png",
+    "filter": "linear",
+    "frameWidth": 239,
+    "frameHeight": 141,
+    "scale": 0.5,
+    "footY": 140,
+    "anims": {
+      "idle": {
+        "frames": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "fps": 5
+      },
+      "walk": {
+        "frames": [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "fps": 9
+      },
+      "attack": {
+        "frames": [
+          12,
+          13,
+          14,
+          15,
+          16
+        ],
+        "fps": 11
+      },
+      "death": {
+        "frames": [
+          18,
+          19,
+          20,
+          21
+        ],
+        "fps": 8
+      },
+      "skill": {
+        "frames": [
+          24,
+          25,
+          26,
+          27
+        ],
+        "fps": 10
+      }
+    },
+    "icon": "icon_earthmage_t4.png"
+  },
+  "earthmage_t5": {
+    "file": "earthmage_t5.png",
+    "filter": "linear",
+    "frameWidth": 255,
+    "frameHeight": 138,
+    "scale": 0.499,
+    "footY": 137,
+    "anims": {
+      "idle": {
+        "frames": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "fps": 5
+      },
+      "walk": {
+        "frames": [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "fps": 9
+      },
+      "attack": {
+        "frames": [
+          12,
+          13,
+          14,
+          15,
+          16
+        ],
+        "fps": 11
+      },
+      "death": {
+        "frames": [
+          18,
+          19,
+          20,
+          21
+        ],
+        "fps": 8
+      },
+      "skill": {
+        "frames": [
+          24,
+          25,
+          26,
+          27
+        ],
+        "fps": 10
+      }
+    },
+    "icon": "icon_earthmage_t5.png"
+  },
+  "darkmage_t4": {
+    "file": "darkmage_t4.png",
+    "filter": "linear",
+    "frameWidth": 273,
+    "frameHeight": 137,
+    "scale": 0.499,
+    "footY": 134,
+    "anims": {
+      "idle": {
+        "frames": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "fps": 5
+      },
+      "walk": {
+        "frames": [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "fps": 9
+      },
+      "attack": {
+        "frames": [
+          12,
+          13,
+          14,
+          15,
+          16
+        ],
+        "fps": 11
+      },
+      "death": {
+        "frames": [
+          18,
+          19,
+          20,
+          21
+        ],
+        "fps": 8
+      },
+      "skill": {
+        "frames": [
+          24,
+          25,
+          26,
+          27
+        ],
+        "fps": 10
+      }
+    },
+    "icon": "icon_darkmage_t4.png"
+  },
+  "darkmage_t5": {
+    "file": "darkmage_t5.png",
+    "filter": "linear",
+    "frameWidth": 231,
+    "frameHeight": 134,
+    "scale": 0.499,
+    "footY": 133,
+    "anims": {
+      "idle": {
+        "frames": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "fps": 5
+      },
+      "walk": {
+        "frames": [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "fps": 9
+      },
+      "attack": {
+        "frames": [
+          12,
+          13,
+          14,
+          15,
+          16
+        ],
+        "fps": 11
+      },
+      "death": {
+        "frames": [
+          18,
+          19,
+          20,
+          21
+        ],
+        "fps": 8
+      },
+      "skill": {
+        "frames": [
+          24,
+          25,
+          26,
+          27
+        ],
+        "fps": 10
+      }
+    },
+    "icon": "icon_darkmage_t5.png"
+  },
+  "shield_t4": {
+    "file": "shield_t4.png",
+    "filter": "linear",
+    "frameWidth": 216,
+    "frameHeight": 140,
+    "scale": 0.499,
+    "footY": 139,
+    "anims": {
+      "idle": {
+        "frames": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "fps": 5
+      },
+      "walk": {
+        "frames": [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "fps": 9
+      },
+      "attack": {
+        "frames": [
+          12,
+          13,
+          14,
+          15,
+          16
+        ],
+        "fps": 11
+      },
+      "death": {
+        "frames": [
+          18,
+          19,
+          20,
+          21
+        ],
+        "fps": 8
+      },
+      "skill": {
+        "frames": [
+          24,
+          25,
+          26,
+          27
+        ],
+        "fps": 10
+      }
+    },
+    "icon": "icon_shield_t4.png"
+  },
+  "shield_t5": {
+    "file": "shield_t5.png",
+    "filter": "linear",
+    "frameWidth": 203,
+    "frameHeight": 146,
+    "scale": 0.501,
+    "footY": 145,
+    "anims": {
+      "idle": {
+        "frames": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "fps": 5
+      },
+      "walk": {
+        "frames": [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "fps": 9
+      },
+      "attack": {
+        "frames": [
+          12,
+          13,
+          14,
+          15,
+          16
+        ],
+        "fps": 11
+      },
+      "death": {
+        "frames": [
+          18,
+          19,
+          20,
+          21
+        ],
+        "fps": 8
+      },
+      "skill": {
+        "frames": [
+          24,
+          25,
+          26,
+          27
+        ],
+        "fps": 10
+      }
+    },
+    "icon": "icon_shield_t5.png"
+  },
+  "cavalry_t4": {
+    "file": "cavalry_t4.png",
+    "filter": "linear",
+    "frameWidth": 351,
+    "frameHeight": 177,
+    "scale": 0.5,
+    "footY": 176,
+    "anims": {
+      "idle": {
+        "frames": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "fps": 5
+      },
+      "walk": {
+        "frames": [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "fps": 9
+      },
+      "attack": {
+        "frames": [
+          12,
+          13,
+          14,
+          15,
+          16
+        ],
+        "fps": 11
+      },
+      "death": {
+        "frames": [
+          18,
+          19,
+          20,
+          21
+        ],
+        "fps": 8
+      },
+      "skill": {
+        "frames": [
+          24,
+          25,
+          26,
+          27
+        ],
+        "fps": 10
+      }
+    },
+    "icon": "icon_cavalry_t4.png"
+  },
+  "cavalry_t5": {
+    "file": "cavalry_t5.png",
+    "filter": "linear",
+    "frameWidth": 350,
+    "frameHeight": 174,
+    "scale": 0.501,
+    "footY": 173,
+    "anims": {
+      "idle": {
+        "frames": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "fps": 5
+      },
+      "walk": {
+        "frames": [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "fps": 9
+      },
+      "attack": {
+        "frames": [
+          12,
+          13,
+          14,
+          15,
+          16
+        ],
+        "fps": 11
+      },
+      "death": {
+        "frames": [
+          18,
+          19,
+          20,
+          21
+        ],
+        "fps": 8
+      },
+      "skill": {
+        "frames": [
+          24,
+          25,
+          26,
+          27
+        ],
+        "fps": 10
+      }
+    },
+    "icon": "icon_cavalry_t5.png"
+  },
+  "cannon_t4": {
+    "file": "cannon_t4.png",
+    "filter": "linear",
+    "frameWidth": 394,
+    "frameHeight": 144,
+    "scale": 0.499,
+    "footY": 143,
+    "anims": {
+      "idle": {
+        "frames": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "fps": 5
+      },
+      "walk": {
+        "frames": [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "fps": 9
+      },
+      "attack": {
+        "frames": [
+          12,
+          13,
+          14,
+          15,
+          16
+        ],
+        "fps": 11
+      },
+      "death": {
+        "frames": [
+          18,
+          19,
+          20,
+          21
+        ],
+        "fps": 8
+      },
+      "skill": {
+        "frames": [
+          24,
+          25,
+          26,
+          27
+        ],
+        "fps": 10
+      }
+    },
+    "icon": "icon_cannon_t4.png"
+  },
+  "cannon_t5": {
+    "file": "cannon_t5.png",
+    "filter": "linear",
+    "frameWidth": 375,
+    "frameHeight": 141,
+    "scale": 0.498,
+    "footY": 140,
+    "anims": {
+      "idle": {
+        "frames": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "fps": 5
+      },
+      "walk": {
+        "frames": [
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "fps": 9
+      },
+      "attack": {
+        "frames": [
+          12,
+          13,
+          14,
+          15,
+          16
+        ],
+        "fps": 11
+      },
+      "death": {
+        "frames": [
+          18,
+          19,
+          20,
+          21
+        ],
+        "fps": 8
+      },
+      "skill": {
+        "frames": [
+          24,
+          25,
+          26,
+          27
+        ],
+        "fps": 10
+      }
+    },
+    "icon": "icon_cannon_t5.png"
+  },
+  "totem_egg_t2": {
+    "file": "totem_egg_t2.png",
+    "filter": "linear",
+    "frameWidth": 166,
+    "frameHeight": 186,
+    "scale": 0.5,
+    "footY": 158,
+    "icon": "icon_totem_egg_t2.png",
+    "anims": {
+      "skill": {
+        "frames": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "fps": 8
+      },
+      "idle": {
+        "frames": [
+          6,
+          7,
+          8,
+          9
+        ],
+        "fps": 5
+      },
+      "attack": {
+        "frames": [
+          12,
+          13,
+          14,
+          15,
+          16
+        ],
+        "fps": 10
+      },
+      "death": {
+        "frames": [
+          18,
+          19,
+          20,
+          21
+        ],
+        "fps": 7
+      }
+    }
+  },
+  "totem_fire_t2": {
+    "file": "totem_fire_t2.png",
+    "filter": "linear",
+    "frameWidth": 157,
+    "frameHeight": 176,
+    "scale": 0.5,
+    "footY": 149,
+    "icon": "icon_totem_fire_t2.png",
+    "anims": {
+      "skill": {
+        "frames": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "fps": 8
+      },
+      "idle": {
+        "frames": [
+          6,
+          7,
+          8,
+          9
+        ],
+        "fps": 5
+      },
+      "attack": {
+        "frames": [
+          12,
+          13,
+          14,
+          15,
+          16
+        ],
+        "fps": 10
+      },
+      "death": {
+        "frames": [
+          18,
+          19,
+          20,
+          21
+        ],
+        "fps": 7
+      }
+    }
+  },
+  "totem_heal_t2": {
+    "file": "totem_heal_t2.png",
+    "filter": "linear",
+    "frameWidth": 164,
+    "frameHeight": 185,
+    "scale": 0.5,
+    "footY": 156,
+    "icon": "icon_totem_heal_t2.png",
+    "anims": {
+      "skill": {
+        "frames": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "fps": 8
+      },
+      "idle": {
+        "frames": [
+          6,
+          7,
+          8,
+          9
+        ],
+        "fps": 5
+      },
+      "attack": {
+        "frames": [
+          12,
+          13,
+          14,
+          15,
+          16
+        ],
+        "fps": 10
+      },
+      "death": {
+        "frames": [
+          18,
+          19,
+          20,
+          21
+        ],
+        "fps": 7
+      }
+    }
+  },
+  "totem_egg_t3": {
+    "file": "totem_egg_t3.png",
+    "filter": "linear",
+    "frameWidth": 158,
+    "frameHeight": 178,
+    "scale": 0.5,
+    "footY": 150,
+    "icon": "icon_totem_egg_t3.png",
+    "anims": {
+      "skill": {
+        "frames": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "fps": 8
+      },
+      "idle": {
+        "frames": [
+          6,
+          7,
+          8,
+          9
+        ],
+        "fps": 5
+      },
+      "attack": {
+        "frames": [
+          12,
+          13,
+          14,
+          15,
+          16
+        ],
+        "fps": 10
+      },
+      "death": {
+        "frames": [
+          18,
+          19,
+          20,
+          21
+        ],
+        "fps": 7
+      }
+    }
+  },
+  "totem_fire_t3": {
+    "file": "totem_fire_t3.png",
+    "filter": "linear",
+    "frameWidth": 158,
+    "frameHeight": 177,
+    "scale": 0.5,
+    "footY": 150,
+    "icon": "icon_totem_fire_t3.png",
+    "anims": {
+      "skill": {
+        "frames": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "fps": 8
+      },
+      "idle": {
+        "frames": [
+          6,
+          7,
+          8,
+          9
+        ],
+        "fps": 5
+      },
+      "attack": {
+        "frames": [
+          12,
+          13,
+          14,
+          15,
+          16
+        ],
+        "fps": 10
+      },
+      "death": {
+        "frames": [
+          18,
+          19,
+          20,
+          21
+        ],
+        "fps": 7
+      }
+    }
+  },
+  "totem_heal_t3": {
+    "file": "totem_heal_t3.png",
+    "filter": "linear",
+    "frameWidth": 157,
+    "frameHeight": 177,
+    "scale": 0.5,
+    "footY": 150,
+    "icon": "icon_totem_heal_t3.png",
+    "anims": {
+      "skill": {
+        "frames": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "fps": 8
+      },
+      "idle": {
+        "frames": [
+          6,
+          7,
+          8,
+          9
+        ],
+        "fps": 5
+      },
+      "attack": {
+        "frames": [
+          12,
+          13,
+          14,
+          15,
+          16
+        ],
+        "fps": 10
+      },
+      "death": {
+        "frames": [
+          18,
+          19,
+          20,
+          21
+        ],
+        "fps": 7
+      }
+    }
   }
 }
