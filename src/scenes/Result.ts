@@ -166,7 +166,7 @@ export class ResultScene extends Phaser.Scene {
         doubled = true;
         dbl.disableInteractive();
         label.setText('⏳ 광고…');
-        void showRewarded().then((ok) => {
+        void showRewarded('gold_x2').then((ok) => {
           if (ok) {
             meta.addGold(earned); // 추가 지급 = 2배
             goldLine.setText(`획득 골드 🪙 ${earned * 2} (2배!)`);
@@ -311,7 +311,7 @@ export class ResultScene extends Phaser.Scene {
       busy = true;
       b.disableInteractive();
       label.setText('⏳ 광고…');
-      void showRewarded().then((ok) => {
+      void showRewarded('chest_more').then((ok) => {
         if (!ok) {
           busy = false;
           label.setText('📺 광고 보고 상자 하나 더');

@@ -10,6 +10,7 @@ import { DevScene } from './scenes/Dev';
 import { PrepareScene } from './scenes/Prepare';
 import { CodexScene } from './scenes/Codex';
 import { VIEW_OFF, VIEW_W } from './systems/view';
+import { trackScreen } from './systems/analytics';
 
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
@@ -43,8 +44,12 @@ const game = new Phaser.Game(config);
 // 📱 전투 외 화면은 1280 기준으로 만들어 가운데 둠(양옆은 배경이 넓게 채움)
 game.events.once(Phaser.Core.Events.READY, () => {
   for (const s of game.scene.scenes) {
-    if (s.sys.settings.key === 'Battle') continue;
+    if (s.sys.settings.key === 'Battle') {
+      s.events.on(Phaser.Scenes.Events.CREATE, () => trackScreen('Battle'));
+      continue;
+    }
     s.events.on(Phaser.Scenes.Events.CREATE, () => s.cameras.main.setScroll(-VIEW_OFF, 0));
+    s.events.on(Phaser.Scenes.Events.CREATE, () => trackScreen(s.sys.settings.key)); // 📊 화면
     s.cameras?.main?.setScroll(-VIEW_OFF, 0); // 이미 시작한 첫 화면(Boot)
   }
 });

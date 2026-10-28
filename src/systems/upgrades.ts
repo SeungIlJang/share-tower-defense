@@ -14,6 +14,7 @@ import { CASTLE_MAX_LV, CASTLE_RATE_MAX_LV, castleUpCost } from './castle';
 import { earnedTitles, type TitleCtx } from './titles';
 import { weekIndex, weeklyStepOf } from './weekly';
 import { levelCap, migrateTier, nextUnitTier, readyToEvolve } from './evolution';
+import { track, trackUser } from './analytics';
 
 /** 강화 순수 계산 (Vitest 검증) */
 
@@ -222,6 +223,8 @@ export class MetaProgress {
   clearStage(id: number): void {
     if (id > this.clearedMax) {
       this.clearedMax = id;
+      trackUser('cleared_max', id); // 📊 진행도
+      if (id % 10 === 0) track('world_clear', { world: id / 10 });
       this.save();
     }
   }
@@ -260,6 +263,7 @@ export class MetaProgress {
     this.gold -= n.gold;
     this.shards[type] = (this.shards[type] ?? 0) - n.shards;
     this.evo[type] = this.tier(type) + 1;
+    track('unit_evolve', { unit: type, tier: this.evo[type] });
     this.save();
     return true;
   }

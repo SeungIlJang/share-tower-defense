@@ -61,6 +61,7 @@ import type { Stats } from '../systems/missions';
 import { endlessStage, endlessWaveAt, endlessMult, endlessReward } from '../systems/endless';
 import { grantNewChest } from '../systems/chestGrant';
 import { WEEKLY_HP, WEEKLY_SEC, WEEKLY_STEPS, newSteps, weekIndex, weeklyBoss, weeklyStage, weeklyStageId, weeklyStepOf } from '../systems/weekly';
+import { track } from '../systems/analytics';
 
 /** 배경 색(하늘 · 레인 · 레인 선) — 월드·모드별 */
 const THEMES = {
@@ -379,6 +380,7 @@ export class BattleScene extends Phaser.Scene {
     this.spawnHero();
     this.setupRule(tough);
     this.setupWeekly();
+    track('stage_start', { stage: this.stage.id, mode: this.endless ? 'endless' : this.rule ? 'daily' : this.weekly ? 'weekly' : 'stage', cleared: meta.clearedMax });
     this.devHud();
     this.waveNo = 0;
     this.waveText = null;
@@ -2826,7 +2828,7 @@ ${info.desc}`, { fontFamily: 'sans-serif', fontSize: '24px', fontStyle: 'bold', 
       .setInteractive({ useHandCursor: true });
     watch.on('pointerdown', () => {
       watch.disableInteractive().setText('⏳ 광고…');
-      void showRewarded().then((ok) => {
+      void showRewarded('revive').then((ok) => {
         layer.destroy();
         if (ok) this.doRevive();
         else {
@@ -2872,6 +2874,8 @@ ${info.desc}`, { fontFamily: 'sans-serif', fontSize: '24px', fontStyle: 'bold', 
 
   private end(win: boolean): void {
     this.over = true;
+    // 📊 판 결과(관문·모드·승패·시간·레벨)
+    track('stage_end', { stage: this.stage.id, mode: this.endless ? 'endless' : this.rule ? 'daily' : this.weekly ? 'weekly' : 'stage', win, sec: Math.round(this.clock), lv: this.level, wave: this.endless ? this.waveNo : 0 });
     this.picking = false;
     this.levelUp.hide();
     if (this.weekly) {

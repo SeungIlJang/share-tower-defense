@@ -11,3 +11,6 @@ keystore.properties
 key-info.txt
 .env
 rea/
+
+# Firebase 설정(사용자가 콘솔에서 받아 넣음)
+android/app/google-services.json

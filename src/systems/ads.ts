@@ -1,3 +1,4 @@
+import { track } from './analytics';
 /**
  * 리워드 광고 — 네이티브(Capacitor)는 @capacitor-community/admob,
  * 웹/개발은 시뮬레이션(짧은 대기 후 보상 지급).
@@ -53,7 +54,13 @@ const wait = (ms: number): Promise<void> =>
  * 리워드 광고 노출 → 끝까지 봤으면 true(보상 지급).
  * 웹/개발 환경은 광고가 없으므로 시뮬레이션으로 true 반환.
  */
-export async function showRewarded(): Promise<boolean> {
+export async function showRewarded(placement = 'unknown'): Promise<boolean> {
+  const ok = await showRewardedInner();
+  track('ad_reward', { placement, ok, live: ADS_ENABLED && isNative() }); // 📊 광고 자리별 시청
+  return ok;
+}
+
+async function showRewardedInner(): Promise<boolean> {
   if (!ADS_ENABLED || !isNative()) {
     await wait(500); // 웹·출시 전: 광고 없음(보상은 바로 지급)
     return true;

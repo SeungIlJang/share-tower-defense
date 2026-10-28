@@ -383,7 +383,7 @@ export class MenuScene extends Phaser.Scene {
       if (!meta.canFreeChest()) return;
       freeBtn.disableInteractive();
       (freeBtn.list[1] as Phaser.GameObjects.Text).setText('⏳ 광고…');
-      void showRewarded().then((ok) => {
+      void showRewarded('free_chest').then((ok) => {
         if (!ok) {
           (freeBtn.list[1] as Phaser.GameObjects.Text).setText('📺 무료 은 상자 받기');
           freeBtn.setInteractive({ useHandCursor: true });
