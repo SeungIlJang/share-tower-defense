@@ -285,7 +285,7 @@ export class Hud {
     const wStrip = scene.add.container(VIEW_L, 0).setDepth(d);
     const wy = W_CARD_CY;
     if (!features.weapon) {
-      scene.add.text(640, wy, '🔒 특수 무기 — 3관문에서 열려요', { fontFamily: 'sans-serif', fontSize: '20px', fontStyle: 'bold', color: '#7c8aa0' }).setOrigin(0.5).setDepth(d);
+      scene.add.text(640, wy, `🔒 특수 무기 — ${(FEATURES.find((f) => f.key === 'weapon')?.stage ?? 3) - 1}관문을 깨면 열려요`, { fontFamily: 'sans-serif', fontSize: '20px', fontStyle: 'bold', color: '#7c8aa0' }).setOrigin(0.5).setDepth(d);
     }
     if (features.weapon) WEAPONS.forEach((w, i) => {
       const x = ROW_X0 + W_CARD_W / 2 + i * (W_CARD_W + CARD_GAP);
