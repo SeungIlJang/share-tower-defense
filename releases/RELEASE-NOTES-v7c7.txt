@@ -1,0 +1,41 @@
+모두의 타워디펜스 — 릴리스 노트 v1.3 (versionCode 7)
+
+파일: linedefense-v7c7.aab (서명 완료, jar verified)
+appId: com.moduseries.linedefense
+빌드일: 2026-10-29
+
+[Play Console 릴리스 노트 — 복사용]
+v1.3 (versionCode 7)
+- 유닛 진화 시스템 확장 (단계별 진화 그림 2차 적용)
+- 광고 보상 개선 (리워드 광고로 보너스)
+- 신규 콘텐츠: 주간 미션, 칭호, 마일스톤, 상자 보상
+- 밸런스 및 UI 다듬기, 안정성 개선
+
+[변경 요약 (v6 -> v7)]
+- 진화 그림 2차 적용 (유닛 외형 단계별)
+- Firebase Analytics 연동 (플레이 통계 수집)
+- 리워드 광고 (보상형) 추가
+- 신규 시스템: weekly(주간), titles(칭호), milestones, chestGrant(상자)
+- 테스트 185/185 통과
+
+[기술 체크 — 다른 환경 안내 3대 조건 전부 충족]
+- 최신 코드: main HEAD = bf408a2 (요구 조건 달성)
+- 버전: versionCode 7 / versionName 1.3
+- Firebase: android/app/google-services.json 포함 (project_id moduseries-linedefense 병합 확인)
+  -> 광고 + Firebase 통계 둘 다 작동
+
+[광고]
+- AdMob + Firebase Analytics + Preferences 플러그인 정상 인식
+- 주의: 실광고라면 본인이 직접 클릭 금지 (AdMob 계정 정지 위험)
+
+[빌드 환경]
+- Node web 빌드(tsc + vite) -> cap sync -> AAB
+- JDK 21, Android SDK C:\dev\android-sdk, Capacitor 8
+- 키스토어: C:\dev\keystores\linedefense-upload.jks (alias linedefense)
+
+[다운로드]
+https://seungiljang.github.io/games/dl/linedefense-v7c7.aab
+
+[남은 일]
+- Play Console에 v7c7 업로드 (내부 테스트 권장)
+- google-services.json 은 레포에 안 올라감(gitignore) — 재빌드 환경마다 별도 배치 필요
