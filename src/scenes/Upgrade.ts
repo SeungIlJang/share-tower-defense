@@ -15,7 +15,7 @@ import { RANK_MAX, rankMult, rankUpCost } from '../systems/chests';
 import { EQUIP_MAX, GRADE_COLORS, GRADE_NAMES, HERO_WEAPONS, RINGS, equipUpCost } from '../systems/equipment';
 import { MILESTONE_TEXT, milestoneBonus, milestoneKind, milestonesAt, nextMilestone } from '../systems/milestones';
 import { BRANCH_CHANGE_GOLD, BRANCH_INFO, BRANCH_TIER, GRADE_INFO, MAX_TIER, UNIT_TIERS, evoCost, evolvedKey, gradeOf, levelCap, nextUnitTier, perkText, readyToEvolve, starText, unitOfKey, type Branch } from '../systems/evolution';
-import { AURA_MAX_LV, AURA_RADIUS, HERO_MAX_LV, HERO_SKILLS, HERO_TIERS, SKILL_MAX_LV, auraBonus, heroLvMult, heroSkillPower, heroTier, heroUpCost, nextHeroTier } from '../systems/hero';
+import { AURA_MAX_LV, AURA_RADIUS, HERO_FALLBACK_LOOKS, HERO_MAX_LV, HERO_SKILLS, HERO_TIERS, SKILL_MAX_LV, auraBonus, heroLvMult, heroSkillPower, heroTier, heroUpCost, nextHeroTier } from '../systems/hero';
 import { VIEW_W } from '../systems/view';
 import { UNIT_GROUPS, unitGroup, type UnitGroup } from '../systems/unitGroups';
 
@@ -246,15 +246,16 @@ export class UpgradeScene extends Phaser.Scene {
       const next = nextUnitTier(tier);
       const evo = owned && readyToEvolve(lv, tier);
       const pk = meta.perks(key); // ⭐ 진화(단계·등급·갈래)
-      const st = (base: number, l: number, m: number): number => Math.round(scaleStat(base, l) * m * milestoneBonus(l).stats); // ⭐ 진화 · 🎁 보상 포함
+      const grp = unitGroup(u);
+      const st = (base: number, l: number, m: number, hp = false): number => Math.round(scaleStat(base, l) * m * milestoneBonus(l, grp).stats * (hp ? milestoneBonus(l, grp).hp : 1)); // ⭐ 진화 · 🎁 보상 포함(근접 체력 보상)
       const have = meta.shards[key] ?? 0;
       const cost = evoCost(key, tier); // 🏷️ 등급별 진화 비용
-      const nm = nextMilestone(lv, UNIT_TIERS[tier].min);
+      const nm = nextMilestone(lv, UNIT_TIERS[tier].min, grp);
       const ms = owned && !evo ? { text: `🎁 Lv${nm.lv} ${nm.text}`, ratio: nm.ratio } : undefined;
       const desc =
         evo && next
           ? `⭐ ${next.name} 진화! ${tier + 1 === BRANCH_TIER ? '🔀 공격형·방어형 고르기' : perkText(key, tier + 1)}\n${cost?.shards ? `🃏 조각 ${have}/${cost.shards}${have < cost.shards ? ' — 보물 상자에서 모아요' : ' ✅'}` : '골드만 있으면 바로 진화!'}`
-          : `❤️ ${st(u.hp, lv, pk.hp)}  ⚔️ ${st(u.atk, lv, pk.atk)}  ▶  ❤️ ${st(u.hp, lv + 1, pk.hp)}  ⚔️ ${st(u.atk, lv + 1, pk.atk)}${next ? `   ⭐ Lv${levelCap(tier)}에 ${next.name} 진화` : '   🔥 최고 단계'}`;
+          : `❤️ ${st(u.hp, lv, pk.hp, true)}  ⚔️ ${st(u.atk, lv, pk.atk)}  ▶  ❤️ ${st(u.hp, lv + 1, pk.hp, true)}  ⚔️ ${st(u.atk, lv + 1, pk.atk)}${next ? `   ⭐ Lv${levelCap(tier)}에 ${next.name} 진화` : '   🔥 최고 단계'}`;
       this.card(
         i,
         shown.length,
@@ -296,7 +297,7 @@ export class UpgradeScene extends Phaser.Scene {
             this.render();
             if (milestonesAt(meta.level(key)) > got) {
               sfx(this, 'levelup');
-              this.toast(`🎁 ${u.name} Lv${meta.level(key)} 보상! ${MILESTONE_TEXT[milestoneKind(got)]}`);
+              this.toast(`🎁 ${u.name} Lv${meta.level(key)} 보상! ${MILESTONE_TEXT[milestoneKind(got, grp)]}`);
             }
           }
         },
@@ -658,11 +659,11 @@ export class UpgradeScene extends Phaser.Scene {
         if (after > before) this.evolveFx(HERO_TIERS[after].name); // ✨ 진화!
       }
     };
-    const row = (i: number, key: string, kind: 'hero' | 'aura' | 'skill', max: number, title: string, desc: string): void => {
+    const row = (i: number, key: string, kind: 'hero' | 'aura' | 'skill', max: number, title: string, desc: string, look?: string): void => {
       const lv = meta.heroLevel(key);
       const cost = heroUpCost(kind, lv);
       const maxed = lv >= max;
-      this.card(i, count, null, `${title}  Lv.${lv}${maxed ? ' (MAX)' : ''}`, desc, maxed ? 'MAX' : `강화 🪙${cost}`, !maxed && meta.gold >= cost, false, () => up(key, kind, max));
+      this.card(i, count, null, `${title}  Lv.${lv}${maxed ? ' (MAX)' : ''}`, desc, maxed ? 'MAX' : `강화 🪙${cost}`, !maxed && meta.gold >= cost, false, () => up(key, kind, max), '', undefined, undefined, look);
     };
     const hl = meta.heroLevel('hero');
     const nt = nextHeroTier(hl);
@@ -670,7 +671,9 @@ export class UpgradeScene extends Phaser.Scene {
       HERO_SKILLS.forEach((sk, j) => this.heroSkillCard(sk, j, count, row));
       return;
     }
-    row(0, 'hero', 'hero', HERO_MAX_LV, `👑 ${HERO_TIERS[heroTier(hl)].name}`, `❤️·⚔️ ${pct(heroLvMult(hl))} → ${pct(heroLvMult(hl + 1))}${nt ? `  ·  Lv${nt.min} 진화` : ''}`);
+    // 👑 지금 진화 단계 영웅 그림(전신, 대기 동작) — 그림이 아직 없으면 아래 단계 그림
+    const heroLook = [HERO_TIERS[heroTier(hl)].look, ...HERO_FALLBACK_LOOKS].find((l) => this.textures.exists(textureKey(l)));
+    row(0, 'hero', 'hero', HERO_MAX_LV, `👑 ${HERO_TIERS[heroTier(hl)].name}`, `❤️·⚔️ ${pct(heroLvMult(hl))} → ${pct(heroLvMult(hl + 1))}${nt ? `  ·  Lv${nt.min} 진화` : ''}`, heroLook);
     this.heroEvolution(hl);
     const al = meta.heroLevel('aura');
     row(1, 'aura', 'aura', AURA_MAX_LV, '⭕ 오라 크기', `오라 반지름 ${AURA_RADIUS + auraBonus(al)}  →  ${AURA_RADIUS + auraBonus(al + 1)}`);

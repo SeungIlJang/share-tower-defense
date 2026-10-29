@@ -11,7 +11,8 @@ import { FOOD_BASE, energyMax, energyRate, popBonus } from '../systems/baseUpgra
 import { summonCooldown } from '../systems/pacing';
 import { anyDevFlag, devFlags } from '../systems/dev';
 import { UNIT_TIERS, tierBodyScale } from '../systems/evolution';
-import { milestoneBonus, milestoneCost } from '../systems/milestones';
+import { milestoneBonus, milestoneCost, type MilestoneBonus } from '../systems/milestones';
+import { unitGroup } from '../systems/unitGroups';
 import { enemyLevel, hexColor, pickVariant, variantTable } from '../systems/enemyVariants';
 import { STAGES, WORLDS, goldMultFor } from '../systems/worlds';
 import { BOSSES, BOSS_KEYS, bossForStage } from '../systems/bosses';
@@ -692,8 +693,9 @@ export class BattleScene extends Phaser.Scene {
     }
     const m0 = applyUpgrade(base, meta.level(type)); // 영구 강화 적용
     const pk = meta.perks(type); // ⭐ 진화(단계·등급·갈래)
-    const rm = rankMult(meta.rank(type)) * milestoneBonus(meta.level(type)).stats; // 🃏 카드 랭크 · 🎁 보상
-    const m = { ...m0, hp: Math.round(m0.hp * rm * pk.hp), atk: Math.round(m0.atk * rm * pk.atk), def: m0.def + pk.def, atkSpeed: m0.atkSpeed * pk.atkSpeed }; // 🔥 각성: 공격 속도
+    const mb = this.unitBonus(type); // 🎁 진화 사이 보상(분류별)
+    const rm = rankMult(meta.rank(type)) * mb.stats; // 🃏 카드 랭크 · 🎁 보상
+    const m = { ...m0, hp: Math.round(m0.hp * rm * pk.hp * mb.hp), atk: Math.round(m0.atk * rm * pk.atk), def: m0.def + pk.def, atkSpeed: m0.atkSpeed * pk.atkSpeed, range: m0.range + mb.range }; // 🔥 각성: 공격 속도 · 🎯 사거리 보상
     this.usedUnits[type] = (this.usedUnits[type] ?? 0) + 1;
     const perfect = this.feat.perfect && Math.abs(this.beat - 0.5) <= BattleScene.PERFECT_WIN; // ⏱️ 타이밍 명중(🎓 6관문부터)
     this.tipDone('summon');
@@ -712,7 +714,7 @@ export class BattleScene extends Phaser.Scene {
     u.spawn(sx, LANE_Y, stats, type, 'ally', this.looks[type] ?? type); // 👗 착용 스킨
     if (totem) {
       u.skillMotion(); // 땅에서 솟아오르는 등장 동작
-      this.totemEnd.set(u, this.clock + TOTEM_LIFE);
+      this.totemEnd.set(u, this.clock + TOTEM_LIFE + mb.life); // ⏳ 설치 시간 보상
       this.puff(sx, 0xd8c8a0);
     }
     u.setStars(UNIT_TIERS[meta.tier(type)].stars, meta.branchOf(type)); // ⭐ 진화 단계(★★부터 머리 위 표시, ★4 금빛·★5 무지개 오라)
@@ -778,8 +780,11 @@ export class BattleScene extends Phaser.Scene {
   private unitCost(k: string): number {
     return milestoneCost(UNITS[k].cost, meta.level(k));
   }
+  private unitBonus(k: string): MilestoneBonus {
+    return milestoneBonus(meta.level(k), UNITS[k] ? unitGroup(UNITS[k]) : 'melee');
+  }
   private unitCooldown(k: string): number {
-    return summonCooldown(UNITS[k].cost) * milestoneBonus(meta.level(k)).cooldown;
+    return summonCooldown(UNITS[k].cost) * this.unitBonus(k).cooldown;
   }
 
   /** ⏱️ 유닛별 남은 대기 비율(1=방금 소환, 0=준비됨) */
@@ -1221,7 +1226,7 @@ export class BattleScene extends Phaser.Scene {
   /** ✨ 유닛 스킬 발동 — 효과 적용 + 스킬 동작 + 이펙트 그림 + 이름 표시 */
   private castSkill(u: Unit | Enemy, target: Unit | Enemy, lv: number, atkMul: number): void {
     const sk = UNIT_SKILLS[u.type];
-    const power = u.stats.atk * atkMul * skillMult(lv) * synergyMult(this.synergies, u.type, 'atk') * (u.side === 'ally' ? meta.perks(u.type).skillPower * milestoneBonus(meta.level(u.type)).skill : 1); // ⭐ ★3부터 스킬 위력 · 🎁 보상
+    const power = u.stats.atk * atkMul * skillMult(lv) * synergyMult(this.synergies, u.type, 'atk') * (u.side === 'ally' ? meta.perks(u.type).skillPower * this.unitBonus(u.type).skill : 1); // ⭐ ★3부터 스킬 위력 · 🎁 보상
     this.track('skills');
     const hit = (e: Unit | Enemy, mul = 1): void => {
       if (e.active) e.takeDamage(computeDamage(power * mul, e.stats.def));

@@ -9,13 +9,16 @@ describe('🎁 진화 사이 작은 보상', () => {
     expect(milestonesAt(100)).toBe(9);
     expect(milestoneKind(0)).toBe('cost');
     expect(milestoneKind(3)).toBe('stats');
+    expect(milestoneKind(1, 'melee')).toBe('hp');
+    expect(milestoneKind(1, 'ranged')).toBe('range');
+    expect(milestoneKind(1, 'totem')).toBe('life');
     expect(milestoneKind(12)).toBe('stats');
   });
   it('보상 합계', () => {
-    expect(milestoneBonus(10)).toEqual({ costDown: 0, cooldown: 1, skill: 1, stats: 1 });
-    const b = milestoneBonus(45); // 15 비용 · 25 대기 · 35 스킬 · 45 체공
+    expect(milestoneBonus(10)).toEqual({ costDown: 0, cooldown: 1, skill: 1, stats: 1, hp: 1, range: 0, life: 0 });
+    const b = milestoneBonus(45, 'ranged'); // 원거리: 15 비용 · 25 사거리 · 35 스킬 · 45 체공
     expect(b.costDown).toBe(3);
-    expect(b.cooldown).toBeCloseTo(0.95);
+    expect(b.range).toBe(10);
     expect(b.skill).toBeCloseTo(1.05);
     expect(b.stats).toBeCloseTo(1.03);
     expect(milestoneBonus(95).costDown).toBe(9);
@@ -30,5 +33,11 @@ describe('🎁 진화 사이 작은 보상', () => {
     expect(n.left).toBe(3);
     expect(n.ratio).toBeCloseTo(0.4);
     expect(nextMilestone(15, 10).lv).toBe(25);
+  });
+  it('분류별 보상 — 근접 체력 · 설치물 설치 시간', () => {
+    expect(milestoneBonus(25, 'melee').hp).toBeCloseTo(1.06);
+    expect(milestoneBonus(25, 'totem').life).toBe(5);
+    expect(milestoneBonus(65, 'totem').life).toBe(10);
+    expect(milestoneBonus(25, 'ranged').hp).toBe(1);
   });
 });
