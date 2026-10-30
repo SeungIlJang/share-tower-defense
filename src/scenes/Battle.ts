@@ -238,7 +238,8 @@ export class BattleScene extends Phaser.Scene {
   private weekly: { boss: string; left: number; unit: number; foe: Enemy | null; text: Phaser.GameObjects.Text | null } | null = null; // 👑 주간 보스
   private finishing = false;
   private cardHintShown = false;
-  private perfectHint = false; // ⏱️ PERFECT 안내를 크게 보여 줄 판 // 🔒 레벨업 카드 잠김 안내(한 판에 한 번) // 🏰 적 성이 무너지는 중(결과 화면 전)
+  private perfectHint = false;
+  private lastVolleyTap = -1e9; // ⏱️ PERFECT 안내를 크게 보여 줄 판 // 🔒 레벨업 카드 잠김 안내(한 판에 한 번) // 🏰 적 성이 무너지는 중(결과 화면 전)
   private heroLook = HERO_TYPE; // 컷인 얼굴
   private speedBtn!: Phaser.GameObjects.Text;
   // 🔥 특수 무기 — 게이지(해금된 것만) + 효과 지속 시각(전투 시계 기준)
@@ -324,6 +325,7 @@ export class BattleScene extends Phaser.Scene {
     this.over = false;
     this.finishing = false;
     this.cardHintShown = false;
+    this.lastVolleyTap = -1e9;
     resetFx();
     this.totemEnd = new Map();
     this.burns = [];
@@ -396,8 +398,14 @@ export class BattleScene extends Phaser.Scene {
     this.volleyIcon = this.add.text(0, 0, '🏹', { fontSize: '32px', padding: { top: 12, bottom: 4 } }).setOrigin(0.5).setDepth(97);
     this.playerBase.onTap(() => this.castleVolley());
     // 게이지 동그라미도 직접 누를 수 있게(손가락 크기 판정)
-    this.volleyHit = this.add.circle(0, 0, VOLLEY_HIT, 0xffffff, 0.001).setDepth(97).setInteractive({ useHandCursor: true }); // 손가락 크기(휴대폰 약 54dp)
-    this.volleyHit.on('pointerdown', () => this.castleVolley());
+    // 판정은 아래 '화면 터치 위치 ↔ 버튼 거리'로 직접(휴대폰 터치에서 물체 판정이 빗나가던 문제) — 이 원은 마우스 손가락 모양용
+    this.volleyHit = this.add.circle(0, 0, VOLLEY_HIT, 0xffffff, 0.001).setDepth(97).setInteractive({ useHandCursor: true });
+    this.input.on('pointerdown', (p: Phaser.Input.Pointer) => {
+      if (!this.feat.volley || this.playerBase.destroyed || !this.volleyHit.visible) return;
+      const w = this.cameras.main.getWorldPoint(p.x, p.y);
+      const v = this.volleyPos();
+      if (Math.hypot(w.x - v.x, w.y - v.y) <= VOLLEY_HIT) this.castleVolley();
+    });
     this.spawnHero();
     this.setupRule(tough);
     this.setupWeekly();
@@ -1913,6 +1921,17 @@ ${info.desc}`, { fontFamily: 'sans-serif', fontSize: '24px', fontStyle: 'bold', 
     this.volleyIcon.setVisible(true).setPosition(x, y).setText(icon).setAlpha(ready ? 1 : 0.55).setScale(ready ? 1 + 0.08 * Math.sin(this.time.now / 120) : 1);
   }
 
+  /** 🎯 못 쓸 때 이유를 버튼 바로 옆에(전엔 화면 오른쪽 위에 떠서 눌린 줄 몰랐음) */
+  private volleyDeny(msg: string): void {
+    const v = this.volleyPos();
+    const t = this.add
+      .text(v.x + VOLLEY_R + 14, v.y, msg, { fontFamily: 'sans-serif', fontSize: '20px', fontStyle: 'bold', color: '#ffd0d0', stroke: '#000000', strokeThickness: 4 })
+      .setOrigin(0, 0.5)
+      .setDepth(97);
+    this.tweens.add({ targets: t, x: t.x + 16, alpha: 0, delay: 500, duration: 600, onComplete: () => t.destroy() });
+    this.tweens.add({ targets: this.volleyIcon, angle: { from: -12, to: 12 }, duration: 60, yoyo: true, repeat: 2, onComplete: () => this.volleyIcon.setAngle(0) });
+  }
+
   /** 🎯 성 특수 공격 버튼 자리 — 성 꼭대기 위(상단 바에 가리지 않게 아래로 제한) */
   private volleyPos(): { x: number; y: number } {
     return { x: this.playerBase.cx, y: Math.max(52 + VOLLEY_R, this.playerBase.top - 46) };
@@ -1921,19 +1940,22 @@ ${info.desc}`, { fontFamily: 'sans-serif', fontSize: '24px', fontStyle: 'bold', 
   /** 🎯 성 특수 공격 — 단계별(화살비·화살 폭풍·일제 포격·번개 폭풍·성광 기둥) */
   private castleVolley(): void {
     if (this.over || this.paused || this.picking || this.reviving || this.playerBase.destroyed || !this.feat.volley) return;
+    // 성 그림·버튼을 함께 눌러 두 번 들어와도 한 번만
+    if (this.time.now - this.lastVolleyTap < 250) return;
+    this.lastVolleyTap = this.time.now;
     if (this.volleyT > 0) {
-      this.hud.heroDeny(`🏰 ${Math.ceil(this.volleyT)}초 후 사용 가능`);
+      this.volleyDeny(`⏳ ${Math.ceil(this.volleyT)}초 후`);
       return;
     }
     const lv = meta.castleLevel('castle');
     const tier = allyCastleTier(lv);
     const gun = allyCastleGun(lv, meta.castleLevel('castleRate'));
     const targets = this.enemies
-      .filter((e) => e.active && e.x - this.playerBase.x <= gun.range + 120)
+      .filter((e) => e.active && (e.x - this.playerBase.x <= gun.range + 120 || e.x <= this.cameras.main.scrollX + VIEW_W - 40)) // 사거리 안 + 지금 화면에 보이는 적
       .sort((a, b) => a.x - b.x)
       .slice(0, VOLLEY_MAX);
     if (!targets.length) {
-      this.hud.heroDeny('🏰 사거리 안에 적이 없어요');
+      this.volleyDeny('🎯 사거리 안에 적이 없어요');
       return;
     }
     this.volleyT = VOLLEY_CD;
