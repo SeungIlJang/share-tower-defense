@@ -12,6 +12,7 @@ import { registerSpriteAnims } from './skinTextures';
 import { fxReady, loadFx, registerFx } from './fx';
 import { WORLDS } from './worlds';
 import { BOSSES } from './bosses';
+import { castleLook } from './castle';
 
 const ENEMIES = enemiesData as Record<string, { look?: string; minStage?: number; variantOf?: string }>;
 
@@ -23,9 +24,19 @@ export function isEnemyType(t: string): boolean {
   return t in ENEMIES;
 }
 
-/** 나중에 받아도 되는 그림(적·보스 — 행진하는 적 제외) */
+/** 🏰 성 진화 단계 그림(base_ally_t2 … base_enemy_t5) — 기본 성(메인 화면)은 제외 */
+export function castleTierType(t: string): boolean {
+  return /^base_(ally|enemy)_t\d+$/.test(t);
+}
+
+/** 나중에 받아도 되는 그림(적·보스 — 행진하는 적 제외 · 성 진화 단계) */
 export function deferredType(t: string): boolean {
-  return isEnemyType(t) && !PARADE_ENEMY.includes(t);
+  return (isEnemyType(t) && !PARADE_ENEMY.includes(t)) || castleTierType(t);
+}
+
+/** 성 그림 이름 — 우리 성 지금 단계(+다음 단계: 전투 중 상점 강화) · 적 성 단계들 */
+export function castleTypes(allyTier: number, enemyTiers: number[]): string[] {
+  return [castleLook('ally', allyTier), castleLook('ally', allyTier + 1), ...enemyTiers.map((t) => castleLook('enemy', t))];
 }
 
 /** 적 그림 이름 + 그 적이 빌려 쓰는 그림 */

@@ -60,7 +60,7 @@ export class UpgradeScene extends Phaser.Scene {
 
   preload(): void {
     const keys = unitPreloadKeys(Object.keys(UNITS), (k) => !!spriteOf(k), (u) => meta.tier(u), (u) => meta.equippedSkin(u));
-    preloadNeeded(this, [...keys]);
+    preloadNeeded(this, [...keys, ...ALLY_CASTLE_TIERS.map((_t, i) => castleLook('ally', i))]); // 🏰 기지 탭 성 진화 줄
   }
 
   create(): void {

@@ -63,7 +63,7 @@ import { endlessStage, endlessWaveAt, endlessMult, endlessReward } from '../syst
 import { grantNewChest } from '../systems/chestGrant';
 import { WEEKLY_HP, WEEKLY_SEC, WEEKLY_STEPS, newSteps, weekIndex, weeklyBoss, weeklyStage, weeklyStageId, weeklyStepOf } from '../systems/weekly';
 import { track } from '../systems/analytics';
-import { allEnemyTypes, preloadNeeded, stageEnemyTypes } from '../systems/assetLoad';
+import { allEnemyTypes, castleTypes, preloadNeeded, stageEnemyTypes } from '../systems/assetLoad';
 import { unitPreloadKeys } from '../systems/evolution';
 
 /** 배경 색(하늘 · 레인 · 레인 선) — 월드·모드별 */
@@ -318,7 +318,9 @@ export class BattleScene extends Phaser.Scene {
     const enemies = this.endless || this.rule ? allEnemyTypes() : stageEnemyTypes(this.stage, this.weekly?.boss);
     const owned = Object.keys(UNITS).filter((k) => meta.ownsUnit(k));
     const units = [...unitPreloadKeys(owned, (k) => !!spriteOf(k), (u) => meta.tier(u), (u) => meta.equippedSkin(u))];
-    preloadNeeded(this, [...enemies, ...units], { fx: true, battleBgm: true });
+    // 🏰 성: 우리 성 지금·다음 단계, 적 성은 이 관문 단계(무한 모드는 웨이브마다 바뀌어 전부)
+    const castles = castleTypes(allyCastleTier(meta.castleLevel('castle')), this.endless ? [0, 1, 2, 3, 4] : [enemyCastleTier(false, this.stage.id, 0)]);
+    preloadNeeded(this, [...enemies, ...units, ...castles], { fx: true, battleBgm: true });
   }
 
   create(): void {

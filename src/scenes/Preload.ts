@@ -8,6 +8,7 @@ import { unitOfKey, unitPreloadKeys } from '../systems/evolution';
 import { PARADE_ALLY, deferredType, loadingBar, stageEnemyTypes } from '../systems/assetLoad';
 import { STAGES } from '../systems/worlds';
 import unitsData from '../data/units.json';
+import { allyCastleTier, castleLook } from '../systems/castle';
 
 /** 기다리는 동안 보여 줄 팁 */
 const TIPS = [
@@ -65,7 +66,9 @@ export class PreloadScene extends Phaser.Scene {
     const unitNames = Object.keys(unitsData);
     const allUnitKeys = unitPreloadKeys(unitNames, (k) => !!manifest[k], (u) => meta.tier(u), (u) => meta.equippedSkin(u));
     const shownUnits = new Set([...unitNames.filter((u) => meta.ownsUnit(u)), ...PARADE_ALLY]);
+    const allyCastle = castleLook('ally', allyCastleTier(meta.castleLevel('castle'))); // 🏰 우리 성은 지금 단계만
     const needed = types.filter((t) => {
+      if (t === allyCastle) return true;
       if (deferredType(t)) return false;
       if (unitNames.includes(unitOfKey(t))) return allUnitKeys.has(t) && shownUnits.has(unitOfKey(t));
       const [unit, skin] = t.split('@');
