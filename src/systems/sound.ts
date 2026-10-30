@@ -37,9 +37,9 @@ const MUTE_KEY = 'ld_mute';
 
 /** Preload에서 호출 */
 export function loadAudio(scene: Phaser.Scene): void {
-  for (const k of SFX) scene.load.audio(k, `audio/${k}.wav`);
+  for (const k of SFX) scene.load.audio(k, [`audio/${k}.ogg`, `audio/${k}.wav`]); // 압축본(OGG) 먼저 — 안 되면 WAV
   scene.load.audio('bgm_menu', 'audio/bgm_menu.ogg');
-  scene.load.audio('bgm_battle', 'audio/bgm_battle.ogg');
+  // bgm_battle은 뒤에서(BgLoad) 또는 첫 전투 preload에서 받음(첫 실행 다운로드 줄이기)
 }
 
 /** 저장된 음소거 설정 적용(Boot) */

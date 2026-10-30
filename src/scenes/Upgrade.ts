@@ -18,6 +18,8 @@ import { BRANCH_CHANGE_GOLD, BRANCH_INFO, BRANCH_TIER, GRADE_INFO, MAX_TIER, UNI
 import { AURA_MAX_LV, AURA_RADIUS, HERO_FALLBACK_LOOKS, HERO_MAX_LV, HERO_SKILLS, HERO_TIERS, SKILL_MAX_LV, auraBonus, heroLvMult, heroSkillPower, heroTier, heroUpCost, nextHeroTier } from '../systems/hero';
 import { VIEW_W } from '../systems/view';
 import { UNIT_GROUPS, unitGroup, type UnitGroup } from '../systems/unitGroups';
+import { preloadNeeded } from '../systems/assetLoad';
+import { unitPreloadKeys } from '../systems/evolution';
 
 const UNITS = unitsData as Record<string, UnitStats>;
 
@@ -46,6 +48,11 @@ export class UpgradeScene extends Phaser.Scene {
 
   init(data?: { fromBattle?: boolean }): void {
     this.fromBattle = !!data?.fromBattle;
+  }
+
+  preload(): void {
+    const keys = unitPreloadKeys(Object.keys(UNITS), (k) => !!spriteOf(k), (u) => meta.tier(u), (u) => meta.equippedSkin(u));
+    preloadNeeded(this, [...keys]);
   }
 
   create(): void {

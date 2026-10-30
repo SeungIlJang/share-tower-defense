@@ -26,13 +26,21 @@ const tex = (k: string): string => `fx_${k}`;
 const snd = (k: string): string => `fxs_${k}`;
 const BASE = 'effects/';
 
-/** Preload에서 호출 */
+/** 소리는 압축본(OGG) 먼저, 못 쓰는 기기는 WAV */
+const audioUrls = (path: string): string[] => [BASE + path.replace(/\.wav$/, '.ogg'), BASE + path];
+
+/** 전투 효과 받기(BgLoad·전투 preload) — 이미 있는 것은 건너뜀 */
 export function loadFx(scene: Phaser.Scene): void {
   for (const [k, d] of Object.entries(FX)) {
-    scene.load.spritesheet(tex(k), BASE + d.texture, { frameWidth: d.frameWidth, frameHeight: d.frameHeight });
-    scene.load.audio(snd(k), BASE + d.audio);
+    if (!scene.textures.exists(tex(k))) scene.load.spritesheet(tex(k), BASE + d.texture, { frameWidth: d.frameWidth, frameHeight: d.frameHeight });
+    if (!scene.cache.audio.exists(snd(k))) scene.load.audio(snd(k), audioUrls(d.audio));
   }
-  scene.load.audio(snd('warning'), BASE + data.warning.audio);
+  if (!scene.cache.audio.exists(snd('warning'))) scene.load.audio(snd('warning'), audioUrls(data.warning.audio));
+}
+
+/** 전투 효과를 다 받았나 */
+export function fxReady(scene: Phaser.Scene): boolean {
+  return Object.keys(FX).every((k) => scene.textures.exists(tex(k)));
 }
 
 /** 로드 후 1번 — 애니메이션 등록 + 도트가 뭉개지지 않게 최근접 보간 */

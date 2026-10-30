@@ -12,6 +12,7 @@ import { RULE_INFO, stageRule, targetTime } from '../systems/stageRules';
 import { formatTime } from '../systems/pacing';
 import { cuteButton, cuteTitle, drawSky, type SkyTheme } from '../ui/cute';
 import { sfx } from '../systems/sound';
+import { preloadNeeded, stageEnemyTypes } from '../systems/assetLoad';
 
 const UNITS = unitsData as Record<string, UnitStats>;
 const ENEMIES = enemiesData as Record<string, EnemyStats>;
@@ -29,6 +30,10 @@ export class PrepareScene extends Phaser.Scene {
 
   init(data: { stageId: number }): void {
     this.stageId = data.stageId;
+  }
+
+  preload(): void {
+    preloadNeeded(this, stageEnemyTypes(STAGES.find((s) => s.id === this.stageId) ?? STAGES[0]));
   }
 
   create(): void {

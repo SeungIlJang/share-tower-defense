@@ -63,6 +63,8 @@ import { endlessStage, endlessWaveAt, endlessMult, endlessReward } from '../syst
 import { grantNewChest } from '../systems/chestGrant';
 import { WEEKLY_HP, WEEKLY_SEC, WEEKLY_STEPS, newSteps, weekIndex, weeklyBoss, weeklyStage, weeklyStageId, weeklyStepOf } from '../systems/weekly';
 import { track } from '../systems/analytics';
+import { allEnemyTypes, preloadNeeded, stageEnemyTypes } from '../systems/assetLoad';
+import { unitPreloadKeys } from '../systems/evolution';
 
 /** 배경 색(하늘 · 레인 · 레인 선) — 월드·모드별 */
 const THEMES = {
@@ -304,6 +306,14 @@ export class BattleScene extends Phaser.Scene {
       const st = this.add.circle(Phaser.Math.Between(10, VIEW_W - 10), Phaser.Math.Between(56, LANE_Y - 170), Phaser.Math.FloatBetween(1, 2.4), 0xffffff, 0.8).setDepth(-8).setScrollFactor(0);
       this.tweens.add({ targets: st, alpha: 0.15, duration: Phaser.Math.Between(900, 2200), yoyo: true, repeat: -1, delay: Phaser.Math.Between(0, 2000) });
     }
+  }
+
+  /** 📦 아직 안 받은 그림·효과·배경음이 있으면 전투 전에 받음(진행 막대) */
+  preload(): void {
+    const enemies = this.endless || this.rule ? allEnemyTypes() : stageEnemyTypes(this.stage, this.weekly?.boss);
+    const owned = Object.keys(UNITS).filter((k) => meta.ownsUnit(k));
+    const units = [...unitPreloadKeys(owned, (k) => !!spriteOf(k), (u) => meta.tier(u), (u) => meta.equippedSkin(u))];
+    preloadNeeded(this, [...enemies, ...units], { fx: true, battleBgm: true });
   }
 
   create(): void {

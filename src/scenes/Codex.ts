@@ -10,6 +10,7 @@ import { sfx } from '../systems/sound';
 import { cuteButton, cuteTitle, drawSky } from '../ui/cute';
 import { enemyPortrait } from '../ui/enemyArt';
 import { VIEW_W } from '../systems/view';
+import { allEnemyTypes, preloadNeeded } from '../systems/assetLoad';
 
 const ENEMIES = enemiesData as Record<string, EnemyStats>;
 const UNITS = unitsData as Record<string, UnitStats>;
@@ -29,6 +30,10 @@ export class CodexScene extends Phaser.Scene {
 
   constructor() {
     super('Codex');
+  }
+
+  preload(): void {
+    preloadNeeded(this, allEnemyTypes());
   }
 
   create(): void {

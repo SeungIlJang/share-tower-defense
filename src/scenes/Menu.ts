@@ -13,10 +13,9 @@ import { grantNewChest } from '../systems/chestGrant';
 import { goldMultFor } from '../systems/worlds';
 import { chestPopup } from '../ui/Chest';
 import unitsData from '../data/units.json';
+import { PARADE_ALLY, PARADE_ENEMY } from '../systems/assetLoad';
 
 /** 메인 화면 행진에 나오는 아군(오른쪽으로) / 적(왼쪽으로) */
-const PARADE_ALLY = ['knight', 'soldier', 'archer', 'cleric', 'mage', 'spear'];
-const PARADE_ENEMY = ['slime', 'goblin', 'mushroom', 'ghost'];
 
 export class MenuScene extends Phaser.Scene {
   constructor() {

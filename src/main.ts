@@ -11,6 +11,7 @@ import { PrepareScene } from './scenes/Prepare';
 import { CodexScene } from './scenes/Codex';
 import { VIEW_OFF, VIEW_W } from './systems/view';
 import { trackScreen } from './systems/analytics';
+import { BgLoadScene } from './systems/assetLoad';
 
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
@@ -37,10 +38,25 @@ const config: Phaser.Types.Core.GameConfig = {
     ResultScene,
     DevScene,
     CodexScene,
+    BgLoadScene, // 📦 뒤에서 나머지 그림 받기(보이지 않음)
   ],
 };
 
 const game = new Phaser.Game(config);
+// 📦 오프라인 캐시(서비스 워커) — 한 번 받은 파일은 기기에 저장: 다시 켤 때 바로, 인터넷 없이도 실행(새 버전은 다음 실행 때)
+if (import.meta.env.PROD && 'serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker
+      .register('sw.js')
+      .then(() => navigator.serviceWorker.ready)
+      .then((reg) => {
+        // 지금 페이지·게임 코드도 바로 저장(다음 실행부터 인터넷 없이도 켜짐)
+        const urls = [location.href.split('#')[0], ...Array.from(document.querySelectorAll<HTMLScriptElement | HTMLLinkElement>('script[src], link[rel="stylesheet"], link[rel="modulepreload"]')).map((el) => (el as HTMLScriptElement).src || (el as HTMLLinkElement).href)];
+        reg.active?.postMessage({ type: 'precache', urls });
+      })
+      .catch(() => undefined);
+  });
+}
 // 📱 전투 외 화면은 1280 기준으로 만들어 가운데 둠(양옆은 배경이 넓게 채움)
 game.events.once(Phaser.Core.Events.READY, () => {
   for (const s of game.scene.scenes) {

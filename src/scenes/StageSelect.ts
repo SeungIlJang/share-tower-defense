@@ -13,6 +13,7 @@ import { enemyPortrait } from '../ui/enemyArt';
 import { worldBoss } from '../systems/bosses';
 import { WEEKLY_STEPS, WEEKLY_UNLOCK, weekIndex, weeklyBoss, weeklyStepOf } from '../systems/weekly';
 import enemiesData from '../data/enemies.json';
+import { preloadNeeded } from '../systems/assetLoad';
 
 const stages = STAGES;
 // 🗺️ 월드 10개 · 관문 100개 — src/systems/worlds.ts
@@ -29,6 +30,11 @@ export class StageSelectScene extends Phaser.Scene {
     // 기본: 지금 진행 중인 월드(마지막으로 깬 스테이지 다음)
     const next = stages.find((s) => s.id === meta.clearedMax + 1) ?? stages[stages.length - 1];
     this.world = data.world ?? next.world ?? 1;
+  }
+
+  preload(): void {
+    const bosses = stages.filter((st) => (st.world ?? 1) === this.world).map((st) => bossOf(st.id)).filter((b): b is string => !!b);
+    preloadNeeded(this, [...new Set(bosses)]);
   }
 
   create(): void {
