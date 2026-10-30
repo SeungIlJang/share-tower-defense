@@ -78,6 +78,7 @@ const EVENT_FIRST = 35; // 특수 웨이브 첫 발생(초)
 const EVENT_EVERY = 40; // 이후 간격(초)
 const STUN_TINT = 0x9a9a9a;
 
+const PERFECT_HINT_RUNS = 3; // ⏱️ PERFECT 안내 글씨를 보여 줄 판 수
 const VOLLEY_R = 30; // 🎯 성 특수 공격 버튼 반지름(보이는 동그라미)
 const VOLLEY_HIT = 50; // 눌리는 영역 반지름
 const CRIT_MULT = 1.5; // 치명타 배수(확률은 skills.critChance — 기본 10%)
@@ -236,7 +237,8 @@ export class BattleScene extends Phaser.Scene {
   private slowmo = 1;
   private weekly: { boss: string; left: number; unit: number; foe: Enemy | null; text: Phaser.GameObjects.Text | null } | null = null; // 👑 주간 보스
   private finishing = false;
-  private cardHintShown = false; // 🔒 레벨업 카드 잠김 안내(한 판에 한 번) // 🏰 적 성이 무너지는 중(결과 화면 전)
+  private cardHintShown = false;
+  private perfectHint = false; // ⏱️ PERFECT 안내를 크게 보여 줄 판 // 🔒 레벨업 카드 잠김 안내(한 판에 한 번) // 🏰 적 성이 무너지는 중(결과 화면 전)
   private heroLook = HERO_TYPE; // 컷인 얼굴
   private speedBtn!: Phaser.GameObjects.Text;
   // 🔥 특수 무기 — 게이지(해금된 것만) + 효과 지속 시각(전투 시계 기준)
@@ -356,6 +358,10 @@ export class BattleScene extends Phaser.Scene {
     this.metNew = new Set();
     this.reached = reachedStage(this.endless ? 99 : this.stage.id, meta.clearedMax);
     for (const k of Object.keys(this.feat) as Feature[]) this.feat[k] = featureOn(k, this.reached, this.endless || !!this.rule || !!this.weekly);
+    // ⏱️ PERFECT 안내 글씨 — 열린 뒤 처음 3판만 크게(그 뒤엔 숨김)
+    const seen = meta.tips.filter((t) => t.startsWith('perfectLabel')).length;
+    this.perfectHint = this.feat.perfect && seen < PERFECT_HINT_RUNS;
+    if (this.perfectHint) meta.markTip(`perfectLabel${seen + 1}`);
 
     // 배경 + 레인
     const [sky, lane, line] = this.endless ? THEMES.endless : WORLDS[(this.stage.world ?? 1) - 1].battle; // 🗺️ 월드별 배경색
@@ -549,7 +555,7 @@ export class BattleScene extends Phaser.Scene {
       this.looks,
       (i) => this.castHeroSkill(i),
       HERO_SKILLS.map((s) => meta.ownsHeroSkill(s.key)),
-      this.feat
+      { ...this.feat, perfectHint: this.perfectHint }
     );
   }
 

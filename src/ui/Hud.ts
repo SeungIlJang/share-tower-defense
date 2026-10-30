@@ -44,6 +44,7 @@ export interface HudFeatures {
   heroSkill: boolean;
   weapon: boolean;
   perfect: boolean;
+  perfectHint?: boolean; // ⏱️ 리듬 바 위 안내 글씨를 크게(열린 뒤 처음 3판)
 }
 const ALL_ON: HudFeatures = { heroSkill: true, weapon: true, perfect: true };
 
@@ -211,7 +212,14 @@ export class Hud {
     // ⏱️ 리듬 소환 바 (초록 중앙 = PERFECT) — 하단 HUD, 인구/에너지 바 사이
     const beatY = by + 4;
     if (features.perfect) {
-      scene.add.text(this.beatX + this.beatW / 2, by - 15, '⏱️ 초록에 맞춰 소환 = PERFECT 강화!', { fontFamily: 'sans-serif', fontSize: '12px', fontStyle: 'bold', color: '#ffe14d' }).setOrigin(0.5).setDepth(d + 1);
+      if (features.perfectHint) {
+        // 처음 3판 — 크게, 통통 튀며(그 뒤엔 안 보임: 막대만으로 충분)
+        const hint = scene.add
+          .text(this.beatX + this.beatW / 2, by - 22, '⏱️ 초록에 맞춰 소환하면 PERFECT 강화!', { fontFamily: 'sans-serif', fontSize: '19px', fontStyle: 'bold', color: '#ffe14d', stroke: '#000000', strokeThickness: 5, backgroundColor: '#0d1424cc', padding: { x: 10, y: 3 } })
+          .setOrigin(0.5)
+          .setDepth(d + 3);
+        scene.tweens.add({ targets: hint, scale: 1.08, duration: 500, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
+      }
       scene.add.rectangle(this.beatX + this.beatW / 2, beatY, this.beatW + 4, 16, 0x000000, 0.5).setDepth(d);
       scene.add.rectangle(this.beatX + this.beatW / 2, beatY, this.beatW, 12, 0x2a3348).setDepth(d + 1);
       scene.add.rectangle(this.beatX + this.beatW / 2, beatY, this.beatW * 0.16, 12, 0x3fd06a).setDepth(d + 1); // 퍼펙트 존
