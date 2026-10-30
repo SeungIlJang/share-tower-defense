@@ -79,7 +79,9 @@ export function chestCard(s: Phaser.Scene, x: number, y: number, loot: ChestLoot
           s.tweens.add({ targets: ray, scaleY: 1.6, alpha: 0, angle: ray.angle + 30, duration: 700, onComplete: () => ray.destroy() });
         }
         sfx(s, loot.tier >= 2 ? 'win' : 'levelup');
-        s.tweens.add({ targets: box, y: y - 82, scale: 0.7, alpha: 0.35, duration: 400, delay: 250 });
+        s.tweens.add({ targets: box, y: y - 84, scale: 0.5, alpha: 0.9, duration: 400, delay: 250 }); // 열린 상자는 제목 아래로 작게
+        s.tweens.killTweensOf(glow);
+        s.tweens.add({ targets: glow, alpha: 0, duration: 300 }); // 뒤 빛은 끔(글씨가 묻히지 않게)
         reveal();
         lift();
       },
@@ -101,12 +103,12 @@ export function chestCard(s: Phaser.Scene, x: number, y: number, loot: ChestLoot
       rows.push({ icon: k, text: `🃏 ${unitName(k)} +${n}`, sub: need === null ? 'MAX' : `${meta.shards[k] ?? 0}/${need}${(meta.shards[k] ?? 0) >= need ? ' 랭크업 가능!' : ''}` });
     }
     rows.forEach((r, i) => {
-      const ry = y - 5 + i * (rows.length > 4 ? 36 : 44);
+      const ry = y - 32 + i * (rows.length > 4 ? 36 : 46); // 보상 줄은 위에서부터
       const parts: Phaser.GameObjects.GameObject[] = [];
       if (r.sheet && s.textures.exists(r.sheet[0])) parts.push(s.add.image(-96, 0, r.sheet[0], r.sheet[1]).setDisplaySize(40, 40));
       else if (r.icon && s.textures.exists(iconKey(r.icon))) parts.push(s.add.image(-96, 0, iconKey(r.icon)).setDisplaySize(40, 40));
-      parts.push(s.add.text(r.icon ? -70 : 0, r.sub ? -9 : 0, r.text, { fontFamily: 'sans-serif', fontSize: r.icon ? '18px' : '26px', fontStyle: 'bold', color: r.icon ? '#3a3a5a' : '#e8a000' }).setOrigin(r.icon ? 0 : 0.5, 0.5));
-      if (r.sub) parts.push(s.add.text(-70, 12, r.sub, { fontFamily: 'sans-serif', fontSize: '13px', fontStyle: 'bold', color: r.sub.includes('가능') || r.sub.includes('!') ? '#2fa25a' : '#7a86a8' }).setOrigin(0, 0.5));
+      parts.push(s.add.text(r.icon ? -70 : 0, r.sub ? -10 : 0, r.text, { fontFamily: 'sans-serif', fontSize: r.icon ? '19px' : '30px', fontStyle: 'bold', color: r.icon ? '#2a2a4a' : '#e8a000', stroke: r.icon ? '#ffffff' : '#ffffff', strokeThickness: r.icon ? 0 : 4 }).setOrigin(r.icon ? 0 : 0.5, 0.5));
+      if (r.sub) parts.push(s.add.text(-70, 12, r.sub, { fontFamily: 'sans-serif', fontSize: '14px', fontStyle: 'bold', color: r.sub.includes('가능') || r.sub.includes('!') ? '#1f8a48' : '#5a6688' }).setOrigin(0, 0.5));
       const row = s.add.container(x, ry, parts).setScale(0).setDepth(5);
       s.tweens.add({ targets: row, scale: 1, delay: 350 + i * 220, duration: 260, ease: 'Back.easeOut', onStart: () => sfx(s, 'coin', 1 + i * 0.1) });
     });

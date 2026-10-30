@@ -219,11 +219,10 @@ export class Hud {
     } else {
       // 🔒 아직 안 열림 — 빈칸 대신 다음에 열릴 기능 미리 알림
       const at = FEATURES.find((f) => f.key === 'perfect')?.stage ?? 6;
-      scene.add.rectangle(this.beatX + this.beatW / 2, beatY - 4, this.beatW + 4, 26, 0x000000, 0.35).setStrokeStyle(1, 0x3a4560, 0.8).setDepth(d);
+      scene.add.rectangle(this.beatX + this.beatW / 2, beatY - 4, this.beatW + 4, 28, 0x1a2338, 0.95).setStrokeStyle(2, 0xffd34d, 0.6).setDepth(d);
       scene.add
-        .text(this.beatX + this.beatW / 2, beatY - 4, `🔒 ${at - 1}관문을 깨면 ⏱️ PERFECT 소환이 열려요`, { fontFamily: 'sans-serif', fontSize: '14px', fontStyle: 'bold', color: '#8a96b8' })
+        .text(this.beatX + this.beatW / 2, beatY - 4, `🔒 ${at - 1}관문을 깨면 ⏱️ PERFECT 소환이 열려요`, { fontFamily: 'sans-serif', fontSize: '15px', fontStyle: 'bold', color: '#ffe680', stroke: '#000000', strokeThickness: 3 })
         .setOrigin(0.5)
-        .setAlpha(0.85)
         .setDepth(d + 1);
     }
 

@@ -20,6 +20,7 @@ import { VIEW_W } from '../systems/view';
 import { UNIT_GROUPS, unitGroup, type UnitGroup } from '../systems/unitGroups';
 import { preloadNeeded } from '../systems/assetLoad';
 import { unitPreloadKeys } from '../systems/evolution';
+import { nextUnitToBuy } from '../systems/pacing';
 
 const UNITS = unitsData as Record<string, UnitStats>;
 
@@ -46,8 +47,15 @@ export class UpgradeScene extends Phaser.Scene {
 
   private fromBattle = false; // ⚔️ 전투 중 상점(전투는 일시정지 상태)
 
-  init(data?: { fromBattle?: boolean }): void {
+  private focus: string | null = null; // 🔜 결과 화면 '다음 동료'에서 왔으면 그 유닛 칸 반짝
+
+  init(data?: { fromBattle?: boolean; focus?: string }): void {
     this.fromBattle = !!data?.fromBattle;
+    this.focus = data?.focus ?? null;
+    if (this.focus && UNITS[this.focus]) {
+      this.tab = 'units';
+      UpgradeScene.group = unitGroup(UNITS[this.focus]);
+    }
   }
 
   preload(): void {
@@ -244,6 +252,8 @@ export class UpgradeScene extends Phaser.Scene {
       const u = UNITS[key];
       const owned = meta.ownsUnit(key);
       const price = unitPrice(keys.indexOf(key)); // 값은 전체 순서 기준 그대로
+      const nextBuy = nextUnitToBuy(keys, (k) => meta.ownsUnit(k));
+      const locked = !owned && nextBuy?.key !== key; // 🔒 다음 동료만 영입 가능 — 나머지는 앞 동료를 먼저
       const lv = meta.level(key);
       const tier = meta.tier(key);
       const look = owned ? ensureSkin(this, key, meta.equippedSkin(key), tier) : key; // 👗 착용 스킨 · ⭐ 진화 단계 얼굴
@@ -269,10 +279,14 @@ export class UpgradeScene extends Phaser.Scene {
         icon,
         `${u.name} ${starText(tier)} Lv.${lv}`,
         desc,
-        !owned ? `🛒 구매\n🪙${price}` : evo && cost ? `⭐ 진화\n🪙${cost.gold}` : `강화 🪙${meta.nextCost(key)}`,
-        !owned ? meta.gold >= price : evo ? meta.canEvolve(key) : meta.canUpgrade(key),
+        locked ? '🔒 잠김' : !owned ? `🛒 영입\n🪙${price}` : evo && cost ? `⭐ 진화\n🪙${cost.gold}` : `강화 🪙${meta.nextCost(key)}`,
+        locked ? false : !owned ? meta.gold >= price : evo ? meta.canEvolve(key) : meta.canUpgrade(key),
         !owned,
         () => {
+          if (locked) {
+            this.toast(`🔒 먼저 ${nextBuy ? UNITS[nextBuy.key].name : '앞 동료'}을(를) 영입해야 해요 — 동료는 차례대로 합류해요`);
+            return;
+          }
           if (!owned) {
             if (meta.buyUnit(key, price)) {
               sfx(this, 'levelup');
@@ -315,6 +329,14 @@ export class UpgradeScene extends Phaser.Scene {
         ms,
         this.unitBadges(key, owned, tier)
       );
+      if (key === this.focus) {
+        // 🔜 결과 화면 '다음 동료'에서 옴 — 이 칸을 금빛 테두리로 반짝
+        const c = this.cell(i, shown.length);
+        const ring = this.add.rectangle(c.x, c.y, 610, c.h - 2).setStrokeStyle(5, 0xffd34d, 1);
+        this.tweens.add({ targets: ring, alpha: 0.25, duration: 450, yoyo: true, repeat: 5, onComplete: () => ring.destroy() });
+        this.layer.add(ring);
+        this.focus = null; // 한 번만
+      }
     });
   }
 

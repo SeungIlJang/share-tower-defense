@@ -209,7 +209,12 @@ export class ResultScene extends Phaser.Scene {
     this.add
       .text(x, y + 78, can ? `🪙 ${price} — 지금 살 수 있어요!` : `🪙 ${price} (${price - meta.gold} 부족)`, { fontFamily: 'sans-serif', fontSize: '15px', fontStyle: 'bold', color: can ? '#2fa25a' : '#9a7a40' })
       .setOrigin(0.5);
-    cuteButton(this, x, y + 118, 200, 42, '🛒 강화에서 구매', can ? 0xffb02e : 0xc0c8d0, can ? 0xd8862a : 0x9098a8, '17px', () => this.scene.start('Upgrade'));
+    const go = (): void => {
+      this.scene.start('Upgrade', { focus: next.key });
+    };
+    cuteButton(this, x, y + 118, 200, 42, can ? '🛒 영입하러 가기' : '👀 보러 가기', can ? 0xffb02e : 0xc0c8d0, can ? 0xd8862a : 0x9098a8, '17px', go);
+    const hit = this.add.rectangle(x, y - 30, 260, 230, 0xffffff, 0.001).setInteractive({ useHandCursor: true }); // 카드 위쪽(얼굴·이름)도 누르면 이동
+    hit.on('pointerdown', go);
   }
 
   /** ♾️ 무한 모드 결과 — 버틴 웨이브 · 신기록 · 명예의 전당 */
