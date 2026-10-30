@@ -69,7 +69,7 @@ export const UNIT_COUNTER: Record<string, EnemyKind | null> = {
 };
 
 export const COUNTER_MULT = 1.5;
-export const DECK_SIZE = 8;
+export const DECK_SIZE = 10;
 
 export function enemyKind(type: string): EnemyKind | null {
   return isBoss(type) ? 'giant' : ENEMY_KIND[type] ?? null;

@@ -61,26 +61,37 @@ export class PrepareScene extends Phaser.Scene {
     const list = stageEnemies(stage).slice(0, 10);
     list.forEach((e, i) => {
       const x = 92 + (i % 5) * 109;
-      const y = 200 + Math.floor(i / 5) * 140;
+      const y = 178 + Math.floor(i / 5) * 118;
       const boss = isBoss(e.type);
-      if (boss) this.add.circle(x, y, 46, 0xff4a4a, 0.18).setStrokeStyle(3, 0xff4a4a);
-      if (!enemyPortrait(this, e.type, x, y, 92, 80)) this.add.text(x, y, '👾', { fontSize: '44px', padding: { top: 10, bottom: 4 } }).setOrigin(0.5);
+      if (boss) this.add.circle(x, y, 40, 0xff4a4a, 0.18).setStrokeStyle(3, 0xff4a4a);
+      if (!enemyPortrait(this, e.type, x, y, 82, 68)) this.add.text(x, y, '👾', { fontSize: '40px', padding: { top: 10, bottom: 4 } }).setOrigin(0.5);
       const k = enemyKind(e.type);
-      if (k) this.add.text(x + 34, y - 36, KIND_INFO[k].icon, { fontSize: '20px', padding: { top: 6, bottom: 2 } }).setOrigin(0.5);
-      this.add.text(x, y + 50, ENEMIES[e.type]?.name ?? e.type, { fontFamily: 'sans-serif', fontSize: '15px', fontStyle: 'bold', color: boss ? '#d8323a' : '#3a3a5a' }).setOrigin(0.5);
-      this.add.text(x, y + 68, boss ? '👑 보스' : `×${e.count}`, { fontFamily: 'sans-serif', fontSize: '14px', fontStyle: 'bold', color: boss ? '#d8323a' : '#7a86a8' }).setOrigin(0.5);
+      if (k) this.add.text(x + 32, y - 30, KIND_INFO[k].icon, { fontSize: '18px', padding: { top: 6, bottom: 2 } }).setOrigin(0.5);
+      this.add.text(x, y + 44, ENEMIES[e.type]?.name ?? e.type, { fontFamily: 'sans-serif', fontSize: '14px', fontStyle: 'bold', color: boss ? '#d8323a' : '#3a3a5a' }).setOrigin(0.5);
+      this.add.text(x, y + 60, boss ? '👑 보스' : `×${e.count}`, { fontFamily: 'sans-serif', fontSize: '13px', fontStyle: 'bold', color: boss ? '#d8323a' : '#7a86a8' }).setOrigin(0.5);
     });
     // 🎯 적 종류 → 추천 유닛
     const kinds = stageKinds(stage).slice(0, 3);
-    this.add.text(56, 470, '🎯 이번 관문 공략', { fontFamily: 'sans-serif', fontSize: '19px', fontStyle: 'bold', color: '#3a4a7a' });
+    const box = this.add.graphics();
+    box.fillStyle(0xeef3ff, 1).fillRoundedRect(46, 396, 528, 172, 16);
+    this.add.text(62, 414, '🎯 이번 관문 공략', { fontFamily: 'sans-serif', fontSize: '18px', fontStyle: 'bold', color: '#3a4a7a' }).setOrigin(0, 0.5);
     kinds.forEach((k, i) => {
+      const y = 452 + i * 40;
       const units = Object.keys(UNITS).filter((u) => UNIT_COUNTER[u] === k.kind);
-      const names = units.map((u) => (owned.includes(u) ? UNITS[u].name : `🔒${UNITS[u].name}`)).join(' · ');
-      this.add.text(56, 504 + i * 30, `${KIND_INFO[k.kind].icon} ${KIND_INFO[k.kind].name} ×${k.count}  →  ${names}`, { fontFamily: 'sans-serif', fontSize: '16px', fontStyle: 'bold', color: '#4a5a7a' });
+      this.add.text(62, y, `${KIND_INFO[k.kind].icon} ${KIND_INFO[k.kind].name} ×${k.count}`, { fontFamily: 'sans-serif', fontSize: '16px', fontStyle: 'bold', color: '#3a4a6a' }).setOrigin(0, 0.5);
+      this.add.text(212, y, '→', { fontFamily: 'sans-serif', fontSize: '18px', fontStyle: 'bold', color: '#8a96b8' }).setOrigin(0.5);
+      let ux = 250; // 얼굴 + 이름을 이어서(이름 길이만큼 띄움)
+      units.slice(0, 5).forEach((u) => {
+        if (ux > 540) return;
+        const has = owned.includes(u);
+        if (this.textures.exists(iconKey(u))) this.add.image(ux, y - 2, iconKey(u)).setDisplaySize(32, 32).setAlpha(has ? 1 : 0.4);
+        const t = this.add.text(ux + 19, y + 2, has ? UNITS[u].name : '🔒', { fontFamily: 'sans-serif', fontSize: '13px', fontStyle: 'bold', color: has ? '#2a6a3a' : '#9aa0b0' }).setOrigin(0, 0.5);
+        ux += 19 + t.width + 26;
+      });
     });
     const rec = recommendedLevel(stage.id, stage.enemyMult ?? 1);
     const tt = targetTime(stage, sr);
-    this.add.text(310, 586, `권장 유닛 강화 Lv${rec}${tt ? `   ·   ⏱️ 목표 ${formatTime(tt)}` : ''}`, { fontFamily: 'sans-serif', fontSize: '15px', color: '#7a86a8' }).setOrigin(0.5);
+    this.add.text(310, 586, `권장 유닛 강화 Lv${rec}${tt ? `   ·   ⏱️ 목표 ${formatTime(tt)}` : ''}`, { fontFamily: 'sans-serif', fontSize: '15px', fontStyle: 'bold', color: '#6a76a0' }).setOrigin(0.5);
 
     // 🃏 오른쪽: 출전 덱
     panel(620, 630);
@@ -104,17 +115,17 @@ export class PrepareScene extends Phaser.Scene {
     this.deckTitle.setText(`🃏 출전 덱 ${this.deck.length}/${DECK_SIZE}`);
     const editable = owned.length > DECK_SIZE;
     owned.forEach((k, i) => {
-      const x = 700 + (i % 4) * 157;
-      const y = 228 + Math.floor(i / 4) * 124;
+      const x = 688 + (i % 5) * 123;
+      const y = 222 + Math.floor(i / 5) * 122;
       const on = this.deck.includes(k);
-      const card = this.add.rectangle(x, y, 146, 114, on ? 0xe8f8ee : 0xeef0f5).setStrokeStyle(on ? 5 : 2, on ? 0x2fa25a : 0xc0c8d8);
+      const card = this.add.rectangle(x, y, 116, 112, on ? 0xe8f8ee : 0xeef0f5).setStrokeStyle(on ? 5 : 2, on ? 0x2fa25a : 0xc0c8d8);
       const parts: Phaser.GameObjects.GameObject[] = [card];
-      if (this.textures.exists(iconKey(k))) parts.push(this.add.image(x, y - 14, iconKey(k)).setDisplaySize(64, 64).setAlpha(on ? 1 : 0.45));
-      parts.push(this.add.text(x, y + 38, UNITS[k].name, { fontFamily: 'sans-serif', fontSize: '17px', fontStyle: 'bold', color: on ? '#2a3a2a' : '#8a92a8' }).setOrigin(0.5));
+      if (this.textures.exists(iconKey(k))) parts.push(this.add.image(x, y - 12, iconKey(k)).setDisplaySize(58, 58).setAlpha(on ? 1 : 0.45));
+      parts.push(this.add.text(x, y + 38, UNITS[k].name, { fontFamily: 'sans-serif', fontSize: UNITS[k].name.length >= 5 ? '13px' : '15px', fontStyle: 'bold', color: on ? '#2a3a2a' : '#8a92a8' }).setOrigin(0.5));
       const ck = UNIT_COUNTER[k];
-      if (ck) parts.push(this.add.text(x + 52, y - 40, `▶${KIND_INFO[ck].icon}`, { fontSize: '15px', padding: { top: 6, bottom: 2 } }).setOrigin(0.5));
-      if (good.has(k)) parts.push(this.add.text(x - 50, y - 42, '🎯', { fontSize: '20px', padding: { top: 6, bottom: 2 } }).setOrigin(0.5));
-      if (on) parts.push(this.add.text(x - 56, y + 10, String(this.deck.indexOf(k) + 1), { fontFamily: 'sans-serif', fontSize: '15px', fontStyle: 'bold', color: '#fff', backgroundColor: '#2fa25a', padding: { x: 6, y: 2 } }).setOrigin(0.5));
+      if (ck) parts.push(this.add.text(x + 40, y - 40, `▶${KIND_INFO[ck].icon}`, { fontSize: '13px', padding: { top: 6, bottom: 2 } }).setOrigin(0.5));
+      if (good.has(k)) parts.push(this.add.text(x - 40, y - 40, '🎯', { fontSize: '18px', padding: { top: 6, bottom: 2 } }).setOrigin(0.5));
+      if (on) parts.push(this.add.text(x - 44, y + 12, String(this.deck.indexOf(k) + 1), { fontFamily: 'sans-serif', fontSize: '15px', fontStyle: 'bold', color: '#fff', backgroundColor: '#2fa25a', padding: { x: 6, y: 2 } }).setOrigin(0.5));
       if (editable) {
         card.setInteractive({ useHandCursor: true });
         card.on('pointerdown', () => {
