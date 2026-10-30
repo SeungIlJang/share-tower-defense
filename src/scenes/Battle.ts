@@ -78,6 +78,8 @@ const EVENT_FIRST = 35; // 특수 웨이브 첫 발생(초)
 const EVENT_EVERY = 40; // 이후 간격(초)
 const STUN_TINT = 0x9a9a9a;
 
+const VOLLEY_R = 30; // 🎯 성 특수 공격 버튼 반지름(보이는 동그라미)
+const VOLLEY_HIT = 50; // 눌리는 영역 반지름
 const CRIT_MULT = 1.5; // 치명타 배수(확률은 skills.critChance — 기본 10%)
 const CRIT_MULT_AWAKE = 2.25; // 🎯 일격필살 각성
 import {
@@ -385,10 +387,10 @@ export class BattleScene extends Phaser.Scene {
     // 🎯 우리 성을 누르면 특수 공격(20초마다) — 성 위 게이지
     this.volleyT = 6;
     this.volleyGauge = this.add.graphics().setDepth(96);
-    this.volleyIcon = this.add.text(0, 0, '🏹', { fontSize: '22px', padding: { top: 10, bottom: 4 } }).setOrigin(0.5).setDepth(97);
+    this.volleyIcon = this.add.text(0, 0, '🏹', { fontSize: '32px', padding: { top: 12, bottom: 4 } }).setOrigin(0.5).setDepth(97);
     this.playerBase.onTap(() => this.castleVolley());
     // 게이지 동그라미도 직접 누를 수 있게(손가락 크기 판정)
-    this.volleyHit = this.add.circle(0, 0, 34, 0xffffff, 0.001).setDepth(97).setInteractive({ useHandCursor: true });
+    this.volleyHit = this.add.circle(0, 0, VOLLEY_HIT, 0xffffff, 0.001).setDepth(97).setInteractive({ useHandCursor: true }); // 손가락 크기(휴대폰 약 54dp)
     this.volleyHit.on('pointerdown', () => this.castleVolley());
     this.spawnHero();
     this.setupRule(tough);
@@ -1489,7 +1491,10 @@ export class BattleScene extends Phaser.Scene {
     } else if (k === 'weapon') {
       const p = this.hud.weaponPos(wi);
       if (p) this.tip.show(k, p.x, p.y, t, { from: 'above', ring: 44, bubbleY: 300 });
-    } else if (k === 'volley') this.tip.show(k, this.playerBase.cx, this.playerBase.top - 34, t, { ring: 40, bubbleY: 160, world: true });
+    } else if (k === 'volley') {
+      const v = this.volleyPos(); // 말풍선은 버튼 오른쪽 옆에(버튼을 가리지 않게)
+      this.tip.show(k, v.x, v.y, t, { ring: VOLLEY_R + 14, bubbleY: v.y, bubbleLeft: v.x + VOLLEY_HIT + 70, world: true });
+    }
     else if (k === 'perfect') {
       const p = this.hud.beatPos();
       this.tip.show(k, p.x, p.y, t, { from: 'above', ring: 0, bubbleY: 300 });
@@ -1881,9 +1886,8 @@ ${info.desc}`, { fontFamily: 'sans-serif', fontSize: '24px', fontStyle: 'bold', 
   /** 🎯 성 특수 공격 게이지(우리 성 위) — 다 차면 반짝 */
   private drawVolleyGauge(): void {
     const g = this.volleyGauge;
-    const x = this.playerBase.cx;
-    const y = this.playerBase.top - 34;
-    const r = 20;
+    const { x, y } = this.volleyPos();
+    const r = VOLLEY_R;
     g.clear();
     if (this.playerBase.destroyed || !this.feat.volley) {
       this.volleyIcon.setVisible(false);
@@ -1891,15 +1895,21 @@ ${info.desc}`, { fontFamily: 'sans-serif', fontSize: '24px', fontStyle: 'bold', 
       return;
     }
     const ready = this.volleyT <= 0;
-    g.fillStyle(0x0b0f1a, 0.75).fillCircle(x, y, r + 3);
-    g.lineStyle(5, ready ? 0xffd34d : 0x6ab8ff, 1);
+    // 다 차면 금색으로 꽉 채운 버튼 + 반짝 테두리 — 누르는 버튼으로 또렷하게
+    g.fillStyle(ready ? 0xffb02e : 0x0b0f1a, ready ? 0.95 : 0.78).fillCircle(x, y, r + 3);
+    g.lineStyle(6, ready ? 0xfff2a0 : 0x6ab8ff, 1);
     g.beginPath();
     g.arc(x, y, r, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * (1 - this.volleyT / VOLLEY_CD), false);
     g.strokePath();
-    if (ready) g.lineStyle(2, 0xffffff, 0.5 + 0.5 * Math.sin(this.time.now / 150)).strokeCircle(x, y, r + 6);
+    if (ready) g.lineStyle(3, 0xffffff, 0.5 + 0.5 * Math.sin(this.time.now / 150)).strokeCircle(x, y, r + 8);
     const icon = VOLLEY_NAMES[allyCastleTier(meta.castleLevel('castle'))].split(' ')[0];
     this.volleyHit.setVisible(true).setPosition(x, y);
-    this.volleyIcon.setVisible(true).setPosition(x, y).setText(icon).setAlpha(ready ? 1 : 0.5).setScale(ready ? 1 + 0.08 * Math.sin(this.time.now / 120) : 1);
+    this.volleyIcon.setVisible(true).setPosition(x, y).setText(icon).setAlpha(ready ? 1 : 0.55).setScale(ready ? 1 + 0.08 * Math.sin(this.time.now / 120) : 1);
+  }
+
+  /** 🎯 성 특수 공격 버튼 자리 — 성 꼭대기 위(상단 바에 가리지 않게 아래로 제한) */
+  private volleyPos(): { x: number; y: number } {
+    return { x: this.playerBase.cx, y: Math.max(52 + VOLLEY_R, this.playerBase.top - 46) };
   }
 
   /** 🎯 성 특수 공격 — 단계별(화살비·화살 폭풍·일제 포격·번개 폭풍·성광 기둥) */

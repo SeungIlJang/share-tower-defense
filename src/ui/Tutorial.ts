@@ -4,6 +4,7 @@ export interface TipOpts {
   from?: 'below' | 'above'; // 손가락 위치(아래에서 위로 👆 / 위에서 아래로 👇)
   drag?: boolean; // 좌우로 미는 손가락(영웅 이동)
   bubbleY?: number; // 말풍선 y(기본 = 전장 위쪽)
+  bubbleLeft?: number; // 말풍선 왼쪽 끝 x(지정하면 가리키는 곳 옆에 붙임 — 버튼을 가리지 않게)
   depth?: number;
   ring?: number; // 대상 강조 원 반지름(0 = 없음)
   finger?: boolean; // 손가락 표시(기본 true)
@@ -65,7 +66,7 @@ export class TipPointer {
         ease: 'Sine.inOut',
       });
     const bubble = s.add
-      .text(o.world ? Math.max(300, x) : Phaser.Math.Clamp(x, 300, 980), o.bubbleY ?? 200, text, {
+      .text(o.bubbleLeft ?? (o.world ? Math.max(300, x) : Phaser.Math.Clamp(x, 300, 980)), o.bubbleY ?? 200, text, {
         fontFamily: 'sans-serif',
         fontSize: '24px',
         fontStyle: 'bold',
@@ -75,7 +76,7 @@ export class TipPointer {
         backgroundColor: '#fff4c8',
         padding: { x: 20, y: 12 },
       })
-      .setOrigin(0.5);
+      .setOrigin(o.bubbleLeft !== undefined ? 0 : 0.5, 0.5); // bubbleLeft: 말풍선 왼쪽 끝(가리키는 버튼 옆에 붙임)
     layer.add(bubble);
     layer.setAlpha(0);
     s.tweens.add({ targets: layer, alpha: 1, duration: 250 });
