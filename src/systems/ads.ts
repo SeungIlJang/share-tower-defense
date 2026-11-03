@@ -35,7 +35,14 @@ function isNative(): boolean {
 }
 
 /** 실제 광고를 띄울 수 있는 앱인가(새 AAB = UA에 LDAds) */
+// ⚠️ 광고 전면 중단 (2026-11-03 ~ 2026-12-02 AdMob 계정 정지)
+// liveAds() 가 리워드·전면·배너·초기화의 유일한 관문이라 여기 하나만 막으면 전부 안 나간다.
+// 리워드 보상은 그대로 지급된다 — playRewarded 가 liveAds() 가 false 면 바로 true 를 돌려준다.
+// 12/2 이후 되살리려면 true 로 바꿔 빌드하고 dist 를 games/linedefense/ 에 복사하면 된다.
+const ADS_ENABLED = false;
+
 function liveAds(): boolean {
+  if (!ADS_ENABLED) return false;
   return isNative() && typeof navigator !== 'undefined' && navigator.userAgent.includes('LDAds');
 }
 
