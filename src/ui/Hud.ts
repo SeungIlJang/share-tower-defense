@@ -8,6 +8,7 @@ import { KIND_INFO, UNIT_COUNTER } from '../systems/counters';
 import { fromRadar, toRadar } from '../systems/camera';
 import { VIEW_L, VIEW_OFF, VIEW_R, VIEW_W, uiX } from '../systems/view';
 import { FEATURES } from '../systems/tutorial';
+import { UNIT_GROUPS, unitGroup } from '../systems/unitGroups';
 
 export interface HudState {
   lv: number;
@@ -248,17 +249,25 @@ export class Hud {
       o.setInteractive({ useHandCursor: true });
       this.pressTap(o, fn);
     };
+    const FACE = 100; // 얼굴 — 카드를 꽉 채우게(이름 줄을 없앤 자리까지)
+    // 얼굴 아래쪽에 겹쳐 붙는 분류 꼬리표
+    const groupTag = (cx: number, u: { range: number; speed: number }): [Phaser.GameObjects.Rectangle, Phaser.GameObjects.Text] => {
+      const g = unitGroup(u);
+      const color = g === 'melee' ? 0xc0453a : g === 'ranged' ? 0x2f8a4d : 0x7a4ab8;
+      const text = UNIT_GROUPS.find((x) => x.key === g)!.label;
+      return [
+        add(scene.add.rectangle(cx, cy + 46, 92, 24, color, 0.95).setStrokeStyle(2, 0x000000, 0.5)),
+        add(scene.add.text(cx, cy + 46, text, { fontFamily: 'sans-serif', fontSize: '15px', fontStyle: 'bold', color: '#ffffff', stroke: '#000000', strokeThickness: 3, padding: { top: 4 } }).setOrigin(0.5)),
+      ];
+    };
     keys.forEach((key, i) => {
       const cx = ROW_X0 + CARD_W / 2 + i * (CARD_W + CARD_GAP);
       if (!key || !unitOwned[key]) {
         // 데이터 없음 = '준비 중' / 구매 안 함 = 얼굴 흐리게 + '강화에서 구매'
         add(scene.add.rectangle(cx, cy, CARD_W, CARD_H, 0x20242e).setStrokeStyle(2, 0x3a3f4a));
-        if (key && scene.textures.exists(iconKey(key))) add(scene.add.image(cx, cy - 10, iconKey(key)).setDisplaySize(72, 72).setAlpha(0.25));
-        add(scene.add.text(cx, cy - 10, '🔒', { fontSize: '30px', padding: { top: 12, bottom: 4 } }).setOrigin(0.5).setAlpha(0.75));
-        if (key) {
-          add(scene.add.rectangle(cx, cy + 46, CARD_W - 10, 26, 0x000000, 0.5)); // 이름 판
-          add(scene.add.text(cx, cy + 46, units[key].name, { fontFamily: 'sans-serif', fontSize: units[key].name.length >= 5 ? '17px' : '19px', fontStyle: 'bold', color: '#e6ecf5', stroke: '#000000', strokeThickness: 3 }).setOrigin(0.5));
-        }
+        if (key && scene.textures.exists(iconKey(key))) add(scene.add.image(cx, cy - 6, iconKey(key)).setDisplaySize(FACE, FACE).setAlpha(0.25));
+        add(scene.add.text(cx, cy - 6, '🔒', { fontSize: '30px', padding: { top: 12, bottom: 4 } }).setOrigin(0.5).setAlpha(0.75));
+        if (key) groupTag(cx, units[key]).forEach((o) => o.setAlpha(0.6));
         add(scene.add.text(cx, cy + 68, key ? '🛒 강화에서 구매' : '준비 중', { fontFamily: 'sans-serif', fontSize: '14px', color: key ? '#a8b4c8' : '#6a7488' }).setOrigin(0.5));
         return;
       }
@@ -266,22 +275,21 @@ export class Hud {
       const col = UNIT_COLORS[key] ?? 0x4a9eff;
       const rect = add(scene.add.rectangle(cx, cy, CARD_W, CARD_H, 0x2a3348).setStrokeStyle(3, col));
       // 윗줄: 레벨(좌) · 전장 강화 버튼(우) / 가운데 얼굴 / 아래 이름 + 비용
-      const lvText = add(scene.add.text(cx - CARD_W / 2 + 8, cy - 62, 'Lv1', { fontFamily: 'sans-serif', fontSize: '16px', fontStyle: 'bold', color: '#ffd34d' }).setOrigin(0, 0.5));
-      const icon = add(scene.add.rectangle(cx, cy - 6, 70, 70, col));
+      const lvText = add(scene.add.text(cx - CARD_W / 2 + 8, cy - 66, 'Lv1', { fontFamily: 'sans-serif', fontSize: '16px', fontStyle: 'bold', color: '#ffd34d' }).setOrigin(0, 0.5));
+      const icon = add(scene.add.rectangle(cx, cy - 2, FACE, FACE, col));
       const faceKey = scene.textures.exists(iconKey(looks[key] ?? key)) ? iconKey(looks[key] ?? key) : iconKey(key);
-      const face = scene.textures.exists(faceKey) ? add(scene.add.image(cx, cy - 6, faceKey).setDisplaySize(70, 70)) : null;
+      const face = scene.textures.exists(faceKey) ? add(scene.add.image(cx, cy - 2, faceKey).setDisplaySize(FACE, FACE)) : null;
       if (face) icon.setFillStyle(0x1a2133).setStrokeStyle(2, col); // 얼굴 뒤는 어두운 바탕 + 유닛 색 테두리
-      add(scene.add.rectangle(cx, cy + 45, CARD_W - 10, 28, 0x000000, 0.55)); // 이름 판(휴대폰에서도 잘 보이게)
-      const label = add(scene.add.text(cx, cy + 45, u.name, { fontFamily: 'sans-serif', fontSize: u.name.length >= 5 ? '19px' : '22px', fontStyle: 'bold', color: '#ffffff', stroke: '#000000', strokeThickness: 4 }).setOrigin(0.5));
+      const label = groupTag(cx, u)[1]; // 이름 대신 ⚔️ 근접 · 🏹 원거리 · 🗿 설치물(얼굴로 구분)
       const cost = add(scene.add.text(cx, cy + 67, `⚡${u.cost}  🍖${u.pop}`, { fontFamily: 'sans-serif', fontSize: '15px', fontStyle: 'bold', color: '#cfe' }).setOrigin(0.5));
       tap(rect, () => onSpawn(key));
       // ⚔️ 상성 — 얼굴 오른쪽 아래에 강한 적 종류, 그 적이 전장에 있으면 '유리!'
       const ck = UNIT_COUNTER[key];
-      if (ck) add(scene.add.text(cx + 30, cy + 22, `▶${KIND_INFO[ck].icon}`, { fontSize: '17px', backgroundColor: '#0d1424dd', padding: { x: 3, y: 1, top: 6 } }).setOrigin(0.5));
+      if (ck) add(scene.add.text(cx + 46, cy - 30, `▶${KIND_INFO[ck].icon}`, { fontSize: '17px', backgroundColor: '#0d1424dd', padding: { x: 3, y: 1, top: 6 } }).setOrigin(0.5));
       const goodTag = ck ? add(scene.add.text(cx, cy - 36, '🎯 유리!', { fontFamily: 'sans-serif', fontSize: '17px', fontStyle: 'bold', color: '#ffe14d', stroke: '#000000', strokeThickness: 4 }).setOrigin(0.5).setVisible(false)) : null;
       // 🛠️ 전장 실시간 강화 버튼(카드 우상단) — 소환 탭과 분리
-      const upBtn = add(scene.add.rectangle(cx + CARD_W / 2 - 36, cy - 62, 62, 28, 0x2f7a4d).setStrokeStyle(1, 0x5cff9e));
-      const upText = add(scene.add.text(cx + CARD_W / 2 - 36, cy - 62, '⬆', { fontFamily: 'sans-serif', fontSize: '15px', fontStyle: 'bold', color: '#fff' }).setOrigin(0.5));
+      const upBtn = add(scene.add.rectangle(cx + CARD_W / 2 - 36, cy - 66, 62, 28, 0x2f7a4d).setStrokeStyle(1, 0x5cff9e));
+      const upText = add(scene.add.text(cx + CARD_W / 2 - 36, cy - 66, '⬆', { fontFamily: 'sans-serif', fontSize: '15px', fontStyle: 'bold', color: '#fff' }).setOrigin(0.5));
       tap(upBtn, () => onUpgrade(key));
       const cdShade = add(scene.add.rectangle(cx, cy - CARD_H / 2, CARD_W, 0, 0x000000, 0.6).setOrigin(0.5, 0));
       this.slots.push({ key, cx, rect, label, cost, icon, face, upBtn, upText, lvText, cdShade, goodTag, col });
