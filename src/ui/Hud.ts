@@ -97,16 +97,16 @@ export const HERO_PANEL_X = 1010 + VIEW_OFF; // 👑 영웅 스킬 버튼 x(적 
 export const HERO_BTN_R = 40;
 const XP_W = 120; // 📈 경험치 막대 길이
 export const HERO_BTN_Y = 114; // 적 기지 그림(위쪽 ~165)보다 위
-const W_CARD_W = 150; // 📱 특수 무기 카드(가로 스크롤)
 const W_CARD_H = 92;
 const W_CARD_CY = 658; // 화면 맨 아래(제스처 영역)에서 조금 위로
 const DRAG_START = 24; // 이만큼 이상 끌어야 스크롤(그 아래는 탭)
-const CARD_W = 140; // 📱 유닛 카드(가로 스크롤)
 const CARD_H = 160;
 const CARD_GAP = 8;
 const CARD_CY = 528;
-const UNIT_SLOTS = 12; // 유닛 칸 수(유닛 데이터보다 많으면 나머지는 잠금 '준비 중')
+const UNIT_SLOTS = 8; // 📱 유닛 칸 = 출전 8명 — 화면에 8장 고정(스크롤 없음, 모자라면 다음 동료 잠금 칸)
 const ROW_X0 = 4; // 카드 줄 왼쪽 여백
+const CARD_W = Math.floor((VIEW_W - ROW_X0 * 2 - CARD_GAP * (UNIT_SLOTS - 1)) / UNIT_SLOTS); // 화면 폭을 8장이 꽉 채움
+const W_CARD_W = CARD_W; // 📱 특수 무기 카드도 8장 같은 폭
 
 /** 전투 HUD — 상단(LV·VS·골드) + 하단 2단(유닛 12슬롯 / 특수 무기 9버튼) + 에너지/식량 바 */
 export class Hud {
@@ -150,7 +150,8 @@ export class Hud {
     onSpawn: (type: string) => void,
     onUpgrade: (type: string) => void,
     onWeapon: (index: number) => void,
-    weaponOwned: boolean[], // 무기별 보유 여부
+    weaponOwned: boolean[], // 무기별 보유 여부(전투에 들고 왔는지)
+    weaponSlots: number[], // 🔥 화면 8칸에 놓을 무기 번호
     unitOwned: Record<string, boolean>, // 유닛별 보유 여부
     looks: Record<string, string> = {}, // 👗 스킨 적용 얼굴(유닛@스킨)
     onHeroSkill: (index: number) => void = () => {}, // 👑 영웅 스킬
@@ -236,7 +237,7 @@ export class Hud {
     }
 
     // 하단 1단: 유닛 카드(큰 카드, 가로 스크롤) — 보유 유닛 먼저, 나머지는 잠금
-    const keys = Object.keys(units).sort((x, y) => Number(!unitOwned[x]) - Number(!unitOwned[y]));
+    const keys = Object.keys(units).sort((x, y) => Number(!unitOwned[x]) - Number(!unitOwned[y])).slice(0, UNIT_SLOTS);
     while (keys.length < UNIT_SLOTS) keys.push('');
     const strip = scene.add.container(VIEW_L, 0).setDepth(d); // 카드 줄은 화면 왼쪽 끝부터
     this.strip = strip;
@@ -296,21 +297,22 @@ export class Hud {
     });
     this.scroller(strip, cy, CARD_H, keys.length * (CARD_W + CARD_GAP) - CARD_GAP, d);
 
-    // 하단 2단: 특수 무기 카드 9장(게이지가 차면 발사, 단축키 1~9) — 가로 스크롤
+    // 하단 2단: 특수 무기 카드 8장(게이지가 차면 발사, 단축키 1~8) — 화면에 고정
     const wStrip = scene.add.container(VIEW_L, 0).setDepth(d);
     const wy = W_CARD_CY;
     if (!features.weapon) {
       scene.add.text(640, wy, `🔒 특수 무기 — ${(FEATURES.find((f) => f.key === 'weapon')?.stage ?? 3) - 1}관문을 깨면 열려요`, { fontFamily: 'sans-serif', fontSize: '20px', fontStyle: 'bold', color: '#7c8aa0' }).setOrigin(0.5).setDepth(d);
     }
-    if (features.weapon) WEAPONS.forEach((w, i) => {
-      const x = ROW_X0 + W_CARD_W / 2 + i * (W_CARD_W + CARD_GAP);
+    if (features.weapon) weaponSlots.forEach((i, j) => {
+      const w = WEAPONS[i];
+      const x = ROW_X0 + W_CARD_W / 2 + j * (W_CARD_W + CARD_GAP);
       const cx = x - W_CARD_W / 2 + 8 + WEAPON_R; // 원(아이콘)은 카드 왼쪽
       const tx = cx + WEAPON_R + 8; // 글씨는 오른쪽
       const owned = weaponOwned[i];
       const card = scene.add.rectangle(x, wy, W_CARD_W, W_CARD_H, owned ? 0x1e2740 : 0x20242e).setStrokeStyle(2, owned ? 0x3a4560 : 0x33373f);
       const bg = scene.add.circle(cx, wy, WEAPON_R, 0x1a2133).setStrokeStyle(3, 0x3a4560);
       const num = scene.add
-        .text(x - W_CARD_W / 2 + 4, wy - W_CARD_H / 2 + 4, String(i + 1), { fontFamily: 'sans-serif', fontSize: '14px', fontStyle: 'bold', color: '#3a2a10', backgroundColor: '#ffd34d', padding: { x: 4, y: 0 } })
+        .text(x - W_CARD_W / 2 + 4, wy - W_CARD_H / 2 + 4, String(j + 1), { fontFamily: 'sans-serif', fontSize: '14px', fontStyle: 'bold', color: '#3a2a10', backgroundColor: '#ffd34d', padding: { x: 4, y: 0 } })
         .setOrigin(0, 0);
       wStrip.add([card, bg]);
       if (!owned) {
@@ -334,7 +336,7 @@ export class Hud {
       this.pressTap(card, () => onWeapon(i));
       this.weaponBtns.push({ index: i, cx, cy: wy, color: w.color, bg, gauge, ring, icon, wasReady: false });
     });
-    if (features.weapon) this.scroller(wStrip, wy, W_CARD_H, WEAPONS.length * (W_CARD_W + CARD_GAP) - CARD_GAP, d);
+    if (features.weapon) this.scroller(wStrip, wy, W_CARD_H, weaponSlots.length * (W_CARD_W + CARD_GAP) - CARD_GAP, d);
     this.objs = scene.children.list.filter((o) => !before.has(o));
   }
 

@@ -85,6 +85,7 @@ const CRIT_MULT = 1.5; // 치명타 배수(확률은 skills.critChance — 기�
 const CRIT_MULT_AWAKE = 2.25; // 🎯 일격필살 각성
 import {
   WEAPONS,
+  weaponSlots,
   WeaponCharge,
   meteorTarget,
   lightningTargets,
@@ -163,6 +164,7 @@ export class BattleScene extends Phaser.Scene {
   private rerolls = 1; // 🎲 레벨업 다시 뽑기(한 판 1회)
   private choices: SkillDef[] = []; // 지금 보여 주는 레벨업 후보
   private freeSummons = 0; // 🎁 무료 소환 남은 횟수
+  private weaponSlotIdx: number[] = []; // 🔥 HUD 무기 칸 → WEAPONS 번호
   private summonCount = 0; // 💎 마나 순환(5번째마다 공짜)
   private summonCd: Record<string, number> = {}; // ⏱️ 유닛별 소환 대기(남은 초)
   private hero!: Unit; // 👑 영웅(쓰러지면 패배)
@@ -437,7 +439,8 @@ export class BattleScene extends Phaser.Scene {
     this.guardUntil = 0;
     this.berserkUntil = 0;
     // 🛒 구매한 무기만 게이지(영구 강화: 충전 단축)
-    this.weapons = WEAPONS.map((w) => (meta.ownsWeapon(w.key) ? new WeaponCharge(w.chargeSec * weaponChargeMult(meta.weaponLevel(w.key))) : null));
+    const loadout = meta.activeWeapons(); // 🔥 출전 준비에서 고른 무기(최대 8)만
+    this.weapons = WEAPONS.map((w) => (loadout.includes(w.key) ? new WeaponCharge(w.chargeSec * weaponChargeMult(meta.weaponLevel(w.key))) : null));
 
     this.unitPool = new Pool<Unit>(
       () => new Unit(this),
@@ -457,7 +460,7 @@ export class BattleScene extends Phaser.Scene {
     this.hud = this.makeHud();
     this.tip = new TipPointer(this);
     this.setupCameraUi();
-    // 키보드 1~9 = 특수 무기
+    // 키보드 1~8 = 특수 무기 칸
     this.input.keyboard?.on('keydown', (ev: KeyboardEvent) => {
       const k = ev.key.toLowerCase();
       if (k === 'a' || k === 'arrowleft') this.heroDir = -1;
@@ -500,7 +503,8 @@ export class BattleScene extends Phaser.Scene {
         }
         return;
       }
-      this.fireWeapon(n - 1);
+      const wi = this.weaponSlotIdx[n - 1]; // 칸 번호 → 무기
+      if (wi !== undefined) this.fireWeapon(wi);
     });
 
     // 보스 HP 바(상단, 보스 등장 시만)
@@ -554,6 +558,7 @@ export class BattleScene extends Phaser.Scene {
     // ⚔️ 출전 덱 유닛 + (아직 안 산 유닛은 '구매' 안내용) — 덱에 없는 보유 유닛은 숨김
     const shown = Object.fromEntries(Object.keys(UNITS).filter((k) => this.deck.includes(k) || !meta.ownsUnit(k)).map((k) => [k, UNITS[k]]));
     const deckFirst = Object.fromEntries([...this.deck.map((k) => [k, UNITS[k]] as const), ...Object.entries(shown).filter(([k]) => !this.deck.includes(k))].map(([k, u]) => [k, { ...u, cost: this.unitCost(k) }])); // 🎁 소환 비용 보상 반영
+    this.weaponSlotIdx = weaponSlots(meta.activeWeapons(), (k) => meta.ownsWeapon(k));
     return new Hud(
       this,
       deckFirst,
@@ -561,6 +566,7 @@ export class BattleScene extends Phaser.Scene {
       (type) => this.doBattleUpgrade(type),
       (i) => this.fireWeapon(i),
       this.weapons.map((w) => !!w),
+      this.weaponSlotIdx,
       this.unitOwned,
       this.looks,
       (i) => this.castHeroSkill(i),
@@ -661,8 +667,9 @@ export class BattleScene extends Phaser.Scene {
       this.placeArchers('ally');
     }
     // 🔥 새로 산 특수 무기
+    const loadout = meta.activeWeapons(); // 칸이 남아 있으면 들고 감
     WEAPONS.forEach((w, i) => {
-      if (!this.weapons[i] && meta.ownsWeapon(w.key)) this.weapons[i] = new WeaponCharge(w.chargeSec * weaponChargeMult(meta.weaponLevel(w.key)));
+      if (!this.weapons[i] && loadout.includes(w.key)) this.weapons[i] = new WeaponCharge(w.chargeSec * weaponChargeMult(meta.weaponLevel(w.key)));
     });
     // 👑 영웅 레벨(체력 비율 유지)
     const h = this.hero;

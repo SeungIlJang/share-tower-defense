@@ -69,7 +69,7 @@ export const UNIT_COUNTER: Record<string, EnemyKind | null> = {
 };
 
 export const COUNTER_MULT = 1.5;
-export const DECK_SIZE = 10;
+export const DECK_SIZE = 8;
 
 export function enemyKind(type: string): EnemyKind | null {
   return isBoss(type) ? 'giant' : ENEMY_KIND[type] ?? null;
@@ -110,8 +110,8 @@ export function goodUnits(stage: StageData, units: string[]): string[] {
 }
 
 /** 출전 덱 정리 — 보유한 것만, 최대 8, 빈칸은 보유 유닛으로 채움(새로 산 유닛이 바로 나오게) */
-export function normalizeDeck(deck: string[], owned: string[]): string[] {
-  const d = [...new Set(deck)].filter((k) => owned.includes(k)).slice(0, DECK_SIZE);
-  for (const k of owned) if (d.length < DECK_SIZE && !d.includes(k)) d.push(k);
+export function normalizeDeck(deck: string[], owned: string[], size = DECK_SIZE): string[] {
+  const d = [...new Set(deck)].filter((k) => owned.includes(k)).slice(0, size);
+  for (const k of owned) if (d.length < size && !d.includes(k)) d.push(k);
   return d;
 }

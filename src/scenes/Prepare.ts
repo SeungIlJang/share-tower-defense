@@ -7,12 +7,14 @@ import { STAGES, WORLDS, recommendedLevel } from '../systems/worlds';
 import { DECK_SIZE, KIND_INFO, UNIT_COUNTER, enemyKind, goodUnits, stageEnemies, stageKinds } from '../systems/counters';
 import { isBoss } from '../systems/bosses';
 import { enemyPortrait } from '../ui/enemyArt';
-import { iconKey } from '../systems/sprites';
+import { iconKey, textureKey } from '../systems/sprites';
 import { RULE_INFO, stageRule, targetTime } from '../systems/stageRules';
 import { formatTime } from '../systems/pacing';
 import { cuteButton, cuteTitle, drawSky, type SkyTheme } from '../ui/cute';
 import { sfx } from '../systems/sound';
 import { preloadNeeded, stageEnemyTypes } from '../systems/assetLoad';
+import { WEAPONS, WEAPON_SLOTS } from '../systems/weapons';
+import { FEATURES, featureOn, reachedStage } from '../systems/tutorial';
 
 const UNITS = unitsData as Record<string, UnitStats>;
 const ENEMIES = enemiesData as Record<string, EnemyStats>;
@@ -22,7 +24,10 @@ export class PrepareScene extends Phaser.Scene {
   private stageId = 1;
   private deck: string[] = [];
   private deckLayer!: Phaser.GameObjects.Container;
-  private deckTitle!: Phaser.GameObjects.Text;
+  private deckHint!: Phaser.GameObjects.Text;
+  private weaponDeck: string[] = [];
+  private tab: 'units' | 'weapons' = 'units'; // 🃏 오른쪽 판: 유닛 덱 / 🔥 특수 무기
+  private tabBtns: { key: 'units' | 'weapons'; bg: Phaser.GameObjects.Rectangle; t: Phaser.GameObjects.Text }[] = [];
 
   constructor() {
     super('Prepare');
@@ -49,6 +54,8 @@ export class PrepareScene extends Phaser.Scene {
         .setDepth(5);
     const owned = Object.keys(UNITS).filter((k) => meta.ownsUnit(k));
     this.deck = meta.activeDeck(Object.keys(UNITS));
+    this.weaponDeck = meta.activeWeapons();
+    this.tab = 'units';
 
     // 👀 왼쪽: 나오는 적
     const panel = (x: number, w: number): void => {
@@ -95,25 +102,90 @@ export class PrepareScene extends Phaser.Scene {
 
     // 🃏 오른쪽: 출전 덱
     panel(620, 630);
-    this.deckTitle = this.add.text(935, 112, '', { fontFamily: 'sans-serif', fontSize: '24px', fontStyle: 'bold', color: '#3a4a7a' }).setOrigin(0.5);
-    this.add
-      .text(935, 142, owned.length > DECK_SIZE ? '눌러서 넣고 빼요 · 🎯 = 이번 관문에 유리' : `유닛이 ${DECK_SIZE + 1}개 이상이면 덱을 고를 수 있어요 · 🎯 = 유리`, { fontFamily: 'sans-serif', fontSize: '15px', color: '#7a86a8' })
-      .setOrigin(0.5);
+    this.deckHint = this.add.text(935, 146, '', { fontFamily: 'sans-serif', fontSize: '15px', color: '#7a86a8' }).setOrigin(0.5);
     this.deckLayer = this.add.container(0, 0);
-    this.renderDeck(owned, new Set(goodUnits(stage, owned)));
+    const good = new Set(goodUnits(stage, owned));
+    const weaponOn = featureOn('weapon', reachedStage(stage.id, meta.clearedMax), false);
+    const render = (): void => {
+      if (this.tab === 'units') this.renderDeck(owned, good);
+      else this.renderWeapons(weaponOn);
+      this.tabBtns.forEach((b) => {
+        const on = b.key === this.tab;
+        b.bg.setFillStyle(on ? 0x6a8ad8 : 0xe4e9f5).setStrokeStyle(2, on ? 0x3a5aa8 : 0xc0c8d8);
+        b.t.setColor(on ? '#ffffff' : '#5a6688').setText(b.key === 'units' ? `🃏 유닛 ${this.deck.length}/${DECK_SIZE}` : `🔥 무기 ${this.weaponDeck.length}/${WEAPON_SLOTS}`);
+      });
+    };
+    this.tabBtns = (['units', 'weapons'] as const).map((key, i) => {
+      const bg = this.add.rectangle(830 + i * 210, 112, 196, 42, 0xe4e9f5).setInteractive({ useHandCursor: true });
+      const t = this.add.text(830 + i * 210, 112, '', { fontFamily: 'sans-serif', fontSize: '20px', fontStyle: 'bold' }).setOrigin(0.5);
+      bg.on('pointerdown', () => {
+        if (this.tab === key) return;
+        this.tab = key;
+        sfx(this, 'click');
+        render();
+      });
+      return { key, bg, t };
+    });
+    this.rerender = render;
+    render();
 
     cuteButton(this, 250, 668, 220, 58, '← 뒤로', 0x8a9ab8, 0x5a6a88, '22px', () => this.scene.start('StageSelect', { world: stage.world }));
     cuteButton(this, 935, 668, 300, 64, '⚔️ 출전!', 0xff7a4a, 0xd8502a, '30px', () => {
       meta.setDeck(this.deck);
+      meta.setWeaponDeck(this.weaponDeck);
       sfx(this, 'click');
       this.scene.start('Battle', { stageId: stage.id });
     });
   }
 
+  private rerender: () => void = () => undefined;
+
+  /** 🔥 특수 무기 고르기 — 산 무기 중 8개(산 게 8개 이하면 전부 자동) */
+  private renderWeapons(unlocked: boolean): void {
+    this.deckLayer.removeAll(true);
+    if (!unlocked) {
+      this.deckHint.setText('');
+      this.deckLayer.add(this.add.text(935, 330, `🔒 특수 무기는 ${(FEATURES.find((f) => f.key === 'weapon')?.stage ?? 3) - 1}관문을 깨면 열려요`, { fontFamily: 'sans-serif', fontSize: '20px', fontStyle: 'bold', color: '#7a86a8' }).setOrigin(0.5));
+      return;
+    }
+    const owned = WEAPONS.filter((w) => meta.ownsWeapon(w.key)).map((w) => w.key);
+    const editable = owned.length > WEAPON_SLOTS;
+    this.deckHint.setText(editable ? '눌러서 넣고 빼요 · 전투 화면엔 8개가 고정으로 나와요' : `무기를 ${WEAPON_SLOTS + 1}개 이상 사면 고를 수 있어요 · 지금은 산 무기 모두 출전`);
+    const iconTex = textureKey('weapon_icons');
+    WEAPONS.forEach((w, i) => {
+      const x = 688 + (i % 5) * 123;
+      const y = 222 + Math.floor(i / 5) * 140;
+      const has = owned.includes(w.key);
+      const on = this.weaponDeck.includes(w.key);
+      const card = this.add.rectangle(x, y, 116, 128, on ? 0xe8f8ee : 0xeef0f5).setStrokeStyle(on ? 5 : 2, on ? 0x2fa25a : 0xc0c8d8);
+      const parts: Phaser.GameObjects.GameObject[] = [card];
+      const a = on ? 1 : has ? 0.5 : 0.25;
+      parts.push(this.textures.exists(iconTex) ? this.add.image(x, y - 18, iconTex, i).setDisplaySize(60, 60).setAlpha(a) : this.add.text(x, y - 18, w.icon, { fontSize: '40px', padding: { top: 10, bottom: 4 } }).setOrigin(0.5).setAlpha(a));
+      parts.push(this.add.text(x, y + 26, w.name, { fontFamily: 'sans-serif', fontSize: '16px', fontStyle: 'bold', color: on ? '#2a3a2a' : '#8a92a8' }).setOrigin(0.5));
+      parts.push(this.add.text(x, y + 47, has ? w.desc : '🔒 강화에서 구매', { fontFamily: 'sans-serif', fontSize: '11px', color: '#7a86a8', align: 'center', wordWrap: { width: 108 } }).setOrigin(0.5, 0.5));
+      if (on) parts.push(this.add.text(x - 44, y - 50, String(this.weaponDeck.indexOf(w.key) + 1), { fontFamily: 'sans-serif', fontSize: '15px', fontStyle: 'bold', color: '#fff', backgroundColor: '#2fa25a', padding: { x: 6, y: 2 } }).setOrigin(0.5));
+      if (editable && has) {
+        card.setInteractive({ useHandCursor: true });
+        card.on('pointerdown', () => {
+          if (on) {
+            if (this.weaponDeck.length <= 1) return;
+            this.weaponDeck = this.weaponDeck.filter((d) => d !== w.key);
+          } else if (this.weaponDeck.length >= WEAPON_SLOTS) {
+            this.toast('무기 칸이 가득 찼어요 — 하나를 먼저 빼 주세요');
+            return;
+          } else this.weaponDeck.push(w.key);
+          sfx(this, 'click');
+          this.rerender();
+        });
+      }
+      this.deckLayer.add(parts);
+    });
+  }
+
   private renderDeck(owned: string[], good: Set<string>): void {
     this.deckLayer.removeAll(true);
-    this.deckTitle.setText(`🃏 출전 덱 ${this.deck.length}/${DECK_SIZE}`);
     const editable = owned.length > DECK_SIZE;
+    this.deckHint.setText(editable ? '눌러서 넣고 빼요 · 🎯 = 이번 관문에 유리' : `유닛이 ${DECK_SIZE + 1}개 이상이면 덱을 고를 수 있어요 · 🎯 = 유리`);
     owned.forEach((k, i) => {
       const x = 688 + (i % 5) * 123;
       const y = 222 + Math.floor(i / 5) * 122;
@@ -137,7 +209,7 @@ export class PrepareScene extends Phaser.Scene {
             return;
           } else this.deck.push(k);
           sfx(this, 'click');
-          this.renderDeck(owned, good);
+          this.rerender();
         });
       }
       this.deckLayer.add(parts);

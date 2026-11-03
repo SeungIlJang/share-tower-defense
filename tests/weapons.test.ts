@@ -9,7 +9,10 @@ import {
   weaponDurationMult,
   weaponUpgradeCost,
   WEAPONS,
+  WEAPON_SLOTS,
+  weaponSlots,
 } from '../src/systems/weapons';
+import { normalizeDeck } from '../src/systems/counters';
 
 describe('WeaponCharge', () => {
   it('시간이 지나면 차고, 가득 차기 전엔 발사 불가', () => {
@@ -68,5 +71,25 @@ describe('특수 무기 영구 강화', () => {
   it('비용 150 + 100×레벨', () => {
     expect(weaponUpgradeCost(0)).toBe(150);
     expect(weaponUpgradeCost(3)).toBe(450);
+  });
+});
+
+describe('🔥 무기 칸(8칸 고정)', () => {
+  const keys = WEAPONS.map((w) => w.key);
+  it('고른 무기 순서대로, 남는 칸은 안 산 무기(잠금)', () => {
+    const owns = (k: string): boolean => ['meteor', 'freeze'].includes(k);
+    const s = weaponSlots(['freeze', 'meteor'], owns);
+    expect(s.length).toBe(WEAPON_SLOTS);
+    expect(s.slice(0, 2)).toEqual([keys.indexOf('freeze'), keys.indexOf('meteor')]);
+    expect(s.slice(2).every((i) => !owns(keys[i]))).toBe(true);
+  });
+  it('9개 다 사면 고른 8개만', () => {
+    const pick = keys.filter((k) => k !== 'snipe');
+    const s = weaponSlots(normalizeDeck(pick, keys, WEAPON_SLOTS), () => true);
+    expect(s).toEqual(pick.map((k) => keys.indexOf(k)));
+  });
+  it('들고 갈 무기는 최대 8, 빈칸은 산 순서대로', () => {
+    expect(normalizeDeck([], keys, WEAPON_SLOTS)).toEqual(keys.slice(0, 8));
+    expect(normalizeDeck(['snipe'], keys, WEAPON_SLOTS)[0]).toBe('snipe');
   });
 });

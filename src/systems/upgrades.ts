@@ -1,6 +1,6 @@
 import type { UnitStats } from '../types';
 import { storageGet, storageSet } from './storage';
-import { weaponUpgradeCost } from './weapons';
+import { WEAPONS, WEAPON_SLOTS, weaponUpgradeCost } from './weapons';
 import { STARTER_UNIT, STARTER_WEAPON, migrateOwned } from './unlocks';
 import { addStats, dailyMissions, type Mission, type Stats } from './missions';
 import { pushRecord, type EndlessRecord } from './endless';
@@ -88,6 +88,7 @@ export class MetaProgress {
   ranks: Record<string, number> = {}; // 🃏 유닛별 카드 랭크(0~5)
   chestsOpened = 0; // 🎁 연 상자 수
   deck: string[] = []; // ⚔️ 출전 덱(최대 8)
+  weaponDeck: string[] = []; // 🔥 들고 갈 특수 무기(최대 8)
   kills: Record<string, number> = {}; // 📖 적별 처치 수(도감)
   codexClaimed: string[] = []; // 📖 발견 보상 받은 적
   codexSteps: number[] = []; // 📖 받은 수집 단계
@@ -556,6 +557,16 @@ export class MetaProgress {
     return normalizeDeck(this.deck, allUnits.filter((k) => this.ownsUnit(k)));
   }
 
+  /** 🔥 들고 갈 무기 — 산 무기 중 최대 8(빈칸은 산 순서대로) */
+  activeWeapons(): string[] {
+    return normalizeDeck(this.weaponDeck, WEAPONS.map((w) => w.key).filter((k) => this.ownsWeapon(k)), WEAPON_SLOTS);
+  }
+
+  setWeaponDeck(keys: string[]): void {
+    this.weaponDeck = [...keys];
+    this.save();
+  }
+
   setDeck(deck: string[]): void {
     this.deck = [...deck];
     this.save();
@@ -659,6 +670,7 @@ export class MetaProgress {
         ranks?: Record<string, number>;
         chestsOpened?: number;
         deck?: string[];
+        weaponDeck?: string[];
         kills?: Record<string, number>;
         codexClaimed?: string[];
         codexSteps?: number[];
@@ -698,6 +710,7 @@ export class MetaProgress {
       this.ranks = obj.ranks ?? {};
       this.chestsOpened = obj.chestsOpened ?? 0;
       this.deck = obj.deck ?? [];
+      this.weaponDeck = obj.weaponDeck ?? [];
       this.kills = obj.kills ?? {};
       this.codexClaimed = obj.codexClaimed ?? [];
       this.codexSteps = obj.codexSteps ?? [];
@@ -763,6 +776,7 @@ export class MetaProgress {
         ranks: this.ranks,
         chestsOpened: this.chestsOpened,
         deck: this.deck,
+        weaponDeck: this.weaponDeck,
         kills: this.kills,
         codexClaimed: this.codexClaimed,
         codexSteps: this.codexSteps,
