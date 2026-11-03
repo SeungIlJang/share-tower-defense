@@ -6,7 +6,7 @@ import { animKey, resolveState, spriteOfLook, textureKey, type AnimState, type S
 import { headStars } from '../systems/evolution';
 
 /** 📱 유닛 표시 배율 — 휴대폰에서 잘 보이게 전체 크기 확대(능력치·사거리는 그대로) */
-export const UNIT_SCALE = 1.5;
+export const UNIT_SCALE = 1.8;
 
 /**
  * 전투 유닛 공통 베이스. 스프라이트 매니페스트에 있는 타입은 픽셀아트 스프라이트,
