@@ -9,7 +9,10 @@ import { track } from './analytics';
  * 🔒 실제 광고는 'LDAds' 표시가 있는 앱(versionCode 7부터, capacitor.config.ts appendUserAgent)에서만.
  *    예전 앱은 매니페스트에 테스트 앱 ID가 들어 있어 실제 광고 단위를 쓰면 안 됨 → 예전처럼 바로 보상.
  */
-const AD_USE_TEST = false;
+// 테스트 트랙 빌드는 capacitor.config.ts 가 UA 에 MSAdsTest 를 붙인다. 그 빌드는 구글 테스트
+// 광고만 쓰므로 테스터가 눌러도 계정에 영향이 없다. 토큰이 없으면(= 프로덕션) 실유닛.
+// 2026-11-02 에 무효 트래픽으로 계정이 29일 정지된 뒤 넣은 분리 장치다.
+const AD_USE_TEST = typeof navigator !== 'undefined' && navigator.userAgent.includes('MSAdsTest');
 const AD_APP_ID = 'ca-app-pub-9017259597860535~2635370729'; // AndroidManifest APPLICATION_ID와 같음(참고용)
 const AD_BANNER_REAL = 'ca-app-pub-9017259597860535/8676988710';
 const AD_INTER_REAL = 'ca-app-pub-9017259597860535/5429055024';
