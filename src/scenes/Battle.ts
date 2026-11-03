@@ -12,7 +12,6 @@ import { summonCooldown } from '../systems/pacing';
 import { anyDevFlag, devFlags } from '../systems/dev';
 import { UNIT_TIERS, tierBodyScale } from '../systems/evolution';
 import { milestoneBonus, milestoneCost, type MilestoneBonus } from '../systems/milestones';
-import { unitGroup } from '../systems/unitGroups';
 import { enemyLevel, hexColor, pickVariant, variantTable } from '../systems/enemyVariants';
 import { STAGES, WORLDS, goldMultFor } from '../systems/worlds';
 import { BOSSES, BOSS_KEYS, bossForStage } from '../systems/bosses';
@@ -40,6 +39,8 @@ import { LOOK_HOLD, SCREEN_W, followX, walkMult, worldWidth } from '../systems/c
 import { RULE_INFO, targetBonus, targetTime, WAGON_BLOCK, WAGON_SPEED, breachGoal, holdProdMult, holdSeconds, stageRule, wagonHp, type StageRule } from '../systems/stageRules';
 import { FEATURES, HERO_TIP_STAGE, TIP_TEXT, featureOn, nextTip, reachedStage, type Feature, type TipKey } from '../systems/tutorial';
 import { showRewarded } from '../systems/ads';
+import { REINFORCE_AD, REINFORCE_COUNT, REINFORCE_FREE } from '../systems/reinforce';
+import { UNIT_GROUPS, unitGroup } from '../systems/unitGroups';
 import {
   UNIT_SKILLS,
   isSkillSwing,
@@ -53,7 +54,7 @@ import {
   DASH_PX,
   PIERCE_MAX,
 } from '../systems/unitSkills';
-import { animKey, spriteOf, textureKey } from '../systems/sprites';
+import { animKey, iconKey, spriteOf, textureKey } from '../systems/sprites';
 import { ensureHue, ensureSkin } from '../systems/skinTextures';
 import { sfx, bgm, setMute } from '../systems/sound';
 import { starsFor, STAR_GOLD } from '../systems/stars';
@@ -165,6 +166,9 @@ export class BattleScene extends Phaser.Scene {
   private choices: SkillDef[] = []; // 지금 보여 주는 레벨업 후보
   private freeSummons = 0; // 🎁 무료 소환 남은 횟수
   private weaponSlotIdx: number[] = []; // 🔥 HUD 무기 칸 → WEAPONS 번호
+  private reinforceFree = REINFORCE_FREE; // 📣 지원군 — 무료 남은 횟수(한 판)
+  private reinforceAd = REINFORCE_AD; // 📣 광고 보고 부를 수 있는 남은 횟수
+  private reinforceBtn: { bg: Phaser.GameObjects.Arc; badge: Phaser.GameObjects.Text; glow: Phaser.GameObjects.Arc } | null = null;
   private summonCount = 0; // 💎 마나 순환(5번째마다 공짜)
   private summonCd: Record<string, number> = {}; // ⏱️ 유닛별 소환 대기(남은 초)
   private hero!: Unit; // 👑 영웅(쓰러지면 패배)
@@ -349,6 +353,8 @@ export class BattleScene extends Phaser.Scene {
     this.choices = [];
     this.freeSummons = 0;
     this.summonCount = 0;
+    this.reinforceFree = REINFORCE_FREE;
+    this.reinforceAd = REINFORCE_AD;
     this.summonCd = {};
     this.picking = false;
     this.levelUp = new LevelUpOverlay(this);
@@ -458,6 +464,7 @@ export class BattleScene extends Phaser.Scene {
     // 👗 착용 스킨 텍스처 미리 준비(HUD 얼굴에도 적용)
     this.looks = Object.fromEntries(Object.keys(UNITS).map((k) => [k, ensureSkin(this, k, meta.equippedSkin(k), meta.tier(k))]));
     this.hud = this.makeHud();
+    this.makeReinforceBtn();
     this.tip = new TipPointer(this);
     this.setupCameraUi();
     // 키보드 1~6 = 특수 무기 칸
@@ -478,7 +485,7 @@ export class BattleScene extends Phaser.Scene {
       this.heroDrag = null;
       if (this.over || this.picking || this.paused || this.reviving || !this.hero?.active) return;
       if (p.y < 60 || p.y > 405) return;
-      if (uiX(p.x) > HERO_PANEL_X - HERO_SKILLS.length * (HERO_BTN_R * 2 + 14) - 10 && p.y < HERO_BTN_Y + HERO_BTN_R + 10) return; // 영웅 스킬 버튼·마나 바
+      if (uiX(p.x) > HERO_PANEL_X - (HERO_SKILLS.length + 1) * (HERO_BTN_R * 2 + 14) - 10 && p.y < HERO_BTN_Y + HERO_BTN_R + 10) return; // 영웅 스킬·📣 지원군 버튼·마나 바
       this.heroDrag = { px: p.x, hx: this.hero.x };
     });
     this.input.on('pointermove', (p: Phaser.Input.Pointer) => {
@@ -726,11 +733,8 @@ export class BattleScene extends Phaser.Scene {
       this.hud.deny(type, 'energy'); // 에너지 부족 안내
       return;
     }
-    const m0 = applyUpgrade(base, meta.level(type)); // 영구 강화 적용
-    const pk = meta.perks(type); // ⭐ 진화(단계·등급·갈래)
-    const mb = this.unitBonus(type); // 🎁 진화 사이 보상(분류별)
-    const rm = rankMult(meta.rank(type)) * mb.stats; // 🃏 카드 랭크 · 🎁 보상
-    const m = { ...m0, hp: Math.round(m0.hp * rm * pk.hp * mb.hp), atk: Math.round(m0.atk * rm * pk.atk), def: m0.def + pk.def, atkSpeed: m0.atkSpeed * pk.atkSpeed, range: m0.range + mb.range }; // 🔥 각성: 공격 속도 · 🎯 사거리 보상
+    const m = this.allyStats(type);
+    const mb = this.unitBonus(type);
     this.usedUnits[type] = (this.usedUnits[type] ?? 0) + 1;
     const perfect = this.feat.perfect && Math.abs(this.beat - 0.5) <= BattleScene.PERFECT_WIN; // ⏱️ 타이밍 명중(🎓 6관문부터)
     this.tipDone('summon');
@@ -770,6 +774,153 @@ export class BattleScene extends Phaser.Scene {
         .setOrigin(0.5)
         .setDepth(70);
       this.tweens.add({ targets: t, y: LANE_Y - 112, alpha: 0, duration: 700, onComplete: () => t.destroy() });
+    }
+  }
+
+  /** 유닛 기본 능력치 — 영구 강화 · ⭐ 진화(단계·등급·갈래) · 🃏 카드 랭크 · 🎁 진화 사이 보상 */
+  private allyStats(type: string): UnitStats {
+    const m0 = applyUpgrade(UNITS[type], meta.level(type));
+    const pk = meta.perks(type);
+    const mb = this.unitBonus(type);
+    const rm = rankMult(meta.rank(type)) * mb.stats;
+    return { ...m0, hp: Math.round(m0.hp * rm * pk.hp * mb.hp), atk: Math.round(m0.atk * rm * pk.atk), def: m0.def + pk.def, atkSpeed: m0.atkSpeed * pk.atkSpeed, range: m0.range + mb.range }; // 🔥 각성: 공격 속도 · 🎯 사거리 보상
+  }
+
+  /** 📣 지원군으로 부를 수 있는 유닛 — 가진 유닛 중 덱에 없는 것(설치물 제외) */
+  private reinforceList(): string[] {
+    return Object.keys(UNITS).filter((k) => meta.ownsUnit(k) && !this.deck.includes(k) && !isTotem(k));
+  }
+
+  /** 📣 지원군 버튼 — 영웅 스킬 버튼 줄 왼쪽 끝 */
+  private makeReinforceBtn(): void {
+    const x = HERO_PANEL_X - HERO_SKILLS.length * (HERO_BTN_R * 2 + 14);
+    const y = HERO_BTN_Y;
+    const glow = this.add.circle(x, y, HERO_BTN_R + 6).setStrokeStyle(4, 0x7affa0, 1).setDepth(119).setVisible(false);
+    this.tweens.add({ targets: glow, scale: 1.15, alpha: 0.25, duration: 600, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
+    const bg = this.add.circle(x, y, HERO_BTN_R, 0x1a3324, 0.92).setStrokeStyle(4, 0x5cff9e).setDepth(120).setInteractive({ useHandCursor: true });
+    this.add.text(x, y - 6, '📣', { fontSize: '30px', padding: { top: 12, bottom: 4 } }).setOrigin(0.5).setDepth(122);
+    this.add.text(x, y + 27, '지원군', { fontFamily: 'sans-serif', fontSize: '14px', fontStyle: 'bold', color: '#d8ffe0', stroke: '#000000', strokeThickness: 4 }).setOrigin(0.5).setDepth(122);
+    const badge = this.add
+      .text(x + HERO_BTN_R - 6, y - HERO_BTN_R + 4, '', { fontFamily: 'sans-serif', fontSize: '14px', fontStyle: 'bold', color: '#10301a', backgroundColor: '#7affa0', padding: { x: 4, y: 0 } })
+      .setOrigin(0.5)
+      .setDepth(123);
+    bg.on('pointerdown', () => {
+      this.tweens.add({ targets: bg, scale: 0.88, duration: 70, yoyo: true });
+      this.openReinforce();
+    });
+    this.reinforceBtn = { bg, badge, glow };
+    this.refreshReinforceBtn();
+  }
+
+  private refreshReinforceBtn(): void {
+    const b = this.reinforceBtn;
+    if (!b) return;
+    const has = this.reinforceList().length > 0;
+    const left = this.reinforceFree + this.reinforceAd;
+    b.badge.setText(!has ? '🔒' : this.reinforceFree > 0 ? `${this.reinforceFree}` : this.reinforceAd > 0 ? '📺' : '0');
+    b.bg.setAlpha(has && left > 0 ? 1 : 0.5);
+    b.glow.setVisible(has && this.reinforceFree > 0);
+  }
+
+  /** 📣 지원군 고르기 — 전투를 멈추고 덱 밖 유닛 중 하나(3마리 등장) */
+  private openReinforce(): void {
+    if (this.over || this.reviving || this.paused || this.picking) return;
+    const list = this.reinforceList();
+    const say = (msg: string): void => {
+      const t = this.add.text(this.reinforceBtn!.bg.x, HERO_BTN_Y + 62, msg, { fontFamily: 'sans-serif', fontSize: '17px', fontStyle: 'bold', color: '#ffe680', backgroundColor: '#0d1424ee', padding: { x: 8, y: 4 } }).setOrigin(0.5).setDepth(130);
+      this.tweens.add({ targets: t, alpha: 0, delay: 1400, duration: 400, onComplete: () => t.destroy() });
+    };
+    if (list.length === 0) {
+      say(`🔒 유닛을 ${DECK_SIZE + 1}명 이상 모으면 열려요 — 덱 밖 유닛이 지원군으로 와요`);
+      return;
+    }
+    if (this.reinforceFree + this.reinforceAd <= 0) {
+      say('이번 판 지원군은 다 불렀어요');
+      return;
+    }
+    const byAd = this.reinforceFree <= 0;
+    sfx(this, 'click');
+    this.paused = true;
+    const layer = this.add.container(0, 0).setDepth(200);
+    const close = (): void => {
+      layer.destroy();
+      this.paused = false;
+    };
+    const n = list.length;
+    const cw = 132;
+    const gap = 12;
+    const pw = Math.max(520, n * (cw + gap) + 40);
+    layer.add([
+      this.add.rectangle(640, 360, VIEW_W, 720, 0x000000, 0.65).setInteractive(),
+      this.add.rectangle(640, 330, pw, 360, 0x15241c).setStrokeStyle(4, 0x5cff9e),
+      this.add.text(640, 190, '📣 지원군 부르기', { fontFamily: 'sans-serif', fontSize: '32px', fontStyle: 'bold', color: '#ffffff' }).setOrigin(0.5),
+      this.add
+        .text(640, 228, byAd ? `📺 광고를 보면 고른 유닛 ${REINFORCE_COUNT}마리가 바로 와요 (마지막 1번)` : `덱에 없는 유닛 중 하나 — ${REINFORCE_COUNT}마리가 바로 와요 (무료 · 이번 판 ${this.reinforceFree}번)`, { fontFamily: 'sans-serif', fontSize: '17px', fontStyle: 'bold', color: byAd ? '#ffd34d' : '#a8f0c0' })
+        .setOrigin(0.5),
+    ]);
+    list.forEach((k, i) => {
+      const x = 640 - ((n - 1) * (cw + gap)) / 2 + i * (cw + gap);
+      const y = 330;
+      const card = this.add.rectangle(x, y, cw, 150, 0x223a2c).setStrokeStyle(3, 0x5cff9e).setInteractive({ useHandCursor: true });
+      const parts: Phaser.GameObjects.GameObject[] = [card];
+      const face = this.textures.exists(iconKey(this.looks[k] ?? k)) ? iconKey(this.looks[k] ?? k) : iconKey(k);
+      if (this.textures.exists(face)) parts.push(this.add.image(x, y - 20, face).setDisplaySize(84, 84));
+      const g = UNIT_GROUPS.find((u) => u.key === unitGroup(UNITS[k]))!.label;
+      parts.push(this.add.text(x, y + 38, `${g} · Lv${meta.level(k)}`, { fontFamily: 'sans-serif', fontSize: '14px', fontStyle: 'bold', color: '#ffffff', stroke: '#000000', strokeThickness: 3 }).setOrigin(0.5));
+      parts.push(this.add.text(x, y + 58, `×${REINFORCE_COUNT}`, { fontFamily: 'sans-serif', fontSize: '15px', fontStyle: 'bold', color: '#7affa0' }).setOrigin(0.5));
+      card.on('pointerdown', () => {
+        if (!byAd) {
+          this.reinforceFree--;
+          close();
+          this.callReinforce(k, false);
+          return;
+        }
+        card.disableInteractive();
+        void showRewarded('reinforce').then((ok) => {
+          close();
+          if (!ok) return;
+          this.reinforceAd--;
+          this.callReinforce(k, true);
+        });
+      });
+      layer.add(parts);
+    });
+    const cancel = this.add
+      .text(640, 470, '닫기', { fontFamily: 'sans-serif', fontSize: '20px', fontStyle: 'bold', color: '#cfd6e6', backgroundColor: '#2a3a48', padding: { x: 22, y: 8 } })
+      .setOrigin(0.5)
+      .setInteractive({ useHandCursor: true });
+    cancel.on('pointerdown', close);
+    layer.add(cancel);
+  }
+
+  /** 📣 지원군 등장 — 고른 유닛 3마리가 성 앞에서 차례로(인구는 차지하지 않음) */
+  private callReinforce(type: string, ad: boolean): void {
+    if (this.over) return;
+    this.refreshReinforceBtn();
+    track('reinforce', { type, ad, stage: this.stage.id });
+    sfx(this, 'levelup');
+    const t = this.add
+      .text(this.playerBase.x + 120, LANE_Y - 150, `📣 지원군 도착! ${UNITS[type].name} ×${REINFORCE_COUNT}`, { fontFamily: 'sans-serif', fontSize: '24px', fontStyle: 'bold', color: '#7affa0', stroke: '#000000', strokeThickness: 5 })
+      .setOrigin(0.5)
+      .setDepth(70);
+    this.tweens.add({ targets: t, y: t.y - 40, alpha: 0, delay: 900, duration: 700, onComplete: () => t.destroy() });
+    const vm = vigorMult(this.skills.vigor ?? 0);
+    const bm = 1 + (this.battleUpg[type] ?? 0) * 0.2;
+    for (let i = 0; i < REINFORCE_COUNT; i++) {
+      this.time.delayedCall(i * 280, () => {
+        if (this.over) return;
+        const m = this.allyStats(type);
+        const stats = { ...m, hp: Math.round(m.hp * bm * vm), atk: Math.round(m.atk * bm) };
+        const u = this.unitPool.acquire();
+        const sx = this.playerBase.x + BASE_FRONT;
+        u.spawn(sx, LANE_Y, stats, type, 'ally', this.looks[type] ?? type);
+        u.setStars(UNIT_TIERS[meta.tier(type)].stars, meta.branchOf(type));
+        if (meta.tier(type) >= 3) u.setBodyScale(tierBodyScale(meta.tier(type)));
+        u.pop = 0; // 지원군은 인구 밖
+        this.puff(sx, 0x7affa0);
+        sfx(this, 'spawn');
+        this.units.push(u);
+      });
     }
   }
 
