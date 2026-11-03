@@ -74,7 +74,7 @@ describe('특수 무기 영구 강화', () => {
   });
 });
 
-describe('🔥 무기 칸(8칸 고정)', () => {
+describe('🔥 무기 칸(6칸 고정)', () => {
   const keys = WEAPONS.map((w) => w.key);
   it('고른 무기 순서대로, 남는 칸은 안 산 무기(잠금)', () => {
     const owns = (k: string): boolean => ['meteor', 'freeze'].includes(k);
@@ -83,13 +83,14 @@ describe('🔥 무기 칸(8칸 고정)', () => {
     expect(s.slice(0, 2)).toEqual([keys.indexOf('freeze'), keys.indexOf('meteor')]);
     expect(s.slice(2).every((i) => !owns(keys[i]))).toBe(true);
   });
-  it('9개 다 사면 고른 8개만', () => {
-    const pick = keys.filter((k) => k !== 'snipe');
+  it('9개 다 사면 고른 6개만', () => {
+    const pick: typeof keys = ['snipe', 'freeze', 'meteor', 'heal', 'guard', 'arrows'];
     const s = weaponSlots(normalizeDeck(pick, keys, WEAPON_SLOTS), () => true);
     expect(s).toEqual(pick.map((k) => keys.indexOf(k)));
   });
-  it('들고 갈 무기는 최대 8, 빈칸은 산 순서대로', () => {
-    expect(normalizeDeck([], keys, WEAPON_SLOTS)).toEqual(keys.slice(0, 8));
+  it('들고 갈 무기는 최대 6, 빈칸은 산 순서대로', () => {
+    expect(normalizeDeck(['berserk', 'heal', 'meteor', 'guard', 'freeze', 'snipe', 'arrows'], keys, WEAPON_SLOTS)).toHaveLength(6);
+    expect(normalizeDeck([], keys, WEAPON_SLOTS)).toEqual(keys.slice(0, 6));
     expect(normalizeDeck(['snipe'], keys, WEAPON_SLOTS)[0]).toBe('snipe');
   });
 });

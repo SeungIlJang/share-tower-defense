@@ -439,7 +439,7 @@ export class BattleScene extends Phaser.Scene {
     this.guardUntil = 0;
     this.berserkUntil = 0;
     // 🛒 구매한 무기만 게이지(영구 강화: 충전 단축)
-    const loadout = meta.activeWeapons(); // 🔥 출전 준비에서 고른 무기(최대 8)만
+    const loadout = meta.activeWeapons(); // 🔥 출전 준비에서 고른 무기(최대 6)만
     this.weapons = WEAPONS.map((w) => (loadout.includes(w.key) ? new WeaponCharge(w.chargeSec * weaponChargeMult(meta.weaponLevel(w.key))) : null));
 
     this.unitPool = new Pool<Unit>(
@@ -460,7 +460,7 @@ export class BattleScene extends Phaser.Scene {
     this.hud = this.makeHud();
     this.tip = new TipPointer(this);
     this.setupCameraUi();
-    // 키보드 1~8 = 특수 무기 칸
+    // 키보드 1~6 = 특수 무기 칸
     this.input.keyboard?.on('keydown', (ev: KeyboardEvent) => {
       const k = ev.key.toLowerCase();
       if (k === 'a' || k === 'arrowleft') this.heroDir = -1;

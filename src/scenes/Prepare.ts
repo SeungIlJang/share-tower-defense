@@ -140,7 +140,7 @@ export class PrepareScene extends Phaser.Scene {
 
   private rerender: () => void = () => undefined;
 
-  /** 🔥 특수 무기 고르기 — 산 무기 중 8개(산 게 8개 이하면 전부 자동) */
+  /** 🔥 특수 무기 고르기 — 산 무기 중 6개(산 게 6개 이하면 전부 자동) */
   private renderWeapons(unlocked: boolean): void {
     this.deckLayer.removeAll(true);
     if (!unlocked) {
@@ -150,7 +150,7 @@ export class PrepareScene extends Phaser.Scene {
     }
     const owned = WEAPONS.filter((w) => meta.ownsWeapon(w.key)).map((w) => w.key);
     const editable = owned.length > WEAPON_SLOTS;
-    this.deckHint.setText(editable ? '눌러서 넣고 빼요 · 전투 화면엔 8개가 고정으로 나와요' : `무기를 ${WEAPON_SLOTS + 1}개 이상 사면 고를 수 있어요 · 지금은 산 무기 모두 출전`);
+    this.deckHint.setText(editable ? `눌러서 넣고 빼요 · 전투엔 ${WEAPON_SLOTS}개를 들고 가요` : `무기를 ${WEAPON_SLOTS + 1}개 이상 사면 고를 수 있어요 · 지금은 산 무기 모두 출전`);
     const iconTex = textureKey('weapon_icons');
     WEAPONS.forEach((w, i) => {
       const x = 688 + (i % 5) * 123;

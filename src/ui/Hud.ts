@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import type { UnitStats } from '../types';
 import { iconKey, textureKey } from '../systems/sprites';
-import { WEAPONS } from '../systems/weapons';
+import { WEAPONS, WEAPON_SLOTS } from '../systems/weapons';
 import type { Synergy } from '../systems/synergy';
 import { HERO_SKILLS } from '../systems/hero';
 import { KIND_INFO, UNIT_COUNTER } from '../systems/counters';
@@ -106,7 +106,7 @@ const CARD_CY = 528;
 const UNIT_SLOTS = 8; // 📱 유닛 칸 = 출전 8명 — 화면에 8장 고정(스크롤 없음, 모자라면 다음 동료 잠금 칸)
 const ROW_X0 = 4; // 카드 줄 왼쪽 여백
 const CARD_W = Math.floor((VIEW_W - ROW_X0 * 2 - CARD_GAP * (UNIT_SLOTS - 1)) / UNIT_SLOTS); // 화면 폭을 8장이 꽉 채움
-const W_CARD_W = CARD_W; // 📱 특수 무기 카드도 8장 같은 폭
+const W_CARD_W = Math.floor((VIEW_W - ROW_X0 * 2 - CARD_GAP * (WEAPON_SLOTS - 1)) / WEAPON_SLOTS); // 📱 특수 무기 6장이 화면 폭을 꽉 채움
 
 /** 전투 HUD — 상단(LV·VS·골드) + 하단 2단(유닛 12슬롯 / 특수 무기 9버튼) + 에너지/식량 바 */
 export class Hud {
@@ -297,7 +297,7 @@ export class Hud {
     });
     this.scroller(strip, cy, CARD_H, keys.length * (CARD_W + CARD_GAP) - CARD_GAP, d);
 
-    // 하단 2단: 특수 무기 카드 8장(게이지가 차면 발사, 단축키 1~8) — 화면에 고정
+    // 하단 2단: 특수 무기 카드 6장(게이지가 차면 발사, 단축키 1~6) — 화면에 고정
     const wStrip = scene.add.container(VIEW_L, 0).setDepth(d);
     const wy = W_CARD_CY;
     if (!features.weapon) {

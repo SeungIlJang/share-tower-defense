@@ -20,9 +20,9 @@ export interface WeaponDef {
   color: number; // 게이지 색
 }
 
-/** 순서 = 구매 가격 순서(첫 번째는 기본 지급) (전투 칸 번호 = 단축키 1~8) */
-/** 🔥 전투에 들고 가는 무기 수 — 화면에 8장 고정(9종 중 출전 준비에서 고름) */
-export const WEAPON_SLOTS = 8;
+/** 순서 = 구매 가격 순서(첫 번째는 기본 지급) (전투 칸 번호 = 단축키 1~6) */
+/** 🔥 전투에 들고 가는 무기 수 — 화면에 6장 고정(9종 중 출전 준비에서 고름) */
+export const WEAPON_SLOTS = 6;
 
 /** 전투 무기 칸(WEAPONS 번호) — 고른 무기 먼저, 남는 칸은 아직 안 산 무기(잠금·구매 안내) */
 export function weaponSlots(loadout: string[], owns: (key: string) => boolean): number[] {
