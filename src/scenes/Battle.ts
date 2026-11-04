@@ -40,7 +40,7 @@ import { RULE_INFO, targetBonus, targetTime, WAGON_BLOCK, WAGON_SPEED, breachGoa
 import { FEATURES, HERO_TIP_STAGE, TIP_TEXT, featureOn, nextTip, reachedStage, type Feature, type TipKey } from '../systems/tutorial';
 import { showRewarded } from '../systems/ads';
 import { CHAIN_SHOW_FROM, CHAIN_VOLLEY_PCT, chainRate, chainReward, chainScale, nextChain } from '../systems/perfectChain';
-import { REINFORCE_AD, REINFORCE_COUNT, REINFORCE_FREE } from '../systems/reinforce';
+import { REINFORCE_AD, REINFORCE_AD_COUNT, REINFORCE_FREE, reinforceCount } from '../systems/reinforce';
 import { UNIT_GROUPS, unitGroup } from '../systems/unitGroups';
 import {
   UNIT_SKILLS,
@@ -864,7 +864,7 @@ export class BattleScene extends Phaser.Scene {
       this.add.rectangle(640, 330, pw, 360, 0x15241c).setStrokeStyle(4, 0x5cff9e),
       this.add.text(640, 190, '📣 지원군 부르기', { fontFamily: 'sans-serif', fontSize: '32px', fontStyle: 'bold', color: '#ffffff' }).setOrigin(0.5),
       this.add
-        .text(640, 228, byAd ? `📺 광고를 보면 고른 유닛 ${REINFORCE_COUNT}마리가 바로 와요 (마지막 1번)` : `덱에 없는 유닛 중 하나 — ${REINFORCE_COUNT}마리가 바로 와요 (무료 · 이번 판 ${this.reinforceFree}번)`, { fontFamily: 'sans-serif', fontSize: '17px', fontStyle: 'bold', color: byAd ? '#ffd34d' : '#a8f0c0' })
+        .text(640, 228, byAd ? `📺 광고를 보면 고른 유닛 ${REINFORCE_AD_COUNT}마리가 바로 와요 (마지막 1번)` : `덱에 없는 유닛 중 하나가 ${reinforceCount(false)}마리 와요 (무료) · 다음엔 📺 광고로 ${REINFORCE_AD_COUNT}마리`, { fontFamily: 'sans-serif', fontSize: '17px', fontStyle: 'bold', color: byAd ? '#ffd34d' : '#a8f0c0' })
         .setOrigin(0.5),
     ]);
     list.forEach((k, i) => {
@@ -874,9 +874,9 @@ export class BattleScene extends Phaser.Scene {
       const parts: Phaser.GameObjects.GameObject[] = [card];
       const face = this.textures.exists(iconKey(this.looks[k] ?? k)) ? iconKey(this.looks[k] ?? k) : iconKey(k);
       if (this.textures.exists(face)) parts.push(this.add.image(x, y - 20, face).setDisplaySize(84, 84));
-      const g = UNIT_GROUPS.find((u) => u.key === unitGroup(UNITS[k]))!.label;
-      parts.push(this.add.text(x, y + 38, `${g} · Lv${meta.level(k)}`, { fontFamily: 'sans-serif', fontSize: '14px', fontStyle: 'bold', color: '#ffffff', stroke: '#000000', strokeThickness: 3 }).setOrigin(0.5));
-      parts.push(this.add.text(x, y + 58, `×${REINFORCE_COUNT}`, { fontFamily: 'sans-serif', fontSize: '15px', fontStyle: 'bold', color: '#7affa0' }).setOrigin(0.5));
+      const icon = UNIT_GROUPS.find((u) => u.key === unitGroup(UNITS[k]))!.label.split(' ')[0];
+      parts.push(this.add.text(x, y + 38, `${icon} ${UNITS[k].name}`, { fontFamily: 'sans-serif', fontSize: UNITS[k].name.length >= 5 ? '14px' : '16px', fontStyle: 'bold', color: '#ffffff', stroke: '#000000', strokeThickness: 3 }).setOrigin(0.5));
+      parts.push(this.add.text(x, y + 59, `Lv${meta.level(k)} · ×${reinforceCount(byAd)}`, { fontFamily: 'sans-serif', fontSize: '15px', fontStyle: 'bold', color: '#7affa0' }).setOrigin(0.5));
       card.on('pointerdown', () => {
         if (!byAd) {
           this.reinforceFree--;
@@ -902,20 +902,21 @@ export class BattleScene extends Phaser.Scene {
     layer.add(cancel);
   }
 
-  /** 📣 지원군 등장 — 고른 유닛 3마리가 성 앞에서 차례로(인구는 차지하지 않음) */
+  /** 📣 지원군 등장 — 고른 유닛이 성 앞에서 차례로(무료 1 · 광고 3, 인구는 차지하지 않음) */
   private callReinforce(type: string, ad: boolean): void {
     if (this.over) return;
+    const n = reinforceCount(ad); // 무료 1마리 · 광고 3마리
     this.refreshReinforceBtn();
     track('reinforce', { type, ad, stage: this.stage.id });
     sfx(this, 'levelup');
     const t = this.add
-      .text(this.playerBase.x + 120, LANE_Y - 150, `📣 지원군 도착! ${UNITS[type].name} ×${REINFORCE_COUNT}`, { fontFamily: 'sans-serif', fontSize: '24px', fontStyle: 'bold', color: '#7affa0', stroke: '#000000', strokeThickness: 5 })
+      .text(this.playerBase.x + 120, LANE_Y - 150, `📣 지원군 도착! ${UNITS[type].name} ×${n}`, { fontFamily: 'sans-serif', fontSize: '24px', fontStyle: 'bold', color: '#7affa0', stroke: '#000000', strokeThickness: 5 })
       .setOrigin(0.5)
       .setDepth(70);
     this.tweens.add({ targets: t, y: t.y - 40, alpha: 0, delay: 900, duration: 700, onComplete: () => t.destroy() });
     const vm = vigorMult(this.skills.vigor ?? 0);
     const bm = 1 + (this.battleUpg[type] ?? 0) * 0.2;
-    for (let i = 0; i < REINFORCE_COUNT; i++) {
+    for (let i = 0; i < n; i++) {
       this.time.delayedCall(i * 280, () => {
         if (this.over) return;
         const m = this.allyStats(type);
