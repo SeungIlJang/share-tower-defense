@@ -14,8 +14,8 @@ import { UNIT_TIERS, tierBodyScale } from '../systems/evolution';
 import { milestoneBonus, milestoneCost, type MilestoneBonus } from '../systems/milestones';
 import { enemyLevel, hexColor, pickVariant, variantTable } from '../systems/enemyVariants';
 import { STAGES, WORLDS, goldMultFor } from '../systems/worlds';
-import { BOSSES, BOSS_KEYS, bossForStage } from '../systems/bosses';
-import { COUNTER_MULT, DECK_SIZE, counterMult, enemyKind, UNIT_COUNTER, type EnemyKind } from '../systems/counters';
+import { BOSSES, BOSS_KEYS, bossForStage, isBoss } from '../systems/bosses';
+import { COUNTER_MULT, DECK_SIZE, KIND_INFO, counterMult, enemyKind, UNIT_COUNTER, type EnemyKind } from '../systems/counters';
 import { dailyBonus, dailyRule, dailyStage, dailyStageId, dailyUnits, type DailyRule } from '../systems/daily';
 import { chestForEndless, chestForStage, rankMult, type ChestLoot } from '../systems/chests';
 import { VOLLEY_CD, VOLLEY_MAX, VOLLEY_MULT, VOLLEY_NAMES, castleArchers, ALLY_CASTLE_TIERS, ENEMY_CASTLE_TIERS, allyCastleGun, allyCastleTier, castleHpMult, castleLook, castleTarget, enemyCastleGun, enemyCastleTier, type CastleShot } from '../systems/castle';
@@ -23,7 +23,7 @@ import { HERO_TYPE, HERO_TIERS, HERO_FALLBACK_LOOKS, heroTier, heroBodyScale, HE
 import { HERO_PANEL_X, HERO_BTN_R, HERO_BTN_Y } from '../ui/Hud';
 import { Pool } from '../utils/pool';
 import { ResourceSystem } from '../systems/resources';
-import { WaveSystem } from '../systems/waves';
+import { WaveSystem, type WavePreview } from '../systems/waves';
 import { computeDamage, attackCooldown, inRange } from '../systems/combat';
 import { meta, applyUpgrade } from '../systems/upgrades';
 import { xpToNext, hasteMult, mimicMult, magicMult, supplyBonus, anyUpgradable, rollChoices, awakened, SKILL_BY_KEY, vigorMult, rechargeMult, powerMult, critChance, chargeMult, type SkillDef } from '../systems/skills';
@@ -39,6 +39,7 @@ import { LOOK_HOLD, SCREEN_W, followX, walkMult, worldWidth } from '../systems/c
 import { RULE_INFO, targetBonus, targetTime, WAGON_BLOCK, WAGON_SPEED, breachGoal, holdProdMult, holdSeconds, stageRule, wagonHp, type StageRule } from '../systems/stageRules';
 import { FEATURES, HERO_TIP_STAGE, TIP_TEXT, featureOn, nextTip, reachedStage, type Feature, type TipKey } from '../systems/tutorial';
 import { showRewarded } from '../systems/ads';
+import { CHAIN_SHOW_FROM, CHAIN_VOLLEY_PCT, chainRate, chainReward, chainScale, nextChain } from '../systems/perfectChain';
 import { REINFORCE_AD, REINFORCE_COUNT, REINFORCE_FREE } from '../systems/reinforce';
 import { UNIT_GROUPS, unitGroup } from '../systems/unitGroups';
 import {
@@ -56,7 +57,7 @@ import {
 } from '../systems/unitSkills';
 import { animKey, iconKey, spriteOf, textureKey } from '../systems/sprites';
 import { ensureHue, ensureSkin } from '../systems/skinTextures';
-import { sfx, bgm, setMute } from '../systems/sound';
+import { sfx, sfxRate, bgm, setMute } from '../systems/sound';
 import { starsFor, STAR_GOLD } from '../systems/stars';
 import { activeSynergies, synergyMult, type Synergy } from '../systems/synergy';
 import type { Stats } from '../systems/missions';
@@ -80,6 +81,8 @@ const EVENT_EVERY = 40; // 이후 간격(초)
 const STUN_TINT = 0x9a9a9a;
 
 const PERFECT_HINT_RUNS = 3; // ⏱️ PERFECT 안내 글씨를 보여 줄 판 수
+const WAVE_LEAD = 5; // 📣 다음 무리 예고 — 몇 초 전에
+const WAVE_SHOW_MS = 3800;
 const VOLLEY_R = 30; // 🎯 성 특수 공격 버튼 반지름(보이는 동그라미)
 const VOLLEY_HIT = 50; // 눌리는 영역 반지름
 const CRIT_MULT = 1.5; // 치명타 배수(확률은 skills.critChance — 기본 10%)
@@ -167,6 +170,8 @@ export class BattleScene extends Phaser.Scene {
   private freeSummons = 0; // 🎁 무료 소환 남은 횟수
   private weaponSlotIdx: number[] = []; // 🔥 HUD 무기 칸 → WEAPONS 번호
   private reinforceFree = REINFORCE_FREE; // 📣 지원군 — 무료 남은 횟수(한 판)
+  private chain = 0; // 🔥 연속 PERFECT 소환 수
+  private waveBanner: Phaser.GameObjects.Container | null = null; // 📣 다음 무리 예고
   private reinforceAd = REINFORCE_AD; // 📣 광고 보고 부를 수 있는 남은 횟수
   private reinforceBtn: { bg: Phaser.GameObjects.Arc; badge: Phaser.GameObjects.Text; glow: Phaser.GameObjects.Arc } | null = null;
   private summonCount = 0; // 💎 마나 순환(5번째마다 공짜)
@@ -355,6 +360,8 @@ export class BattleScene extends Phaser.Scene {
     this.summonCount = 0;
     this.reinforceFree = REINFORCE_FREE;
     this.reinforceAd = REINFORCE_AD;
+    this.chain = 0;
+    this.waveBanner = null;
     this.summonCd = {};
     this.picking = false;
     this.levelUp = new LevelUpOverlay(this);
@@ -557,6 +564,7 @@ export class BattleScene extends Phaser.Scene {
   private makeHud(): Hud {
     const hud = this.buildHud();
     hud.setRadar(this.worldW, (x) => this.lookAt(x)); // 🗺️ 지도로 둘러보기
+    hud.setChain(this.chain);
     hud.setSkillIcon(0, textureKey('equip_weapon_icons'), (HERO_WEAPONS.find((w) => w.key === meta.weaponEq) ?? HERO_WEAPONS[0]).frame); // 🛡️ 장착 무기
     return hud;
   }
@@ -742,6 +750,7 @@ export class BattleScene extends Phaser.Scene {
     const pm = perfect ? 1.3 : 1;
     const bm = 1 + (this.battleUpg[type] ?? 0) * 0.2; // 🛠️ 전장 강화
     if (this.freeSummons > 0) this.freeSummons--;
+    if (this.feat.perfect) this.onChain(perfect); // 🔥 PERFECT 체인(보상·표시·음정)
     this.summonCount++;
     if (!devFlags.noCooldown) this.summonCd[type] = this.unitCooldown(type); // ⏱️ 같은 유닛 재소환 대기(🛠️ 치트면 없음 · 🎁 대기 보상)
     const vm = vigorMult(this.skills.vigor ?? 0); // ❤️ 튼튼한 몸
@@ -759,7 +768,7 @@ export class BattleScene extends Phaser.Scene {
     u.setStars(UNIT_TIERS[meta.tier(type)].stars, meta.branchOf(type)); // ⭐ 진화 단계(★★부터 머리 위 표시, ★4 금빛·★5 무지개 오라)
     if (!totem && meta.tier(type) >= 3) u.setBodyScale(tierBodyScale(meta.tier(type))); // ★4부터는 ★3 그림이라 아주 조금씩 크게
     u.pop = base.pop;
-    sfx(this, 'spawn');
+    if (!(this.feat.perfect && perfect && this.chain >= 2)) sfx(this, 'spawn'); // 체인 중엔 onChain이 음정 올려서 냄
     this.track('spawns');
     if (perfect) this.track('perfects');
     this.units.push(u);
@@ -922,6 +931,63 @@ export class BattleScene extends Phaser.Scene {
         this.units.push(u);
       });
     }
+  }
+
+  /** 🔥 PERFECT 체인 — 연속이면 커지는 "×N CHAIN!" · 3연속 무료 소환 · 5연속 발리 +20% · 음정 상승 */
+  private onChain(perfect: boolean): void {
+    this.chain = nextChain(this.chain, perfect);
+    this.hud.setChain(this.chain);
+    if (!perfect || this.chain < CHAIN_SHOW_FROM) return;
+    sfxRate(this, 'spawn', chainRate(this.chain));
+    const sc = chainScale(this.chain);
+    const t = this.add
+      .text(640, 250, `×${this.chain} CHAIN!`, { fontFamily: 'sans-serif', fontSize: '34px', fontStyle: 'bold', color: this.chain >= 5 ? '#ff7af0' : '#ffe14d', stroke: '#3a2a00', strokeThickness: 8 })
+      .setOrigin(0.5)
+      .setDepth(140)
+      .setScale(sc * 1.6)
+      .setAlpha(0.9);
+    this.tweens.add({ targets: t, scale: sc, duration: 160, ease: 'Back.easeOut' });
+    this.tweens.add({ targets: t, y: 215, alpha: 0, delay: 520, duration: 420, onComplete: () => t.destroy() });
+    const r = chainReward(this.chain);
+    const bonus: string[] = [];
+    if (r.free) {
+      this.freeSummons++;
+      bonus.push('🎁 다음 소환 무료!');
+    }
+    if (r.volley && this.feat.volley) {
+      this.volleyT = Math.max(0, this.volleyT - VOLLEY_CD * CHAIN_VOLLEY_PCT);
+      bonus.push('🏰 성 공격 +20%!');
+    }
+    if (bonus.length) {
+      sfx(this, 'coin');
+      const b = this.add
+        .text(640, 300, bonus.join('  '), { fontFamily: 'sans-serif', fontSize: '22px', fontStyle: 'bold', color: '#7affa0', stroke: '#000000', strokeThickness: 6 })
+        .setOrigin(0.5)
+        .setDepth(140);
+      this.tweens.add({ targets: b, y: 270, alpha: 0, delay: 900, duration: 500, onComplete: () => b.destroy() });
+    }
+    if (this.chain === 3 || this.chain === 5 || this.chain === 10) track('perfect_chain', { n: this.chain, stage: this.stage.id });
+  }
+
+  /** 📣 다음 무리 예고 — 몇 초 뒤 누가 오는지 + 덱에 있는 유리한 유닛 */
+  private announceWave(w: WavePreview): void {
+    const secs = Math.max(0, Math.ceil(w.at - this.waves.now));
+    const names = w.groups.slice(0, 3).map((g) => `${ENEMIES[g.type]?.name ?? g.type} ×${g.count}`).join(' · ');
+    const kinds = [...new Set(w.groups.map((g) => enemyKind(g.type)).filter((k): k is EnemyKind => !!k))];
+    const good = this.deck.find((u) => kinds.includes(UNIT_COUNTER[u] as EnemyKind));
+    const boss = w.groups.some((g) => isBoss(g.type));
+    const head = boss ? '👑 보스 등장' : secs <= 1 ? '지금' : `${secs}초 뒤`;
+    const tip = good ? `  →  🎯 ${UNITS[good].name} 유리` : kinds.length ? `  (${kinds.map((k) => KIND_INFO[k].icon + KIND_INFO[k].name).join(' ')})` : '';
+    this.waveBanner?.destroy();
+    const c = this.add.container(560, 64).setDepth(106); // 상단 바 바로 아래, 📣 지원군·영웅 체력 바 왼쪽
+    const txt = this.add.text(0, 0, `⚠️ ${head}: ${names}${tip}`, { fontFamily: 'sans-serif', fontSize: '19px', fontStyle: 'bold', color: boss ? '#ffb0b0' : '#ffe680', stroke: '#000000', strokeThickness: 4 }).setOrigin(0.5);
+    const bg = this.add.rectangle(0, 0, txt.width + 28, 36, boss ? 0x5a1020 : 0x0d1424, 0.88).setStrokeStyle(2, boss ? 0xff5a6e : 0xffd34d, 0.8);
+    c.add([bg, txt]);
+    c.setAlpha(0).setY(50);
+    this.tweens.add({ targets: c, alpha: 1, y: 64, duration: 220 });
+    this.tweens.add({ targets: c, alpha: 0, delay: WAVE_SHOW_MS, duration: 400, onComplete: () => c.destroy() });
+    this.waveBanner = c;
+    if (good) this.hud.flashCard(good); // 유리한 유닛 카드 깜빡
   }
 
   private upgCost(type: string): number {
@@ -1133,6 +1199,10 @@ export class BattleScene extends Phaser.Scene {
     this.updateHero(dt);
     this.updateCastles(dt);
     for (const ev of this.waves.update(dt)) this.spawnEnemy(ev.type);
+    if (!this.endless && !this.weekly && this.clock > 2) {
+      const nw = this.waves.nextWave(WAVE_LEAD);
+      if (nw) this.announceWave(nw);
+    }
 
     // 적 기지가 병력을 계속 생산(기지 파괴 전까지) → 기지를 부숴야 생산이 멈춤
     if (!this.enemyBase.destroyed) {

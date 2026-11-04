@@ -15,6 +15,7 @@ import { grantNewChest } from '../systems/chestGrant';
 import { goldMultFor } from '../systems/worlds';
 import { WEEKLY_STEPS } from '../systems/weekly';
 import enemiesData from '../data/enemies.json';
+import { track } from '../systems/analytics';
 
 const ENEMY_NAMES = enemiesData as Record<string, { name: string }>;
 
@@ -88,6 +89,20 @@ export class ResultScene extends Phaser.Scene {
       this.tweens.add({ targets: nb, scale: 1.15, duration: 380, yoyo: true, repeat: -1 });
     }
     this.nextUnitCard();
+    // 🌅 오늘의 첫 승리 상자 — 관문 승리(도전·주간·무한 제외) 하루 1번
+    if (win && !this.resultData.mode && meta.canFirstWin()) {
+      meta.markFirstWin();
+      track('first_win_chest', { stage: stageId });
+      this.time.delayedCall(1100, () => {
+        const tag = this.add
+          .text(640, 40, '🌅 오늘의 첫 승리! 은 상자 선물', { fontFamily: 'sans-serif', fontSize: '26px', fontStyle: 'bold', color: '#fff', stroke: '#c07a00', strokeThickness: 6 })
+          .setOrigin(0.5)
+          .setDepth(401)
+          .setScale(0.4);
+        this.tweens.add({ targets: tag, scale: 1, duration: 380, ease: 'Back.easeOut' });
+        chestPopup(this, grantNewChest(1, goldMultFor(stageId)), (k) => UNITS[k]?.name ?? k, () => tag.destroy());
+      });
+    }
     if (this.resultData.chest) {
       chestCard(this, 170, 330, this.resultData.chest, (k) => UNITS[k]?.name ?? k);
       this.adChest(this.resultData.chest.tier, daily ? 1 : goldMultFor(stageId));

@@ -52,6 +52,12 @@ export function setMute(scene: Phaser.Scene, mute: boolean): void {
   storageSet(MUTE_KEY, mute ? '1' : '0');
 }
 
+/** 🔥 음정을 바꿔 재생(PERFECT 체인 — 도·레·미처럼 올라가게). 간격 제한 없음 */
+export function sfxRate(scene: Phaser.Scene, key: SfxKey, rate: number, volume = 1): void {
+  if (!scene.cache.audio.exists(key)) return;
+  scene.sound.play(key, { volume: (VOLUME[key] ?? 0.5) * volume, rate });
+}
+
 export function sfx(scene: Phaser.Scene, key: SfxKey, volume = 1): void {
   if (!scene.cache.audio.exists(key)) return;
   const now = performance.now();

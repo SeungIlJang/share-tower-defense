@@ -141,6 +141,7 @@ export class Hud {
   private heroHpText!: Phaser.GameObjects.Text;
   private synergyText!: Phaser.GameObjects.Text;
   private beatMark: Phaser.GameObjects.Triangle | null = null;
+  private chainText: Phaser.GameObjects.Text | null = null; // 🔥 PERFECT 체인 수(리듬 바 오른쪽)
   private readonly beatX = 470; // 인구 바(~440)와 에너지 바(840~) 사이
   private readonly beatW = 340;
 
@@ -226,6 +227,10 @@ export class Hud {
       scene.add.rectangle(this.beatX + this.beatW / 2, beatY, this.beatW, 12, 0x2a3348).setDepth(d + 1);
       scene.add.rectangle(this.beatX + this.beatW / 2, beatY, this.beatW * 0.16, 12, 0x3fd06a).setDepth(d + 1); // 퍼펙트 존
       this.beatMark = scene.add.triangle(this.beatX + this.beatW / 2, beatY, 0, -10, 10, -10, 5, 2, 0xffffff).setDepth(d + 2);
+      this.chainText = scene.add
+        .text(this.beatX + this.beatW + 10, beatY, '', { fontFamily: 'sans-serif', fontSize: '16px', fontStyle: 'bold', color: '#ffe14d', stroke: '#000000', strokeThickness: 4 })
+        .setOrigin(0, 0.5)
+        .setDepth(d + 2);
     } else {
       // 🔒 아직 안 열림 — 빈칸 대신 다음에 열릴 기능 미리 알림
       const at = FEATURES.find((f) => f.key === 'perfect')?.stage ?? 6;
@@ -443,6 +448,21 @@ export class Hud {
       });
       this.heroBtns.push({ bg, shade, cx: bx, cy, glow, cost, owned: !!owned[i], icon });
     });
+  }
+
+  /** 🔥 PERFECT 체인 수 — 2부터 보임, 5부터 분홍 */
+  setChain(n: number): void {
+    if (!this.chainText) return;
+    this.chainText.setText(n >= 2 ? `🔥×${n}` : '').setColor(n >= 5 ? '#ff7af0' : '#ffe14d');
+    if (n >= 2) this.scene.tweens.add({ targets: this.chainText, scale: 1.35, duration: 90, yoyo: true });
+  }
+
+  /** 📣 유리한 유닛 카드 테두리 깜빡(다음 무리 예고) */
+  flashCard(key: string): void {
+    const slot = this.slots.find((s) => s.key === key);
+    if (!slot) return;
+    const r = this.scene.add.rectangle(slot.cx + this.strip.x, CARD_CY, CARD_W + 8, CARD_H + 8).setStrokeStyle(5, 0xffe14d, 1).setDepth(slot.rect.depth + 5);
+    this.scene.tweens.add({ targets: r, alpha: 0.15, duration: 260, yoyo: true, repeat: 5, onComplete: () => r.destroy() });
   }
 
   /** 👑 마나·스킬 대기 표시 */

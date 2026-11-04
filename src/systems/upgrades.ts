@@ -99,6 +99,7 @@ export class MetaProgress {
   evo: Record<string, number> = {}; // ⭐ 유닛별 진화 단계(0~11)
   branch: Record<string, Branch> = {}; // 🔀 ★4부터 갈래(공격형·방어형)
   freeChestDay = -1; // 📺 오늘의 무료 상자 받은 날
+  firstWinDay = -1; // 🌅 오늘의 첫 승리 상자 받은 날
   title: string | null = null; // 🏷️ 달고 있는 칭호
   titlesSeen: string[] = []; // 🏷️ 이미 본(새 칭호 표시 끈) 칭호
   weekly = { week: -1, total: 0 }; // 👑 이번 주 보스에게 준 누적 피해(보스 체력 배수)
@@ -129,6 +130,15 @@ export class MetaProgress {
   }
   markFreeChest(): void {
     this.freeChestDay = this.dayIndex();
+    this.save();
+  }
+
+  /** 🌅 오늘의 첫 승리 상자 — 하루 1번, 관문에서 이기면(광고 없음) */
+  canFirstWin(): boolean {
+    return this.firstWinDay !== this.dayIndex();
+  }
+  markFirstWin(): void {
+    this.firstWinDay = this.dayIndex();
     this.save();
   }
 
@@ -681,6 +691,7 @@ export class MetaProgress {
         evo?: Record<string, number>;
         branch?: Record<string, Branch>;
         freeChestDay?: number;
+        firstWinDay?: number;
         title?: string | null;
         titlesSeen?: string[];
         weekly?: { week: number; total: number };
@@ -723,6 +734,7 @@ export class MetaProgress {
       this.evo = obj.evo ?? Object.fromEntries(Object.entries(this.levels).map(([k, lv]) => [k, migrateTier(lv)]));
       this.branch = obj.branch ?? {};
       this.freeChestDay = obj.freeChestDay ?? -1;
+      this.firstWinDay = obj.firstWinDay ?? -1;
       this.title = obj.title ?? null;
       this.titlesSeen = obj.titlesSeen ?? [];
       this.weekly = obj.weekly ?? { week: -1, total: 0 };
@@ -787,6 +799,7 @@ export class MetaProgress {
         evo: this.evo,
         branch: this.branch,
         freeChestDay: this.freeChestDay,
+        firstWinDay: this.firstWinDay,
         title: this.title,
         titlesSeen: this.titlesSeen,
         weekly: this.weekly,
