@@ -14,3 +14,7 @@ rea/
 
 # Firebase 설정(사용자가 콘솔에서 받아 넣음)
 android/app/google-services.json
+
+# 📦 빌드 결과물(AAB/APK) — 용량이 커서 저장소에 넣지 않음(파일은 releases/에 로컬로 보관)
+releases/*.aab
+releases/*.apk
