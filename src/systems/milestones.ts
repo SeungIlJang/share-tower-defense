@@ -21,6 +21,7 @@ export const MILESTONE_TEXT: Record<MilestoneKind, string> = {
 const CYCLE: Record<UnitGroup, MilestoneKind[]> = {
   melee: ['cost', 'hp', 'cooldown', 'stats'],
   ranged: ['cost', 'range', 'skill', 'stats'],
+  magic: ['cost', 'range', 'skill', 'stats'], // 원거리에서 나뉨 — 보상 순서는 그대로
   totem: ['cost', 'life', 'cooldown', 'stats'],
 };
 

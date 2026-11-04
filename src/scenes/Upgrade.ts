@@ -238,7 +238,7 @@ export class UpgradeScene extends Phaser.Scene {
 
   private renderUnits(): void {
     const keys = Object.keys(UNITS);
-    // 🛡️ 근접 · 원거리 · 설치물 — 고른 묶음만 크게
+    // 🛡️ 근접 · 원거리 · 마법 · 설치물 — 고른 묶음만 크게
     this.subTabs(
       UNIT_GROUPS.map((g) => {
         const n = keys.filter((k) => unitGroup(UNITS[k]) === g.key);

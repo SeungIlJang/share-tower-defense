@@ -12,6 +12,7 @@ export interface CombatStats {
 export interface UnitStats extends CombatStats {
   cost: number; // 소환 에너지 비용
   pop: number; // 인구(식량) 점유
+  role?: 'magic'; // 🔮 마법 계열(마법사·흙마법사·암흑마법사·성직자) — 원거리와 따로 묶음
 }
 
 export interface EnemyStats extends CombatStats {

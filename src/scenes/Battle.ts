@@ -41,7 +41,7 @@ import { FEATURES, HERO_TIP_STAGE, TIP_TEXT, featureOn, nextTip, reachedStage, t
 import { showRewarded } from '../systems/ads';
 import { CHAIN_SHOW_FROM, CHAIN_VOLLEY_PCT, chainRate, chainReward, chainScale, nextChain } from '../systems/perfectChain';
 import { REINFORCE_AD, REINFORCE_AD_COUNT, REINFORCE_FREE, reinforceCount } from '../systems/reinforce';
-import { UNIT_GROUPS, unitGroup } from '../systems/unitGroups';
+import { groupInfo, unitGroup } from '../systems/unitGroups';
 import {
   UNIT_SKILLS,
   isSkillSwing,
@@ -904,7 +904,7 @@ export class BattleScene extends Phaser.Scene {
       const parts: Phaser.GameObjects.GameObject[] = [card];
       const face = this.textures.exists(iconKey(this.looks[k] ?? k)) ? iconKey(this.looks[k] ?? k) : iconKey(k);
       if (this.textures.exists(face)) parts.push(this.add.image(x, y - 20, face).setDisplaySize(84, 84));
-      const icon = UNIT_GROUPS.find((u) => u.key === unitGroup(UNITS[k]))!.label.split(' ')[0];
+      const icon = groupInfo(unitGroup(UNITS[k])).icon;
       parts.push(this.add.text(x, y + 38, `${icon} ${UNITS[k].name}`, { fontFamily: 'sans-serif', fontSize: UNITS[k].name.length >= 5 ? '14px' : '16px', fontStyle: 'bold', color: '#ffffff', stroke: '#000000', strokeThickness: 3 }).setOrigin(0.5));
       parts.push(this.add.text(x, y + 59, `Lv${meta.level(k)} · ×${reinforceCount(byAd)}`, { fontFamily: 'sans-serif', fontSize: '15px', fontStyle: 'bold', color: '#7affa0' }).setOrigin(0.5));
       card.on('pointerdown', () => {
