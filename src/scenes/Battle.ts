@@ -82,6 +82,8 @@ const STUN_TINT = 0x9a9a9a;
 
 const PERFECT_HINT_RUNS = 3; // ⏱️ PERFECT 안내 글씨를 보여 줄 판 수
 const WAVE_LEAD = 5; // 📣 다음 무리 예고 — 몇 초 전에
+const BG_PARALLAX = 0.5; // 🖼️ 배경 그림이 카메라를 따라 움직이는 비율(원근감)
+const BG_GROUND = 388 / 744; // 🖼️ 배경 그림 속 풀밭 윗선 높이(그림 높이 대비) — 원본 BG_*.png 기준
 const WAVE_SHOW_MS = 3800;
 const VOLLEY_R = 30; // 🎯 성 특수 공격 버튼 반지름(보이는 동그라미)
 const VOLLEY_HIT = 50; // 눌리는 영역 반지름
@@ -286,6 +288,28 @@ export class BattleScene extends Phaser.Scene {
     if (this.rule) this.stage = dailyStage(STAGES.find((s) => s.id === dailyStageId(meta.today(), meta.clearedMax)) ?? STAGES[2], this.rule);
   }
 
+  /** 🖼️ 이 전투의 배경 그림(월드에 그림이 있으면) — 무한 모드는 코드 배경 */
+  private bgKey(): string | null {
+    return this.endless ? null : WORLDS[(this.stage.world ?? 1) - 1]?.bg ?? null;
+  }
+
+  /**
+   * 🖼️ 배경 그림 한 장 — 풀밭 윗선을 전장 바닥(LANE_Y)에 맞추고, 카메라의 절반 속도로 움직임(원근감).
+   * 그림 한 장이 전장 끝까지 덮을 만큼 넓어서 이어 붙이지 않음(모자라면 그만큼 키움).
+   */
+  private drawBgImage(key: string): void {
+    const tex = this.textures.get(key).getSourceImage() as { width: number; height: number };
+    const needW = VIEW_W + (this.worldW - VIEW_W) * BG_PARALLAX;
+    const k = Math.max(1, needW / tex.width);
+    const groundY = tex.height * BG_GROUND; // 그림 속 풀밭 윗선
+    this.add
+      .image(0, LANE_Y - 2 - groundY * k, key)
+      .setOrigin(0, 0)
+      .setScale(k)
+      .setDepth(-9)
+      .setScrollFactor(BG_PARALLAX, 1);
+  }
+
   /** 🌄 전장 배경 — 하늘 그라데이션 · 달 · 별 · 먼 언덕 2겹(위쪽 빈 공간 채우기) */
   private drawBackdrop(sky: number, lane: number, line: number): void {
     const mix = (a: number, b: number, t: number): number => {
@@ -332,6 +356,8 @@ export class BattleScene extends Phaser.Scene {
     // 🏰 성: 우리 성 지금·다음 단계, 적 성은 이 관문 단계(무한 모드는 웨이브마다 바뀌어 전부)
     const castles = castleTypes(allyCastleTier(meta.castleLevel('castle')), this.endless ? [0, 1, 2, 3, 4] : [enemyCastleTier(false, this.stage.id, 0)]);
     preloadNeeded(this, [...enemies, ...units, ...castles], { fx: true, battleBgm: true });
+    const bg = this.bgKey();
+    if (bg && !this.textures.exists(bg)) this.load.image(bg, `backgrounds/${bg}.webp`); // 🖼️ 월드 배경(약 50KB)
   }
 
   create(): void {
@@ -392,9 +418,13 @@ export class BattleScene extends Phaser.Scene {
     this.cameras.main.setBounds(0, 0, W, 720).setScroll(0, 0);
     this.setupUiCamera();
     this.add.rectangle(VIEW_W / 2, 360, VIEW_W, 720, sky).setDepth(-10).setScrollFactor(0);
-    this.drawBackdrop(sky, lane, line);
-    this.add.rectangle(W / 2, LANE_Y + 40, W, 80, lane).setDepth(-5);
-    this.add.rectangle(W / 2, LANE_Y + 2, W, 3, line).setDepth(-4);
+    const bg = this.bgKey();
+    if (bg && this.textures.exists(bg)) this.drawBgImage(bg); // 🖼️ 월드 배경 그림(풀밭·흙까지 그림에 있음)
+    else {
+      this.drawBackdrop(sky, lane, line);
+      this.add.rectangle(W / 2, LANE_Y + 40, W, 80, lane).setDepth(-5);
+      this.add.rectangle(W / 2, LANE_Y + 2, W, 3, line).setDepth(-4);
+    }
 
     // 🏰 우리 성: 성 레벨로 체력·단계 / 적 성: 관문(무한=웨이브)으로 단계
     const ct = allyCastleTier(meta.castleLevel('castle'));

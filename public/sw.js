@@ -1,7 +1,7 @@
 /**
  * 📦 모두의 타워디펜스 오프라인 캐시(서비스 워커)
  * - 게임 코드(assets/ — 이름에 해시가 붙어 바뀌면 새 파일): 캐시 우선
- * - 그림·소리·효과(sprites/ audio/ effects/): 캐시에서 바로 주고 뒤에서 새로 받아 둠(다음 실행에 반영)
+ * - 그림·소리·효과·배경(sprites/ audio/ effects/ backgrounds/): 캐시에서 바로 주고 뒤에서 새로 받아 둠(다음 실행에 반영)
  * - 첫 화면(index.html)·매니페스트(json): 네트워크 우선, 안 되면 캐시(인터넷 없을 때도 실행)
  */
 const CACHE = 'ld-v1';
@@ -43,7 +43,7 @@ self.addEventListener('fetch', (e) => {
     return;
   }
   // 그림·소리·효과 — 캐시 먼저(빠름), 뒤에서 새로 받아 둠
-  if (/\/(sprites|audio|effects)\//.test(path)) {
+  if (/\/(sprites|audio|effects|backgrounds)\//.test(path)) {
     e.respondWith(
       caches.match(req).then((hit) => {
         const net = fetch(req)

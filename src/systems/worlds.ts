@@ -15,13 +15,14 @@ export interface WorldDef {
   color: number; // 스테이지 선택 리본·버튼
   dark: number;
   battle: [number, number, number]; // 전투 배경 [하늘, 레인, 레인 선]
+  bg?: string; // 🖼️ 전투 배경 그림(public/backgrounds/<bg>.webp) — 없으면 코드로 그림(하늘·언덕)
   themed: string[]; // 이 월드에 더 나오는 적(웨이브에 섞음)
 }
 
 export const WORLDS: WorldDef[] = [
-  { id: 1, name: '🌳 관문의 숲', theme: 'forest', color: 0x3f9a4a, dark: 0x2a6a32, battle: [0x121826, 0x1d2740, 0x33406a], themed: [] },
-  { id: 2, name: '🏜️ 모래 사막', theme: 'desert', color: 0xd8862a, dark: 0xa05a10, battle: [0x2a1f18, 0x4a3826, 0x7a5a36], themed: [] },
-  { id: 3, name: '❄️ 얼음 설원', theme: 'ice', color: 0x4aa8e0, dark: 0x2a78b0, battle: [0x142438, 0x2a4a68, 0x7ab8e0], themed: ['frost_wolf', 'ice_golem', 'wisp'] },
+  { id: 1, name: '🌳 관문의 숲', theme: 'forest', color: 0x3f9a4a, dark: 0x2a6a32, battle: [0x121826, 0x1d2740, 0x33406a], themed: [], bg: 'bg_forest' },
+  { id: 2, name: '🏜️ 모래 사막', theme: 'desert', color: 0xd8862a, dark: 0xa05a10, battle: [0x2a1f18, 0x4a3826, 0x7a5a36], themed: [], bg: 'bg_desert' },
+  { id: 3, name: '❄️ 얼음 설원', theme: 'ice', color: 0x4aa8e0, dark: 0x2a78b0, battle: [0x142438, 0x2a4a68, 0x7ab8e0], themed: ['frost_wolf', 'ice_golem', 'wisp'], bg: 'bg_ice' },
   { id: 4, name: '🌿 독 늪지', theme: 'swamp', color: 0x5a9a4a, dark: 0x3a6a2a, battle: [0x14221a, 0x24402a, 0x5a8a4a], themed: ['poison_slime', 'toxic_mushroom', 'goblin_shaman'] },
   { id: 5, name: '🌋 화산 지대', theme: 'volcano', color: 0xd8502a, dark: 0x9a2a10, battle: [0x2a1010, 0x4a2018, 0xa8482a], themed: ['lava_golem', 'baby_dragon', 'goblin_bomber'] },
   { id: 6, name: '🪦 망자의 묘지', theme: 'graveyard', color: 0x7a7a9a, dark: 0x4a4a6a, battle: [0x16161f, 0x2a2a38, 0x6a6a8a], themed: ['skeleton_archer', 'skeleton_knight', 'banshee', 'necromancer'] },
