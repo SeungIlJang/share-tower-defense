@@ -39,7 +39,7 @@ export class UpgradeScene extends Phaser.Scene {
   private goldText!: Phaser.GameObjects.Text;
   private tab: Tab = 'units';
   private tabBtns: Partial<Record<Tab, Phaser.GameObjects.Text>> = {};
-  private static group: UnitGroup = 'melee'; // 🛡️ 마지막으로 본 유닛 묶음(다시 열어도 유지)
+  private static group: UnitGroup = 'infantry'; // 🛡️ 마지막으로 본 유닛 묶음(다시 열어도 유지)
 
   constructor() {
     super('Upgrade');
@@ -238,7 +238,7 @@ export class UpgradeScene extends Phaser.Scene {
 
   private renderUnits(): void {
     const keys = Object.keys(UNITS);
-    // 🛡️ 근접 · 원거리 · 마법 · 설치물 — 고른 묶음만 크게
+    // 🛡️ 보병 · 정예 · 원거리 · 마법 · 설치물 — 고른 묶음만 크게
     this.subTabs(
       UNIT_GROUPS.map((g) => {
         const n = keys.filter((k) => unitGroup(UNITS[k]) === g.key);

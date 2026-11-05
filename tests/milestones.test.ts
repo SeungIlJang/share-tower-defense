@@ -9,7 +9,7 @@ describe('🎁 진화 사이 작은 보상', () => {
     expect(milestonesAt(100)).toBe(9);
     expect(milestoneKind(0)).toBe('cost');
     expect(milestoneKind(3)).toBe('stats');
-    expect(milestoneKind(1, 'melee')).toBe('hp');
+    expect(milestoneKind(1, 'infantry')).toBe('hp');
     expect(milestoneKind(1, 'ranged')).toBe('range');
     expect(milestoneKind(1, 'totem')).toBe('life');
     expect(milestoneKind(12)).toBe('stats');
@@ -35,7 +35,7 @@ describe('🎁 진화 사이 작은 보상', () => {
     expect(nextMilestone(15, 10).lv).toBe(25);
   });
   it('분류별 보상 — 근접 체력 · 설치물 설치 시간', () => {
-    expect(milestoneBonus(25, 'melee').hp).toBeCloseTo(1.06);
+    expect(milestoneBonus(25, 'elite').hp).toBeCloseTo(1.06);
     expect(milestoneBonus(25, 'totem').life).toBe(5);
     expect(milestoneBonus(65, 'totem').life).toBe(10);
     expect(milestoneBonus(25, 'ranged').hp).toBe(1);

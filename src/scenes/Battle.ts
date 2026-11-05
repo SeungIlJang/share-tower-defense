@@ -1064,7 +1064,7 @@ export class BattleScene extends Phaser.Scene {
     return milestoneCost(UNITS[k].cost, meta.level(k));
   }
   private unitBonus(k: string): MilestoneBonus {
-    return milestoneBonus(meta.level(k), UNITS[k] ? unitGroup(UNITS[k]) : 'melee');
+    return milestoneBonus(meta.level(k), UNITS[k] ? unitGroup(UNITS[k]) : 'infantry');
   }
   private unitCooldown(k: string): number {
     return summonCooldown(UNITS[k].cost) * this.unitBonus(k).cooldown;

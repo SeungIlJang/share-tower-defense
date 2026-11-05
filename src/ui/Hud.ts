@@ -256,8 +256,8 @@ export class Hud {
       this.pressTap(o, fn);
     };
     const FACE = 100; // 얼굴 — 카드를 꽉 채우게(이름 줄을 없앤 자리까지)
-    // 얼굴 아래쪽에 겹쳐 붙는 이름표 — 분류 아이콘(⚔️·🏹·🔮·🗿) + 유닛 이름, 색은 분류(빨강 근접 · 초록 원거리 · 보라 마법 · 갈색 설치물)
-    const groupTag = (cx: number, u: { range: number; speed: number; name: string; role?: string }): [Phaser.GameObjects.Rectangle, Phaser.GameObjects.Text] => {
+    // 얼굴 아래쪽에 겹쳐 붙는 이름표 — 분류 아이콘(🪖·👑·🏹·🔮·🗿) + 유닛 이름, 색은 분류(주황 보병 · 빨강 정예 · 초록 원거리 · 보라 마법 · 갈색 설치물)
+    const groupTag = (cx: number, u: { range: number; speed: number; hp: number; name: string; role?: string }): [Phaser.GameObjects.Rectangle, Phaser.GameObjects.Text] => {
       const { color, icon } = groupInfo(unitGroup(u));
       return [
         add(scene.add.rectangle(cx, cy + 46, Math.min(CARD_W - 12, 124), 26, color, 0.95).setStrokeStyle(2, 0x000000, 0.5)),

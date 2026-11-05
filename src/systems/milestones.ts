@@ -19,7 +19,8 @@ export const MILESTONE_TEXT: Record<MilestoneKind, string> = {
   life: '⏳ 설치 시간 +5초',
 };
 const CYCLE: Record<UnitGroup, MilestoneKind[]> = {
-  melee: ['cost', 'hp', 'cooldown', 'stats'],
+  infantry: ['cost', 'hp', 'cooldown', 'stats'], // 근접(보병·정예)은 같은 순서 — 나뉘기 전 보상이 바뀌지 않게
+  elite: ['cost', 'hp', 'cooldown', 'stats'],
   ranged: ['cost', 'range', 'skill', 'stats'],
   magic: ['cost', 'range', 'skill', 'stats'], // 원거리에서 나뉨 — 보상 순서는 그대로
   totem: ['cost', 'life', 'cooldown', 'stats'],
@@ -30,7 +31,7 @@ export function milestoneLevel(n: number): number {
   return n < 9 ? 15 + n * 10 : 105 + (n - 9) * 5;
 }
 
-export function milestoneKind(n: number, group: UnitGroup = 'melee'): MilestoneKind {
+export function milestoneKind(n: number, group: UnitGroup = 'infantry'): MilestoneKind {
   const c = CYCLE[group];
   return n < 9 ? c[n % c.length] : 'stats';
 }
@@ -53,7 +54,7 @@ export interface MilestoneBonus {
 }
 
 /** 받은 보상 합계 */
-export function milestoneBonus(lv: number, group: UnitGroup = 'melee'): MilestoneBonus {
+export function milestoneBonus(lv: number, group: UnitGroup = 'infantry'): MilestoneBonus {
   const b: MilestoneBonus = { costDown: 0, cooldown: 1, skill: 1, stats: 1, hp: 1, range: 0, life: 0 };
   const n = milestonesAt(lv);
   for (let i = 0; i < n; i++) {
@@ -70,7 +71,7 @@ export function milestoneBonus(lv: number, group: UnitGroup = 'melee'): Mileston
 }
 
 /** 다음 보상 — 레벨 · 내용 · 진행(지난 보상/진화 레벨부터) */
-export function nextMilestone(lv: number, prevAnchor: number, group: UnitGroup = 'melee'): { lv: number; text: string; ratio: number; left: number } {
+export function nextMilestone(lv: number, prevAnchor: number, group: UnitGroup = 'infantry'): { lv: number; text: string; ratio: number; left: number } {
   const n = milestonesAt(lv);
   const at = milestoneLevel(n);
   const from = Math.max(prevAnchor, n > 0 ? milestoneLevel(n - 1) : 0);
