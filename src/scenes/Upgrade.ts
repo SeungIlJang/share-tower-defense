@@ -29,6 +29,7 @@ type Tab = 'units' | 'weapons' | 'base' | 'hero';
 /** 지속시간이 핵심인 무기(위력 대신 지속시간 표시) */
 const DURATION_WEAPONS = new Set(['freeze', 'guard', 'berserk']);
 
+const UNIT_SLOTS = 6; // 📦 유닛 탭 묶음당 칸 수(2열 × 3줄) — 모자라면 '곧 합류' 카드로 채움
 const GRID_TOP = 118; // 제목·보유 골드를 한 줄로 올려서 카드 공간 확보
 const GRID_H = 548;
 const SUB_H = 34; // 유닛 탭: 근접·원거리·설치물 고르는 줄
@@ -248,6 +249,7 @@ export class UpgradeScene extends Phaser.Scene {
       (k) => (UpgradeScene.group = k as UnitGroup)
     );
     const shown = keys.filter((k) => unitGroup(UNITS[k]) === UpgradeScene.group);
+    const slots = Math.max(UNIT_SLOTS, Math.ceil(shown.length / 2) * 2); // 📦 묶음마다 6칸 고정 — 빈칸은 '곧 합류' 카드
     shown.forEach((key, i) => {
       const u = UNITS[key];
       const owned = meta.ownsUnit(key);
@@ -275,7 +277,7 @@ export class UpgradeScene extends Phaser.Scene {
           : `❤️ ${st(u.hp, lv, pk.hp, true)}  ⚔️ ${st(u.atk, lv, pk.atk)}  ▶  ❤️ ${st(u.hp, lv + 1, pk.hp, true)}  ⚔️ ${st(u.atk, lv + 1, pk.atk)}${next ? `   ⭐ Lv${levelCap(tier)}에 ${next.name} 진화` : '   🔥 최고 단계'}`;
       this.card(
         i,
-        shown.length,
+        slots,
         icon,
         `${u.name} ${starText(tier)} Lv.${lv}`,
         desc,
@@ -331,13 +333,32 @@ export class UpgradeScene extends Phaser.Scene {
       );
       if (key === this.focus) {
         // 🔜 결과 화면 '다음 동료'에서 옴 — 이 칸을 금빛 테두리로 반짝
-        const c = this.cell(i, shown.length);
+        const c = this.cell(i, slots);
         const ring = this.add.rectangle(c.x, c.y, 610, c.h - 2).setStrokeStyle(5, 0xffd34d, 1);
         this.tweens.add({ targets: ring, alpha: 0.25, duration: 450, yoyo: true, repeat: 5, onComplete: () => ring.destroy() });
         this.layer.add(ring);
         this.focus = null; // 한 번만
       }
     });
+    for (let i = shown.length; i < slots; i++) this.comingSoonCard(i, slots);
+  }
+
+  /** ❓ 빈 칸 — 다음 업데이트에 합류할 동료 자리(물음표 실루엣이 살짝 숨 쉼) */
+  private comingSoonCard(i: number, count: number): void {
+    const { x, y, h } = this.cell(i, count);
+    const sx = x - 222;
+    const stageH = h - 22;
+    const box = this.add.rectangle(x, y, 600, h - 8, 0x141b2c).setStrokeStyle(2, 0x2a3656);
+    const stage = this.add.rectangle(sx, y, 148, stageH, 0x0c1220).setStrokeStyle(1, 0x22304a);
+    const shadow = this.add.ellipse(sx, y + stageH / 2 - 16, 96, 16, 0x000000, 0.35);
+    const q = this.add.text(sx, y - 4, '?', { fontFamily: 'sans-serif', fontSize: '72px', fontStyle: 'bold', color: '#3a4a72', stroke: '#0a0f1c', strokeThickness: 6 }).setOrigin(0.5);
+    this.tweens.add({ targets: q, alpha: 0.45, scale: 0.92, duration: 1100, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
+    const title = this.add.text(x - 130, y - 30, '??? 새 동료', { fontFamily: 'sans-serif', fontSize: '24px', fontStyle: 'bold', color: '#7a88aa', stroke: '#000000', strokeThickness: 3 }).setOrigin(0, 0.5);
+    const sub = this.add.text(x - 130, y + 6, '곧 합류할 동료의 자리예요', { fontFamily: 'sans-serif', fontSize: '16px', fontStyle: 'bold', color: '#5a6888' }).setOrigin(0, 0.5);
+    const hint = this.add.text(x - 130, y + 32, '✨ 업데이트를 기다려 주세요', { fontFamily: 'sans-serif', fontSize: '14px', color: '#4a587a' }).setOrigin(0, 0.5);
+    const btn = this.add.rectangle(x + 230, y, 110, Math.min(70, h - 40), 0x1e2638).setStrokeStyle(2, 0x2e3a56);
+    const lock = this.add.text(x + 230, y, '🔒\n준비 중', { fontFamily: 'sans-serif', fontSize: '15px', fontStyle: 'bold', color: '#5a6888', align: 'center' }).setOrigin(0.5);
+    this.layer.add([box, stage, shadow, q, title, sub, hint, btn, lock]);
   }
 
   /** 🏷️ 등급 배지 + 🔀 갈래 배지(★4부터 — 아직 안 골랐으면 반짝, 누르면 고르기/바꾸기) */
