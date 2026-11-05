@@ -16,20 +16,21 @@ export interface WorldDef {
   dark: number;
   battle: [number, number, number]; // 전투 배경 [하늘, 레인, 레인 선]
   bg?: string; // 🖼️ 전투 배경 그림(public/backgrounds/<bg>.webp) — 없으면 코드로 그림(하늘·언덕)
+  bgGround?: number; // 🖼️ 그 그림 속 땅 윗선 높이(그림 높이 대비) — 원본에서 잼, 유닛 발을 여기에 맞춤
   themed: string[]; // 이 월드에 더 나오는 적(웨이브에 섞음)
 }
 
 export const WORLDS: WorldDef[] = [
-  { id: 1, name: '🌳 관문의 숲', theme: 'forest', color: 0x3f9a4a, dark: 0x2a6a32, battle: [0x121826, 0x1d2740, 0x33406a], themed: [], bg: 'bg_forest' },
-  { id: 2, name: '🏜️ 모래 사막', theme: 'desert', color: 0xd8862a, dark: 0xa05a10, battle: [0x2a1f18, 0x4a3826, 0x7a5a36], themed: [], bg: 'bg_desert' },
-  { id: 3, name: '❄️ 얼음 설원', theme: 'ice', color: 0x4aa8e0, dark: 0x2a78b0, battle: [0x142438, 0x2a4a68, 0x7ab8e0], themed: ['frost_wolf', 'ice_golem', 'wisp'], bg: 'bg_ice' },
-  { id: 4, name: '🌿 독 늪지', theme: 'swamp', color: 0x5a9a4a, dark: 0x3a6a2a, battle: [0x14221a, 0x24402a, 0x5a8a4a], themed: ['poison_slime', 'toxic_mushroom', 'goblin_shaman'] },
-  { id: 5, name: '🌋 화산 지대', theme: 'volcano', color: 0xd8502a, dark: 0x9a2a10, battle: [0x2a1010, 0x4a2018, 0xa8482a], themed: ['lava_golem', 'baby_dragon', 'goblin_bomber'] },
-  { id: 6, name: '🪦 망자의 묘지', theme: 'graveyard', color: 0x7a7a9a, dark: 0x4a4a6a, battle: [0x16161f, 0x2a2a38, 0x6a6a8a], themed: ['skeleton_archer', 'skeleton_knight', 'banshee', 'necromancer'] },
-  { id: 7, name: '💎 수정 동굴', theme: 'crystal', color: 0x8a6ad8, dark: 0x5a3aa8, battle: [0x1a1430, 0x2e2450, 0x8a7ad8], themed: ['wisp', 'stone_golem', 'goblin_archer'] },
-  { id: 8, name: '☁️ 하늘 섬', theme: 'sky', color: 0x5ab8f0, dark: 0x2a88c0, battle: [0x1a2a44, 0x2a4a6a, 0x9ad8ff], themed: ['vampire_bat', 'baby_dragon', 'banshee'] },
-  { id: 9, name: '🌑 그림자 숲', theme: 'shadow', color: 0x4a3a6a, dark: 0x2a1a4a, battle: [0x0c0c18, 0x1a1a2a, 0x4a3a6a], themed: ['orc_berserker', 'necromancer', 'dire_wolf'] },
-  { id: 10, name: '👹 마왕의 땅', theme: 'demon', color: 0xa82a3a, dark: 0x6a1020, battle: [0x1a080c, 0x341018, 0x8a2a2a], themed: ['orc_warchief', 'lava_golem', 'king_slime', 'skeleton_knight'] },
+  { id: 1, name: '🌳 관문의 숲', theme: 'forest', color: 0x3f9a4a, dark: 0x2a6a32, battle: [0x121826, 0x1d2740, 0x33406a], themed: [], bg: 'bg_forest', bgGround: 0.5228 },
+  { id: 2, name: '🏜️ 모래 사막', theme: 'desert', color: 0xd8862a, dark: 0xa05a10, battle: [0x2a1f18, 0x4a3826, 0x7a5a36], themed: [], bg: 'bg_desert', bgGround: 0.5202 },
+  { id: 3, name: '❄️ 얼음 설원', theme: 'ice', color: 0x4aa8e0, dark: 0x2a78b0, battle: [0x142438, 0x2a4a68, 0x7ab8e0], themed: ['frost_wolf', 'ice_golem', 'wisp'], bg: 'bg_ice', bgGround: 0.5215 },
+  { id: 4, name: '🌿 독 늪지', theme: 'swamp', color: 0x5a9a4a, dark: 0x3a6a2a, battle: [0x14221a, 0x24402a, 0x5a8a4a], themed: ['poison_slime', 'toxic_mushroom', 'goblin_shaman'], bg: 'bg_swamp', bgGround: 0.5275 },
+  { id: 5, name: '🌋 화산 지대', theme: 'volcano', color: 0xd8502a, dark: 0x9a2a10, battle: [0x2a1010, 0x4a2018, 0xa8482a], themed: ['lava_golem', 'baby_dragon', 'goblin_bomber'], bg: 'bg_volcano', bgGround: 0.5282 },
+  { id: 6, name: '🪦 망자의 묘지', theme: 'graveyard', color: 0x7a7a9a, dark: 0x4a4a6a, battle: [0x16161f, 0x2a2a38, 0x6a6a8a], themed: ['skeleton_archer', 'skeleton_knight', 'banshee', 'necromancer'], bg: 'bg_graveyard', bgGround: 0.5235 },
+  { id: 7, name: '💎 수정 동굴', theme: 'crystal', color: 0x8a6ad8, dark: 0x5a3aa8, battle: [0x1a1430, 0x2e2450, 0x8a7ad8], themed: ['wisp', 'stone_golem', 'goblin_archer'], bg: 'bg_crystal', bgGround: 0.5296 },
+  { id: 8, name: '☁️ 하늘 섬', theme: 'sky', color: 0x5ab8f0, dark: 0x2a88c0, battle: [0x1a2a44, 0x2a4a6a, 0x9ad8ff], themed: ['vampire_bat', 'baby_dragon', 'banshee'], bg: 'bg_sky', bgGround: 0.5269 },
+  { id: 9, name: '🌑 그림자 숲', theme: 'shadow', color: 0x4a3a6a, dark: 0x2a1a4a, battle: [0x0c0c18, 0x1a1a2a, 0x4a3a6a], themed: ['orc_berserker', 'necromancer', 'dire_wolf'], bg: 'bg_shadow', bgGround: 0.5208 },
+  { id: 10, name: '👹 마왕의 땅', theme: 'demon', color: 0xa82a3a, dark: 0x6a1020, battle: [0x1a080c, 0x341018, 0x8a2a2a], themed: ['orc_warchief', 'lava_golem', 'king_slime', 'skeleton_knight'], bg: 'bg_demon', bgGround: 0.5315 },
 ];
 
 export const MAX_STAGE = WORLDS.length * 10;

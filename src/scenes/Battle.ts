@@ -83,7 +83,7 @@ const STUN_TINT = 0x9a9a9a;
 const PERFECT_HINT_RUNS = 3; // ⏱️ PERFECT 안내 글씨를 보여 줄 판 수
 const WAVE_LEAD = 5; // 📣 다음 무리 예고 — 몇 초 전에
 const BG_PARALLAX = 0.5; // 🖼️ 배경 그림이 카메라를 따라 움직이는 비율(원근감)
-const BG_GROUND = 388 / 744; // 🖼️ 배경 그림 속 풀밭 윗선 높이(그림 높이 대비) — 원본 BG_*.png 기준
+const BG_GROUND = 388 / 744; // 🖼️ 월드에 bgGround 가 없을 때 쓰는 땅 윗선 높이(그림 높이 대비)
 const WAVE_SHOW_MS = 3800;
 const VOLLEY_R = 30; // 🎯 성 특수 공격 버튼 반지름(보이는 동그라미)
 const VOLLEY_HIT = 50; // 눌리는 영역 반지름
@@ -301,7 +301,7 @@ export class BattleScene extends Phaser.Scene {
     const tex = this.textures.get(key).getSourceImage() as { width: number; height: number };
     const needW = VIEW_W + (this.worldW - VIEW_W) * BG_PARALLAX;
     const k = Math.max(1, needW / tex.width);
-    const groundY = tex.height * BG_GROUND; // 그림 속 풀밭 윗선
+    const groundY = tex.height * (WORLDS[(this.stage.world ?? 1) - 1]?.bgGround ?? BG_GROUND); // 그림 속 땅 윗선(월드마다 잰 값)
     this.add
       .image(0, LANE_Y - 2 - groundY * k, key)
       .setOrigin(0, 0)
