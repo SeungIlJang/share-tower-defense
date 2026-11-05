@@ -310,11 +310,19 @@ def extract_sheet(cfg):
             oy = r * fh + foot - f['foot'] + ys.min()
             sheet.alpha_composite(piece, (ox, oy))
         if cfg.get('mirror'):  # 왼쪽을 보는 그림 → 칸마다 좌우 반전해 오른쪽 보게
+            keep = set(cfg.get('keep_dir', {}).get(state, []))  # 원본에서 이미 오른쪽을 보는 칸(뒤집으면 거꾸로 됨)
             for c in range(len(frames)):
+                if c in keep:
+                    continue
                 box = (c * fw, r * fh, (c + 1) * fw, (r + 1) * fh)
                 sheet.paste(sheet.crop(box).transpose(Image.FLIP_LEFT_RIGHT), box[:2])
         if frames:
             anims[state] = {'frames': [r * cols + i for i in range(len(frames))], 'fps': cfg.get('fps', {}).get(state, 8)}
+    # anim_frames: 동작을 다른 줄의 칸으로 다시 엮기 — 예) 정면을 보는 공격 칸 대신 [["walk", 3], ["attack", 2]]
+    # (없던 동작도 만들 수 있음 — 예) ready: 전투 중 대기 자세)
+    for state, picks in cfg.get('anim_frames', {}).items():
+        fps = cfg.get('fps', {}).get(state, anims.get(state, {}).get('fps', 6))
+        anims[state] = {'frames': [states.index(st) * cols + i for st, i in picks], 'fps': fps}
     idle_h = np.median([f['foot'] - f['top'] for f in rows['idle']])
     return sheet, {
         'frameWidth': fw,
@@ -423,6 +431,8 @@ def main():
     sys.stdout.reconfigure(encoding="utf-8")
     cfg_path = sys.argv[1]
     preview = sys.argv[sys.argv.index('--preview') + 1] if '--preview' in sys.argv else None
+    # --only a,b : 이 항목들만 다시 만듦(나머지 그림·manifest 항목은 그대로)
+    only = set(sys.argv[sys.argv.index('--only') + 1].split(',')) if '--only' in sys.argv else None
     with open(cfg_path, encoding='utf-8') as fp:
         config = json.load(fp)
     base = os.path.dirname(os.path.abspath(cfg_path))
@@ -446,7 +456,7 @@ def main():
             config[type_] = merged
 
     for type_, c in config.items():
-        if type_.startswith('_'):
+        if type_.startswith('_') or (only and type_ not in only):
             continue
         for k in ('sheet', 'image'):
             if k in c:

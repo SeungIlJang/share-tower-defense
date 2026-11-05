@@ -270,9 +270,9 @@ export class Fighter {
     this.char.scaleX = d;
   }
 
-  /** 제자리 대기(사거리 안에서 쿨다운 중) */
+  /** 제자리 대기(사거리 안에서 쿨다운 중) — 전투 자세(ready)가 있으면 적 쪽을 본 채로, 없으면 idle */
   idle(): void {
-    this.play('idle');
+    this.play('ready');
   }
 
   get x(): number {
@@ -322,8 +322,8 @@ export class Fighter {
     if (oneShot(next)) {
       s.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => {
         if (this.sprite === s && oneShot(this.anim)) {
-          this.anim = 'idle';
-          s.play(animKey(this.look, 'idle'));
+          this.anim = resolveState(d, 'ready') ?? 'idle'; // 휘두른 뒤엔 전투 자세로(정면을 보지 않게)
+          s.play(animKey(this.look, this.anim));
         }
       });
     }
