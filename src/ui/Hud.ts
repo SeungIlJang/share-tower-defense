@@ -163,7 +163,10 @@ export class Hud {
     const before = new Set(scene.children.list); // destroy()용 — 이 HUD가 만든 것만 기억
     const d = 100;
     this.buildHeroPanel(onHeroSkill, heroOwned, d, features.heroSkill);
-    scene.add.rectangle(640, 22, VIEW_W, 44, 0x0d1424, 0.8).setDepth(d);
+    // 상단 바 — 딱 끊긴 띠 대신 아래로 갈수록 배경에 스며들게(그라데이션)
+    const top = scene.add.graphics().setDepth(d);
+    top.fillStyle(0x0d1424, 0.7).fillRect(VIEW_L, 0, VIEW_W, 36);
+    top.fillGradientStyle(0x0d1424, 0x0d1424, 0x0d1424, 0x0d1424, 0.7, 0.7, 0, 0).fillRect(VIEW_L, 36, VIEW_W, 34);
     this.synergyText = scene.add
       .text(VIEW_L + 12, 52, '', { fontFamily: 'sans-serif', fontSize: '14px', fontStyle: 'bold', color: '#aef5ff', backgroundColor: '#0d1424cc', padding: { x: 8, y: 4 } })
       .setDepth(d + 1)
@@ -199,7 +202,9 @@ export class Hud {
 
     // 하단 HUD 판(전장과 구분)
     scene.add.rectangle(640, 565, VIEW_W, 310, 0x0b0f1a, 0.92).setDepth(d - 1);
-    scene.add.rectangle(640, 410, VIEW_W, 2, 0x3a4560).setDepth(d - 1);
+    // 땅(배경 그림의 흙) → 하단 판으로 자연스럽게 — 선 대신 위에서부터 점점 어두워짐
+    const fade = scene.add.graphics().setDepth(d - 1);
+    fade.fillGradientStyle(0x0b0f1a, 0x0b0f1a, 0x0b0f1a, 0x0b0f1a, 0, 0, 0.92, 0.92).fillRect(VIEW_L, 368, VIEW_W, 42);
     const fl = VIEW_L; // 🍖 인구 바는 왼쪽 끝, ⚡ 에너지 바는 오른쪽 끝에 붙임
     const er = VIEW_OFF;
     const by = 428;
