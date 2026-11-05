@@ -1,0 +1,16 @@
+﻿[모두의 타워디펜스 v1.4 (versionCode 8)]
+
+• 강화 화면 UI 개선 — 더 보기 쉽게 정리
+• 특수 무기·마법 추가 및 효과 개선
+• 유닛 표시 크기·배치 조정으로 전장 가독성 향상
+• 덱/지원군 시스템 개선
+• PERFECT 처리·전투 타이밍 다듬기
+• 안정성 개선
+
+[EN]
+• Reworked upgrade screen UI for better readability
+• Added special weapons/spells and improved effects
+• Adjusted unit sizing and layout for clearer battles
+• Improved deck/reinforcement system
+• Refined PERFECT timing and combat feel
+• Stability improvements
