@@ -602,9 +602,8 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private buildHud(): Hud {
-    // ⚔️ 출전 덱 유닛 + (아직 안 산 유닛은 '구매' 안내용) — 덱에 없는 보유 유닛은 숨김
-    const shown = Object.fromEntries(Object.keys(UNITS).filter((k) => this.deck.includes(k) || !meta.ownsUnit(k)).map((k) => [k, UNITS[k]]));
-    const deckFirst = Object.fromEntries([...this.deck.map((k) => [k, UNITS[k]] as const), ...Object.entries(shown).filter(([k]) => !this.deck.includes(k))].map(([k, u]) => [k, { ...u, cost: this.unitCost(k) }])); // 🎁 소환 비용 보상 반영
+    // ⚔️ 카드 줄엔 출전 덱만 — 남는 칸은 '빈 칸'(안 산 유닛을 보여 주면 출전한 줄 알고 헷갈림)
+    const deckFirst = Object.fromEntries(this.deck.map((k) => [k, { ...UNITS[k], cost: this.unitCost(k) }])); // 🎁 소환 비용 보상 반영
     this.weaponSlotIdx = weaponSlots(meta.activeWeapons(), (k) => meta.ownsWeapon(k));
     return new Hud(
       this,

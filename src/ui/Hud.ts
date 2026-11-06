@@ -276,8 +276,10 @@ export class Hud {
         // 출전 덱에서 비운 칸 = '빈 칸' / 구매 안 함 = 얼굴 흐리게 + '강화에서 구매'
         add(scene.add.rectangle(cx, cy, CARD_W, CARD_H, 0x20242e).setStrokeStyle(2, 0x3a3f4a));
         if (key && scene.textures.exists(iconKey(key))) add(scene.add.image(cx, cy - 6, iconKey(key)).setDisplaySize(FACE - FACE_PAD * 2, FACE - FACE_PAD * 2).setAlpha(0.25));
-        add(scene.add.text(cx, cy - 6, '🔒', { fontSize: '30px', padding: { top: 12, bottom: 4 } }).setOrigin(0.5).setAlpha(0.75));
-        if (key) groupTag(cx, units[key]).forEach((o) => o.setAlpha(0.6));
+        if (key) {
+          add(scene.add.text(cx, cy - 6, '🔒', { fontSize: '30px', padding: { top: 12, bottom: 4 } }).setOrigin(0.5).setAlpha(0.75));
+          groupTag(cx, units[key]).forEach((o) => o.setAlpha(0.6));
+        } else add(scene.add.rectangle(cx, cy - 2, FACE - 12, FACE - 12).setStrokeStyle(2, 0x3a3f4a, 0.8)); // 빈 칸 — 자물쇠 없이 빈 틀만
         add(scene.add.text(cx, cy + 68, key ? '🛒 강화에서 구매' : '빈 칸', { fontFamily: 'sans-serif', fontSize: '14px', color: key ? '#a8b4c8' : '#6a7488' }).setOrigin(0.5));
         return;
       }
