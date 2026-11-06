@@ -40,7 +40,7 @@ export class MenuScene extends Phaser.Scene {
         .setDepth(2);
       this.tweens.add({ targets: fw, y: 470, duration: 700, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
     }
-    cuteButton(this, 310, 520, 200, 58, '🔧 강화', 0xffc94a, 0xd8962a, '24px', () => this.scene.start('Upgrade'));
+    cuteButton(this, 310, 520, 200, 58, '🔧 강화', 0xffc94a, 0xd8962a, '24px', () => this.scene.start('Upgrade', {}));
     const reward = cuteButton(this, 530, 520, 200, 58, '🎁 보상', 0x5cd88a, 0x2fa25a, '24px', () => this.openRewards());
     const mission = cuteButton(this, 750, 520, 200, 58, '📋 미션', 0xff8ab0, 0xd85a88, '24px', () => this.openMissions('daily'));
     const codex = cuteButton(this, 970, 520, 200, 58, '📖 도감', 0x7a9aff, 0x4a6ad8, '24px', () => this.scene.start('Codex'));

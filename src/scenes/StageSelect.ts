@@ -123,7 +123,7 @@ export class StageSelectScene extends Phaser.Scene {
     this.add
       .text(1130, 610, `총 ⭐ ${meta.totalStars} / ${stages.length * 3}`, { fontFamily: 'sans-serif', fontSize: '18px', fontStyle: 'bold', color: '#7a5a00', backgroundColor: '#fff3c8', padding: { x: 12, y: 5 } })
       .setOrigin(0.5);
-    cuteButton(this, 1130, 668, 180, 54, '🔧 강화', 0xffc94a, 0xd8962a, '22px', () => this.scene.start('Upgrade'));
+    cuteButton(this, 1130, 668, 180, 54, '🔧 강화', 0xffc94a, 0xd8962a, '22px', () => this.scene.start('Upgrade', {}));
   }
 
   /** 🗺️ 월드 지도 — 월드 카드 10장(별 · 깬 관문 · 보스 얼굴), 열린 월드는 눌러서 이동 */

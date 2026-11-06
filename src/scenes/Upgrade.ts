@@ -51,7 +51,9 @@ export class UpgradeScene extends Phaser.Scene {
   private focus: string | null = null; // 🔜 결과 화면 '다음 동료'에서 왔으면 그 유닛 칸 반짝
 
   init(data?: { fromBattle?: boolean; focus?: string }): void {
-    this.fromBattle = !!data?.fromBattle;
+    // ⚠️ Phaser는 data 없이 start하면 지난번 data를 그대로 줌 → 전투 상점에서 한 번 왔다면 그 뒤로도 fromBattle 이 남았음
+    //    (메뉴의 강화에서 '스테이지 선택'을 누르면 예전 전투로 돌아가던 버그) — 실제로 멈춘 전투가 있을 때만 전투 상점으로 봄
+    this.fromBattle = !!data?.fromBattle && this.scene.isPaused('Battle');
     this.focus = data?.focus ?? null;
     if (this.focus && UNITS[this.focus]) {
       this.tab = 'units';
@@ -108,10 +110,13 @@ export class UpgradeScene extends Phaser.Scene {
       .setOrigin(0.5)
       .setInteractive({ useHandCursor: true });
     back.on('pointerdown', () => {
-      if (this.fromBattle) {
+      if (this.fromBattle && this.scene.isPaused('Battle')) {
         this.scene.stop();
         this.scene.resume('Battle'); // 멈춘 자리에서 이어서
-      } else this.scene.start('StageSelect');
+      } else {
+        if (this.scene.isPaused('Battle')) this.scene.stop('Battle'); // 남은 전투가 있으면 정리
+        this.scene.start('StageSelect', {});
+      }
     });
   }
 
