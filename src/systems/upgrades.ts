@@ -7,7 +7,7 @@ import { pushRecord, type EndlessRecord } from './endless';
 import { BASE_MAX_LV, baseUpgradeCost, type BaseKey } from './baseUpgrades';
 import { timeRecord } from './pacing';
 import { rankUpCost, type ChestLoot } from './chests';
-import { normalizeDeck } from './counters';
+import { DECK_SIZE, normalizeDeck } from './counters';
 import { EQUIP_MAX, equipUpCost, isWeapon, type RingKey, type WeaponKey } from './equipment';
 import { CODEX_MILESTONES, claimableMilestone, discoverReward, mergeKills } from './codex';
 import { CASTLE_MAX_LV, CASTLE_RATE_MAX_LV, castleUpCost } from './castle';
@@ -322,6 +322,7 @@ export class MetaProgress {
     if (this.ownsUnit(key) || this.gold < price) return false;
     this.gold -= price;
     this.ownedUnits.push(key);
+    if (this.deck.length && this.deck.length < DECK_SIZE && !this.deck.includes(key)) this.deck.push(key); // ⚔️ 덱에 자리가 있으면 바로 출전
     this.save();
     return true;
   }
@@ -330,6 +331,7 @@ export class MetaProgress {
     if (this.ownsWeapon(key) || this.gold < price) return false;
     this.gold -= price;
     this.ownedWeapons.push(key);
+    if (this.weaponDeck.length && this.weaponDeck.length < WEAPON_SLOTS && !this.weaponDeck.includes(key)) this.weaponDeck.push(key); // 🔥 무기 칸에 자리가 있으면 바로
     this.save();
     return true;
   }

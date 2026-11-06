@@ -30,10 +30,19 @@ describe('⚔️ 유닛 상성', () => {
     expect(goodUnits(s, ['spear', 'cleric'])).toEqual(['spear']);
   });
 
-  it('출전 덱 — 보유만 · 최대 8 · 빈칸 채움', () => {
+  it('출전 덱 — 보유만 · 최대 8 · 8명 이하면 전부', () => {
     const owned = ['soldier', 'archer', 'knight', 'spear', 'mage', 'rogue', 'cleric', 'cannon'];
     expect(normalizeDeck([], owned)).toEqual(owned.slice(0, 8));
     expect(normalizeDeck(['cannon', 'cleric', 'nope'], owned)).toEqual(['cannon', 'cleric', 'soldier', 'archer', 'knight', 'spear', 'mage', 'rogue']);
     expect(normalizeDeck(['archer'], ['soldier', 'archer'])).toEqual(['archer', 'soldier']);
+  });
+
+  it('출전 덱 — 9명 이상 가지면 고른 그대로(1명만 골라도 1명), 안 골랐으면 채움', () => {
+    const owned = ['soldier', 'archer', 'knight', 'spear', 'mage', 'rogue', 'cleric', 'cannon', 'shield', 'cavalry'];
+    expect(normalizeDeck(['knight'], owned)).toEqual(['knight']);
+    expect(normalizeDeck(['knight', 'nope'], owned)).toEqual(['knight']);
+    expect(normalizeDeck([], owned)).toEqual(owned.slice(0, 8));
+    expect(normalizeDeck(['nope'], owned)).toEqual(owned.slice(0, 8)); // 고른 게 다 사라졌으면 다시 채움
+    expect(normalizeDeck(owned, owned)).toHaveLength(8);
   });
 });

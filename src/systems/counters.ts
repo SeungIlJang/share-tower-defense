@@ -109,9 +109,14 @@ export function goodUnits(stage: StageData, units: string[]): string[] {
   });
 }
 
-/** 출전 덱 정리 — 보유한 것만, 최대 8, 빈칸은 보유 유닛으로 채움(새로 산 유닛이 바로 나오게) */
+/**
+ * 출전 덱 정리 — 보유한 것만, 최대 size.
+ * - 가진 게 size 이하면 고를 수 없으니 전부 출전(빈칸 채움)
+ * - 더 많으면 고른 그대로(1명만 골랐으면 1명) — 아무것도 안 골랐을 때만 앞에서부터 채움
+ * 새로 산 유닛·무기는 살 때 덱에 자리가 있으면 넣음(upgrades.ts buyUnit·buyWeapon)
+ */
 export function normalizeDeck(deck: string[], owned: string[], size = DECK_SIZE): string[] {
   const d = [...new Set(deck)].filter((k) => owned.includes(k)).slice(0, size);
-  for (const k of owned) if (d.length < size && !d.includes(k)) d.push(k);
+  if (owned.length <= size || d.length === 0) for (const k of owned) if (d.length < size && !d.includes(k)) d.push(k);
   return d;
 }
