@@ -316,6 +316,20 @@ def extract_sheet(cfg):
                     continue
                 box = (c * fw, r * fh, (c + 1) * fw, (r + 1) * fh)
                 sheet.paste(sheet.crop(box).transpose(Image.FLIP_LEFT_RIGHT), box[:2])
+        # strip_fx: 몸과 반대쪽으로 그려진 베기 궤적·불꽃(밝은 크림·노랑) 지우기 — 몸 덩어리와 그 바로 옆만 남김
+        for c in cfg.get('strip_fx', {}).get(state, []):
+            box = (c * fw, r * fh, (c + 1) * fw, (r + 1) * fh)
+            cell = np.asarray(sheet.crop(box)).copy()
+            rgb = cell[..., :3].astype(int)
+            al = cell[..., 3] > 0
+            fx = al & (rgb[..., 0] > 170) & (rgb[..., 1] > 140) & (rgb[..., 0] - rgb[..., 2] > 25)
+            lab, n = ndimage.label(al & ~fx)
+            if n:
+                sizes = ndimage.sum(al & ~fx, lab, range(1, n + 1))
+                body = lab == int(np.argmax(sizes)) + 1
+                keep = body | (fx & ndimage.binary_dilation(body, iterations=2))
+                cell[..., 3] = np.where(keep, cell[..., 3], 0)
+                sheet.paste(Image.fromarray(cell), box[:2])
         if frames:
             anims[state] = {'frames': [r * cols + i for i in range(len(frames))], 'fps': cfg.get('fps', {}).get(state, 8)}
     # anim_frames: 동작을 다른 줄의 칸으로 다시 엮기 — 예) 정면을 보는 공격 칸 대신 [["walk", 3], ["attack", 2]]
