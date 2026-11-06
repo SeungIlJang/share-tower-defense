@@ -39,6 +39,9 @@ import { LOOK_HOLD, SCREEN_W, followX, walkMult, worldWidth } from '../systems/c
 import { RULE_INFO, targetBonus, targetTime, WAGON_BLOCK, WAGON_SPEED, breachGoal, holdProdMult, holdSeconds, stageRule, wagonHp, type StageRule } from '../systems/stageRules';
 import { FEATURES, HERO_TIP_STAGE, TIP_TEXT, featureOn, nextTip, reachedStage, type Feature, type TipKey } from '../systems/tutorial';
 import { showRewarded } from '../systems/ads';
+import { DUEL_LIMIT, LOSE_RAGE, LOSE_RAGE_SEC, SPECIAL_CD, SPECIAL_MULT, WIN_MORALE, duelFoeStats, duelPlanned, duelTime, pickChampion } from '../systems/duel';
+import { enemyPortrait } from '../ui/enemyArt';
+import { cuteButton } from '../ui/cute';
 import { DENSE_MULT, thinCount, thinStage } from '../systems/density';
 import { CHAIN_SHOW_FROM, CHAIN_VOLLEY_PCT, chainRate, chainReward, chainScale, nextChain } from '../systems/perfectChain';
 import { REINFORCE_AD, REINFORCE_AD_COUNT, REINFORCE_FREE, reinforceCount } from '../systems/reinforce';
@@ -201,7 +204,25 @@ export class BattleScene extends Phaser.Scene {
   private picking = false;
   private levelUp!: LevelUpOverlay;
   // 🎓 첫 경험 — 관문마다 하나씩 열리는 기능 + 👆 손가락 안내
-  private feat: Record<Feature, boolean> = { heroSkill: true, weapon: true, prepare: true, volley: true, levelup: true, perfect: true };
+  private feat: Record<Feature, boolean> = { heroSkill: true, weapon: true, prepare: true, volley: true, levelup: true, perfect: true, duel: true };
+  // ⚔️ 일기토 — 진행 중이면 다른 전투는 멈추고 둘만 싸움
+  private duel: {
+    phase: 'offer' | 'fight';
+    forced: boolean; // 일기토 관문(거절 없음, 승패 = 관문 승패)
+    foeType: string;
+    foe: Enemy | null;
+    ally: Unit | null;
+    x: number;
+    t: number;
+    spCd: number;
+    ui: Phaser.GameObjects.GameObject[];
+    mark: Phaser.GameObjects.Rectangle | null;
+    tag: Phaser.GameObjects.Text | null;
+    btn: Phaser.GameObjects.Arc | null;
+  } | null = null;
+  private duelAt = 0; // 적장이 나오는 시각(0 = 이번 판엔 없음)
+  private enemyMorale = 1; // 일기토 승리 → 적 공격력 ×0.8
+  private enemyRageUntil = 0; // 일기토 패배 → 이때까지 적 공격력 ×1.2
   private reached = 1;
   private tip!: TipPointer;
   private usedUnits: Record<string, number> = {}; // 🎁 이번 판 유닛별 소환 수(상자 조각 비율)
@@ -457,6 +478,12 @@ export class BattleScene extends Phaser.Scene {
     });
     this.spawnHero();
     this.setupRule(tough);
+    // ⚔️ 일기토 — 일기토 관문이면 바로, 아니면 보스 관문은 꼭·일반 관문은 가끔 중반에 적장 등장
+    this.duel = null;
+    this.enemyMorale = 1;
+    this.enemyRageUntil = 0;
+    this.duelAt = !this.endless && !this.rule && !this.weekly && this.feat.duel && duelPlanned(this.stage.id, this.sRule, Math.random) ? duelTime(this.stage) : 0;
+    if (this.sRule === 'duel') this.time.delayedCall(1200, () => !this.over && this.offerDuel(true));
     this.setupWeekly();
     track('stage_start', { stage: this.stage.id, mode: this.endless ? 'endless' : this.rule ? 'daily' : this.weekly ? 'weekly' : 'stage', cleared: meta.clearedMax });
     this.devHud();
@@ -755,7 +782,7 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private trySpawnUnit(type: string): void {
-    if (this.over || this.picking) return;
+    if (this.over || this.picking || this.duel || this.sRule === 'duel') return; // ⚔️ 일기토 중·일기토 관문엔 소환 없음
     const base = UNITS[type];
     if (!base || !meta.ownsUnit(type) || !this.deck.includes(type)) return; // 🔒 구매 안 한 유닛 · 덱에 없는 유닛
     if ((this.summonCd[type] ?? 0) > 0) {
@@ -864,7 +891,7 @@ export class BattleScene extends Phaser.Scene {
 
   /** 📣 지원군 고르기 — 전투를 멈추고 덱 밖 유닛 중 하나(3마리 등장) */
   private openReinforce(): void {
-    if (this.over || this.reviving || this.paused || this.picking) return;
+    if (this.over || this.reviving || this.paused || this.picking || this.duel) return;
     const list = this.reinforceList();
     const say = (msg: string): void => {
       const t = this.add.text(this.reinforceBtn!.bg.x, HERO_BTN_Y + 62, msg, { fontFamily: 'sans-serif', fontSize: '17px', fontStyle: 'bold', color: '#ffe680', backgroundColor: '#0d1424ee', padding: { x: 8, y: 4 } }).setOrigin(0.5).setDepth(130);
@@ -1020,6 +1047,212 @@ export class BattleScene extends Phaser.Scene {
     this.tweens.add({ targets: c, alpha: 0, delay: WAVE_SHOW_MS, duration: 400, onComplete: () => c.destroy() });
     this.waveBanner = c;
     if (good) this.hud.flashCard(good); // 유리한 유닛 카드 깜빡
+  }
+
+  /** ⚔️ 적장이 일기토를 신청 — 전투를 멈추고 받을지 묻기(일기토 관문은 바로 고르기) */
+  private offerDuel(forced: boolean): void {
+    if (this.over || this.duel) return;
+    const types = [...new Set(this.stage.waves.flatMap((w) => w.enemies.map((g) => g.type)))];
+    const foeType = pickChampion(types, ENEMIES, (t) => BOSS.has(t));
+    this.duel = { phase: 'offer', forced, foeType, foe: null, ally: null, x: 0, t: 0, spCd: 0, ui: [], mark: null, tag: null, btn: null };
+    sfx(this, 'boss');
+    this.cameras.main.shake(250, 0.006);
+    if (forced) {
+      this.openDuelPicker();
+      return;
+    }
+    const before = new Set(this.children.list);
+    this.add.rectangle(640, 360, VIEW_W, 720, 0x000000, 0.5).setDepth(200).setInteractive();
+    this.add.rectangle(640, 250, 600, 280, 0x2a1418).setStrokeStyle(4, 0xff5a4a).setDepth(200);
+    this.add.text(640, 140, '⚔️ 적장이 일기토를 신청했다!', { fontFamily: 'sans-serif', fontSize: '30px', fontStyle: 'bold', color: '#ffe680', stroke: '#000000', strokeThickness: 6 }).setOrigin(0.5).setDepth(201);
+    enemyPortrait(this, foeType, 560, 245, 120, 110)?.setDepth(201);
+    this.add.text(640, 205, `👺 ${ENEMIES[foeType]?.name ?? foeType}`, { fontFamily: 'sans-serif', fontSize: '24px', fontStyle: 'bold', color: '#ffffff' }).setOrigin(0, 0.5).setDepth(201);
+    this.add
+      .text(640, 250, `이기면 남은 적 공격력 −${Math.round((1 - WIN_MORALE) * 100)}% · 🪙 보너스\n지면 적이 ${LOSE_RAGE_SEC}초 동안 강해져요`, { fontFamily: 'sans-serif', fontSize: '16px', fontStyle: 'bold', color: '#d6dbe8', lineSpacing: 6 })
+      .setOrigin(0, 0.5)
+      .setDepth(201);
+    cuteButton(this, 560, 345, 230, 56, '⚔️ 받아들이기', 0xff7a4a, 0xd8502a, '22px', () => this.openDuelPicker()).setDepth(202);
+    cuteButton(this, 780, 345, 160, 56, '거절', 0x8a9ab8, 0x5a6a88, '20px', () => this.endDuel(null)).setDepth(202);
+    this.duel.ui = this.children.list.filter((o) => !before.has(o));
+  }
+
+  /** ⚔️ 결투에 내보낼 유닛 1명 고르기 — 덱 유닛(설치물·성직자 제외), 상성이면 🎯 유리 */
+  private openDuelPicker(): void {
+    const d = this.duel;
+    if (!d) return;
+    for (const o of d.ui) o.destroy();
+    const list = this.deck.filter((k) => meta.ownsUnit(k) && !isTotem(k) && k !== 'cleric');
+    if (!list.length) return this.endDuel(null);
+    const kind = enemyKind(d.foeType);
+    const before = new Set(this.children.list);
+    this.add.rectangle(640, 360, VIEW_W, 720, 0x000000, 0.55).setDepth(200).setInteractive();
+    const cw = 118;
+    const gap = 10;
+    const pw = Math.max(560, list.length * (cw + gap) + 40);
+    this.add.rectangle(640, 260, pw, 300, 0x1a1f30).setStrokeStyle(4, 0xffd34d).setDepth(200);
+    this.add.text(640, 135, `⚔️ 누가 나갈까? — 상대 👺 ${ENEMIES[d.foeType]?.name ?? d.foeType}`, { fontFamily: 'sans-serif', fontSize: '24px', fontStyle: 'bold', color: '#ffffff' }).setOrigin(0.5).setDepth(201);
+    this.add.text(640, 168, '🎯 유리한 유닛은 피해 ×1.5 · 초록 박자에 ⚔️ 필살!', { fontFamily: 'sans-serif', fontSize: '16px', fontStyle: 'bold', color: '#ffe680' }).setOrigin(0.5).setDepth(201);
+    list.forEach((k, i) => {
+      const x = 640 - ((list.length - 1) * (cw + gap)) / 2 + i * (cw + gap);
+      const y = 262;
+      const good = !!kind && UNIT_COUNTER[k] === kind;
+      const card = this.add.rectangle(x, y, cw, 140, good ? 0x2a4a2a : 0x26324e).setStrokeStyle(good ? 4 : 2, good ? 0x7cff9a : 0x4a5a80).setDepth(201).setInteractive({ useHandCursor: true });
+      const face = this.textures.exists(iconKey(this.looks[k] ?? k)) ? iconKey(this.looks[k] ?? k) : iconKey(k);
+      if (this.textures.exists(face)) this.add.image(x, y - 22, face).setDisplaySize(78, 78).setDepth(202);
+      this.add.text(x, y + 32, UNITS[k].name, { fontFamily: 'sans-serif', fontSize: UNITS[k].name.length >= 5 ? '14px' : '17px', fontStyle: 'bold', color: '#ffffff' }).setOrigin(0.5).setDepth(202);
+      this.add.text(x, y + 54, good ? '🎯 유리!' : `Lv${meta.level(k)}`, { fontFamily: 'sans-serif', fontSize: '15px', fontStyle: 'bold', color: good ? '#7cff9a' : '#a8b4c8' }).setOrigin(0.5).setDepth(202);
+      card.on('pointerdown', () => this.startDuelFight(k));
+    });
+    if (!d.forced) cuteButton(this, 640, 440, 160, 48, '거절', 0x8a9ab8, 0x5a6a88, '18px', () => this.endDuel(null)).setDepth(202);
+    d.ui = this.children.list.filter((o) => !before.has(o));
+  }
+
+  /** ⚔️ 결투 시작 — 가운데를 비우고 고른 유닛 vs 적장 */
+  private startDuelFight(type: string): void {
+    const d = this.duel;
+    if (!d) return;
+    for (const o of d.ui) o.destroy();
+    d.ui = [];
+    sfx(this, 'click');
+    // 결투장 — 양쪽 맨 앞 사이(일기토 관문은 전장 가운데)
+    const fa = Math.max(this.playerBase.x + 200, ...this.units.filter((u) => u.active).map((u) => u.x), this.hero?.active ? this.hero.x : 0);
+    const fe = Math.min(this.enemyBase.x - 200, ...this.enemies.filter((e) => e.active).map((e) => e.x));
+    const lo = this.playerBase.x + 260;
+    const hi = this.enemyBase.x - 260;
+    const cx = d.forced ? (this.playerBase.x + this.enemyBase.x) / 2 : Phaser.Math.Clamp((fa + fe) / 2, lo, Math.max(lo, hi));
+    d.x = cx;
+    // 구경꾼은 양옆으로 물러남
+    let ai = 0;
+    for (const u of this.units) if (u.active && u.x > cx - 190) u.slideTo(Math.max(this.playerBase.x + 60, cx - 190 - (ai++ % 4) * 26));
+    if (this.hero?.active && this.hero.x > cx - 190) this.hero.slideTo(cx - 230);
+    let ei = 0;
+    for (const e of this.enemies) if (e.active && e.x < cx + 190) e.slideTo(Math.min(this.enemyBase.x - 60, cx + 190 + (ei++ % 4) * 26));
+    for (const p of this.projectiles) if (p.active) this.projPool.release(p);
+    this.projectiles = [];
+    // ⚔️ 내 결투자
+    const m = this.allyStats(type);
+    const vm = vigorMult(this.skills.vigor ?? 0);
+    const bm = 1 + (this.battleUpg[type] ?? 0) * 0.2;
+    const ustats = { ...m, hp: Math.round(m.hp * bm * vm), atk: Math.round(m.atk * bm) };
+    const u = this.unitPool.acquire();
+    u.spawn(cx - 120, LANE_Y, ustats, type, 'ally', this.looks[type] ?? type);
+    u.setStars(UNIT_TIERS[meta.tier(type)].stars, meta.branchOf(type));
+    if (meta.tier(type) >= 3) u.setBodyScale(tierBodyScale(meta.tier(type)));
+    u.pop = 0;
+    this.units.push(u);
+    d.ally = u;
+    // 👺 적장 — 고른 유닛에 맞춘 능력치(일기토 관문은 더 셈)
+    const base = ENEMIES[d.foeType];
+    const fstats = duelFoeStats(ustats, base, d.forced);
+    const f = this.enemyPool.acquire();
+    const own = !!spriteOf(d.foeType);
+    f.spawn(cx + 120, LANE_Y, fstats, d.foeType, 'enemy', own ? d.foeType : base.look ?? d.foeType);
+    f.setVariant(own ? null : hexColor(base.tint), (base.scale ?? 1) * 1.25); // 적장은 한 치수 크게
+    f.reward = Math.round(base.reward * 4);
+    this.enemies.push(f);
+    d.foe = f;
+    d.phase = 'fight';
+    d.t = 0;
+    d.spCd = 0;
+    this.lookAt(cx);
+    this.lookT = 999;
+    // 결투 화면 — 제목 · 박자 막대 · ⚔️ 필살 버튼
+    const before = new Set(this.children.list);
+    this.add.text(640, 76, '⚔️ 일기토', { fontFamily: 'sans-serif', fontSize: '28px', fontStyle: 'bold', color: '#ffe680', stroke: '#000000', strokeThickness: 6 }).setOrigin(0.5).setDepth(120);
+    this.add.rectangle(640, 112, 324, 18, 0x000000, 0.6).setDepth(120);
+    this.add.rectangle(640, 112, 320, 12, 0x2a3348).setDepth(121);
+    this.add.rectangle(640, 112, 320 * BattleScene.PERFECT_WIN * 2 * 1.5, 12, 0x3fd06a).setDepth(121);
+    d.mark = this.add.rectangle(640, 112, 6, 24, 0xffffff).setDepth(122);
+    d.btn = this.add.circle(640, 168, 40, 0xd8502a).setStrokeStyle(4, 0xffe680).setDepth(120).setInteractive({ useHandCursor: true });
+    this.add.text(640, 168, '⚔️\n필살', { fontFamily: 'sans-serif', fontSize: '17px', fontStyle: 'bold', color: '#ffffff', align: 'center' }).setOrigin(0.5).setDepth(121);
+    d.btn.on('pointerdown', () => this.duelSpecial());
+    d.tag = this.add.text(f.x, LANE_Y - 120, `👺 적장 ${ENEMIES[d.foeType]?.name ?? ''}`, { fontFamily: 'sans-serif', fontSize: '15px', fontStyle: 'bold', color: '#ffb0a0', stroke: '#000000', strokeThickness: 4 }).setOrigin(0.5).setDepth(80);
+    d.ui = this.children.list.filter((o) => !before.has(o));
+    this.banner(`⚔️ ${UNITS[type].name} vs 👺 ${ENEMIES[d.foeType]?.name ?? ''}`, 0xffe680);
+    track('duel_start', { stage: this.stage.id, unit: type, foe: d.foeType, forced: d.forced });
+  }
+
+  /** ⚔️ 결투 진행 — 둘이 다가가 싸움(나머지는 멈춤) */
+  private updateDuel(dt: number): void {
+    const d = this.duel;
+    if (!d || d.phase !== 'fight' || !d.ally || !d.foe) return;
+    d.t += dt;
+    d.spCd = Math.max(0, d.spCd - dt);
+    d.mark?.setX(640 - 160 + 320 * Phaser.Math.Clamp(this.beat, 0, 1));
+    d.btn?.setAlpha(d.spCd > 0 ? 0.45 : 1);
+    const a = d.ally;
+    const f = d.foe;
+    d.tag?.setX(f.x);
+    for (const [att, def, dir] of [[a, f, 1], [f, a, -1]] as const) {
+      if (!att.active || att.hp <= 0) continue;
+      att.cooldown -= dt;
+      if (att.stunned) att.idle();
+      else if (inRange(att.x, def.x, att.stats.range + REACH)) this.attack(att, def);
+      else att.moveBy(dir * att.stats.speed * dt * this.walkK);
+    }
+    for (const p of this.projectiles) if (p.active && p.update(dt)) this.projPool.release(p);
+    this.projectiles = this.projectiles.filter((p) => p.active);
+    if (f.hp <= 0) this.endDuel(true);
+    else if (a.hp <= 0) this.endDuel(false);
+    else if (d.t >= DUEL_LIMIT) this.endDuel(f.hp / f.maxHp < a.hp / a.maxHp);
+  }
+
+  /** ⚔️ 필살 — 초록 박자(PERFECT)면 큰 한 방 + 기절, 아니면 빗나감 */
+  private duelSpecial(): void {
+    const d = this.duel;
+    if (!d || d.phase !== 'fight' || !d.ally || !d.foe || d.spCd > 0 || this.paused) return;
+    d.spCd = SPECIAL_CD;
+    const a = d.ally;
+    const f = d.foe;
+    const perfect = Math.abs(this.beat - 0.5) <= BattleScene.PERFECT_WIN * 1.5;
+    if (!perfect) {
+      const t = this.add.text(a.x, LANE_Y - 110, '빗나감…', { fontFamily: 'sans-serif', fontSize: '20px', fontStyle: 'bold', color: '#a8b4c8', stroke: '#000000', strokeThickness: 4 }).setOrigin(0.5).setDepth(90);
+      this.tweens.add({ targets: t, y: t.y - 26, alpha: 0, duration: 600, onComplete: () => t.destroy() });
+      return;
+    }
+    const mul = SPECIAL_MULT * (counterMult(a.type, f.type) > 1 ? COUNTER_MULT : 1);
+    f.takeDamage(computeDamage(a.stats.atk * mul, f.stats.def), true);
+    f.stunUntil = this.time.now + 700;
+    a.skillMotion();
+    playFx(this, 'critical', f.x, LANE_Y - 40, { scale: 1.3 });
+    this.cameras.main.shake(220, 0.012);
+    const t = this.add.text(f.x, LANE_Y - 130, '⚔️ 필살!', { fontFamily: 'sans-serif', fontSize: '32px', fontStyle: 'bold', color: '#ffe14d', stroke: '#5a2000', strokeThickness: 7 }).setOrigin(0.5).setDepth(90);
+    this.tweens.add({ targets: t, y: t.y - 36, alpha: 0, delay: 250, duration: 600, onComplete: () => t.destroy() });
+  }
+
+  /** ⚔️ 결투 끝 — win: true 승리 · false 패배 · null 거절. 일기토 관문은 관문 승패 */
+  private endDuel(win: boolean | null): void {
+    const d = this.duel;
+    if (!d) return;
+    for (const o of d.ui) o.destroy();
+    d.tag?.destroy();
+    this.duel = null;
+    this.lookT = 0.6;
+    if (win === null) {
+      this.banner('일기토를 거절했어요', 0xa8b4c8);
+      return;
+    }
+    track('duel_end', { stage: this.stage.id, win, forced: d.forced, unit: d.ally?.type ?? '', sec: Math.round(d.t) });
+    if (d.forced) {
+      this.banner(win ? '⚔️ 일기토 승리!' : '⚔️ 일기토 패배…', win ? 0x7cff9a : 0xff7a8a);
+      this.time.delayedCall(900, () => !this.over && this.end(win));
+      return;
+    }
+    if (win) {
+      this.enemyMorale = WIN_MORALE;
+      const bonus = 20 + this.stage.id * 2;
+      this.runGold += bonus;
+      sfx(this, 'levelup');
+      this.banner(`⚔️ 일기토 승리! 적 공격력 −${Math.round((1 - WIN_MORALE) * 100)}% · 🪙+${bonus}`, 0x7cff9a);
+    } else {
+      this.enemyRageUntil = this.clock + LOSE_RAGE_SEC;
+      if (d.foe?.active) {
+        this.puff(d.foe.x, 0xff8a6a); // 적장은 물러감(혼자 너무 세서 남겨 두지 않음)
+        this.enemyPool.release(d.foe);
+        this.enemies = this.enemies.filter((e) => e.active);
+      }
+      this.banner(`⚔️ 일기토 패배… 적이 ${LOSE_RAGE_SEC}초 동안 강해져요`, 0xff7a8a);
+    }
   }
 
   private upgCost(type: string): number {
@@ -1222,6 +1455,16 @@ export class BattleScene extends Phaser.Scene {
     }
 
     this.clock += dt;
+    if (this.duel) {
+      this.updateDuel(dt); // ⚔️ 일기토 중 — 나머지는 멈춰서 지켜봄
+      this.updateCamera(dt);
+      return;
+    }
+    if (this.duelAt > 0 && this.clock >= this.duelAt) {
+      this.duelAt = 0;
+      this.offerDuel(false);
+      return;
+    }
     this.tutorialTick();
     const wc = chargeMult(this.skills.charge ?? 0); // 🔥 무기 충전
     for (const w of this.weapons) w?.update(dt * wc * (this.rule?.charge ?? 1)); // 📅 무기 대잔치
@@ -1237,14 +1480,14 @@ export class BattleScene extends Phaser.Scene {
     this.heroCd = this.heroCd.map((c) => Math.max(0, c - dt));
     this.updateHero(dt);
     this.updateCastles(dt);
-    for (const ev of this.waves.update(dt)) this.spawnEnemy(ev.type, false, undefined, false, true); // 👥 줄인 만큼 센 적
+    if (this.sRule !== 'duel') for (const ev of this.waves.update(dt)) this.spawnEnemy(ev.type, false, undefined, false, true); // 👥 줄인 만큼 센 적(⚔️ 일기토 관문은 없음)
     if (!this.endless && !this.weekly && this.clock > 2) {
       const nw = this.waves.nextWave(WAVE_LEAD);
       if (nw) this.announceWave(nw);
     }
 
     // 적 기지가 병력을 계속 생산(기지 파괴 전까지) → 기지를 부숴야 생산이 멈춤
-    if (!this.enemyBase.destroyed) {
+    if (!this.enemyBase.destroyed && this.sRule !== 'duel') {
       this.prodTimer -= dt * (this.sRule === 'hold' ? 1 / holdProdMult(holdSeconds(this.stage.id) - this.holdLeft, holdSeconds(this.stage.id)) : 1); // 🏰 수성: 점점 빨리
       if (this.prodTimer <= 0) {
         this.prodTimer = this.prodInterval;
@@ -1465,6 +1708,7 @@ export class BattleScene extends Phaser.Scene {
     const auraAtk = attInAura ? AURA_ATK * (lowHp ? 1 + 0.4 * (this.skills.auraBerserk ?? 0) : 1) : 1; // ⭕ 오라
     const synAtk = ally ? synergyMult(this.synergies, att.type, 'atk') * powerMult(this.skills.power ?? 0) * auraAtk : 1; // 🤝 조합 · 💪 공격력
     let dmg = computeDamage(att.stats.atk * (berserk ? BERSERK_ATK : 1) * (crit ? critMul : 1) * synAtk, def.stats.def);
+    if (!ally && !(this.duel && att === this.duel.foe)) dmg = Math.max(1, Math.round(dmg * this.enemyMorale * (this.clock < this.enemyRageUntil ? LOSE_RAGE : 1))); // ⚔️ 일기토 결과
     if (def.side === 'ally') {
       dmg = Math.max(1, Math.round(dmg * synergyMult(this.synergies, def.type, 'guard')));
       if (awakened(this.skills, 'vigor')) dmg = Math.max(1, Math.round(dmg * 0.85)); // ❤️ 강철 피부
@@ -1609,7 +1853,7 @@ export class BattleScene extends Phaser.Scene {
 
   /** 🔥 특수 무기 발사 — 게이지가 가득 찬 해금 무기만 */
   private fireWeapon(i: number): void {
-    if (this.over || this.picking || this.paused || this.reviving || !this.feat.weapon) return;
+    if (this.over || this.picking || this.paused || this.reviving || this.duel || !this.feat.weapon) return;
     const charge = this.weapons[i];
     if (!charge) return;
     if (!charge.ready) {
@@ -2208,7 +2452,7 @@ ${info.desc}`, { fontFamily: 'sans-serif', fontSize: '24px', fontStyle: 'bold', 
 
   /** 🎯 성 특수 공격 — 단계별(화살비·화살 폭풍·일제 포격·번개 폭풍·성광 기둥) */
   private castleVolley(): void {
-    if (this.over || this.paused || this.picking || this.reviving || this.playerBase.destroyed || !this.feat.volley) return;
+    if (this.over || this.paused || this.picking || this.reviving || this.duel || this.playerBase.destroyed || !this.feat.volley) return;
     // 성 그림·버튼을 함께 눌러 두 번 들어와도 한 번만
     if (this.time.now - this.lastVolleyTap < 250) return;
     this.lastVolleyTap = this.time.now;
@@ -2350,7 +2594,7 @@ ${info.desc}`, { fontFamily: 'sans-serif', fontSize: '24px', fontStyle: 'bold', 
 
   /** 👑 영웅 스킬 사용 — 💧 마나 + 대기시간 */
   private castHeroSkill(i: number): void {
-    if (this.over || this.picking || this.paused || this.reviving || !this.hero?.active || !this.feat.heroSkill) return;
+    if (this.over || this.picking || this.paused || this.reviving || this.duel || !this.hero?.active || !this.feat.heroSkill) return;
     if (this.hero.stunned) {
       this.hud.heroDeny('💫 기절 중!');
       return;

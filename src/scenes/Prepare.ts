@@ -14,6 +14,7 @@ import { cuteButton, cuteTitle, drawSky, type SkyTheme } from '../ui/cute';
 import { sfx } from '../systems/sound';
 import { preloadNeeded, stageEnemyTypes } from '../systems/assetLoad';
 import { thinStage } from '../systems/density';
+import { pickChampion } from '../systems/duel';
 import { WEAPONS, WEAPON_SLOTS } from '../systems/weapons';
 import { FEATURES, featureOn, reachedStage } from '../systems/tutorial';
 
@@ -65,8 +66,10 @@ export class PrepareScene extends Phaser.Scene {
       g.lineStyle(4, 0x6a8ad8, 1).strokeRoundedRect(x, 84, w, 520, 26);
     };
     panel(30, 560);
-    this.add.text(310, 112, '👀 나오는 적', { fontFamily: 'sans-serif', fontSize: '24px', fontStyle: 'bold', color: '#3a4a7a' }).setOrigin(0.5);
-    const list = stageEnemies(stage).slice(0, 10);
+    // ⚔️ 일기토 관문은 적장 한 명만 나옴
+    const champ = sr === 'duel' ? pickChampion([...new Set(stage.waves.flatMap((w) => w.enemies.map((g) => g.type)))], ENEMIES, isBoss) : null;
+    this.add.text(310, 112, champ ? '👺 일기토 상대' : '👀 나오는 적', { fontFamily: 'sans-serif', fontSize: '24px', fontStyle: 'bold', color: '#3a4a7a' }).setOrigin(0.5);
+    const list = champ ? [{ type: champ, count: 1 }] : stageEnemies(stage).slice(0, 10);
     list.forEach((e, i) => {
       const x = 92 + (i % 5) * 109;
       const y = 178 + Math.floor(i / 5) * 118;
@@ -79,7 +82,8 @@ export class PrepareScene extends Phaser.Scene {
       this.add.text(x, y + 60, boss ? '👑 보스' : `×${e.count}`, { fontFamily: 'sans-serif', fontSize: '13px', fontStyle: 'bold', color: boss ? '#d8323a' : '#7a86a8' }).setOrigin(0.5);
     });
     // 🎯 적 종류 → 추천 유닛
-    const kinds = stageKinds(stage).slice(0, 3);
+    const champKind = champ ? enemyKind(champ) : null;
+    const kinds = champ ? (champKind ? [{ kind: champKind, count: 1 }] : []) : stageKinds(stage).slice(0, 3);
     const box = this.add.graphics();
     box.fillStyle(0xeef3ff, 1).fillRoundedRect(46, 396, 528, 172, 16);
     this.add.text(62, 414, '🎯 이번 관문 공략', { fontFamily: 'sans-serif', fontSize: '18px', fontStyle: 'bold', color: '#3a4a7a' }).setOrigin(0, 0.5);

@@ -284,6 +284,12 @@ export class Fighter {
     this.char.add(o);
   }
 
+  /** ⚔️ 일기토 — 결투장을 비우려고 옆으로 물러남(걷는 모습으로 미끄러지듯) */
+  slideTo(x: number, ms = 450): void {
+    this.play('walk');
+    this.scene.tweens.add({ targets: this.root, x, duration: ms, ease: 'Quad.easeOut', onComplete: () => this.active && this.idle() });
+  }
+
   moveBy(dx: number): void {
     this.root.x += dx;
     this.play('walk');
