@@ -2550,7 +2550,8 @@ ${info.desc}`, { fontFamily: 'sans-serif', fontSize: '24px', fontStyle: 'bold', 
         sfx(this, 'click');
         this.choices = rollChoices(this.skills, Math.random);
         this.showLevelUp();
-      }
+      },
+      this.level
     );
   }
 
@@ -2603,6 +2604,16 @@ ${info.desc}`, { fontFamily: 'sans-serif', fontSize: '24px', fontStyle: 'bold', 
     });
     const flash = this.add.rectangle(640, 360, VIEW_W, 720, 0xfff6c0, 0.35).setDepth(98);
     this.tweens.add({ targets: flash, alpha: 0, duration: 400, onComplete: () => flash.destroy() });
+    // ⭐ 화면 가운데 'LEVEL UP! · LV n' — 몇 레벨이 됐는지 또렷하게(카드 창이 뜨면 그 제목에도 LV)
+    const pop = this.add.container(640, 215).setDepth(120); // 🔒 카드 안내(y 128)·다음 무리 예고(y 64) 아래
+    const glow = this.add.ellipse(0, 6, 360, 150, 0xffd34d, 0.22);
+    const head = this.add.text(0, -34, 'LEVEL UP!', { fontFamily: 'sans-serif', fontSize: '34px', fontStyle: 'bold', color: '#fff4c8', stroke: '#7a4a00', strokeThickness: 7 }).setOrigin(0.5);
+    const big = this.add.text(0, 22, `LV ${this.level}`, { fontFamily: 'sans-serif', fontSize: '64px', fontStyle: 'bold', color: '#ffd34d', stroke: '#5a3000', strokeThickness: 9 }).setOrigin(0.5);
+    const gift = this.add.text(0, 74, '⚡ +30  ·  ❤️ 아군 20% 회복', { fontFamily: 'sans-serif', fontSize: '18px', fontStyle: 'bold', color: '#ffffff', stroke: '#000000', strokeThickness: 4 }).setOrigin(0.5);
+    pop.add([glow, head, big, gift]).setScale(0.3).setAlpha(0);
+    this.tweens.add({ targets: pop, scale: 1, alpha: 1, duration: 280, ease: 'Back.easeOut' });
+    this.tweens.add({ targets: big, scale: 1.12, duration: 180, delay: 280, yoyo: true, ease: 'Sine.easeOut' });
+    this.tweens.add({ targets: pop, y: 185, alpha: 0, delay: 1300, duration: 450, ease: 'Quad.easeIn', onComplete: () => pop.destroy() });
   }
 
   private banner(text: string, color: number): void {
