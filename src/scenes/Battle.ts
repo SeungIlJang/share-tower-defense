@@ -39,6 +39,7 @@ import { LOOK_HOLD, SCREEN_W, followX, walkMult, worldWidth } from '../systems/c
 import { RULE_INFO, targetBonus, targetTime, WAGON_BLOCK, WAGON_SPEED, breachGoal, holdProdMult, holdSeconds, stageRule, wagonHp, type StageRule } from '../systems/stageRules';
 import { FEATURES, HERO_TIP_STAGE, TIP_TEXT, featureOn, nextTip, reachedStage, type Feature, type TipKey } from '../systems/tutorial';
 import { showRewarded } from '../systems/ads';
+import { DENSE_MULT, thinCount, thinStage } from '../systems/density';
 import { CHAIN_SHOW_FROM, CHAIN_VOLLEY_PCT, chainRate, chainReward, chainScale, nextChain } from '../systems/perfectChain';
 import { REINFORCE_AD, REINFORCE_AD_COUNT, REINFORCE_FREE, reinforceCount } from '../systems/reinforce';
 import { groupInfo, unitGroup } from '../systems/unitGroups';
@@ -278,7 +279,7 @@ export class BattleScene extends Phaser.Scene {
     this.weekly = null;
     if (data.mode === 'weekly') {
       this.weekly = { boss: weeklyBoss(weekIndex(meta.today())), left: WEEKLY_SEC, unit: 1, foe: null, text: null };
-      this.stage = weeklyStage(STAGES.find((s) => s.id === weeklyStageId(meta.clearedMax)) ?? STAGES[9]);
+      this.stage = thinStage(weeklyStage(STAGES.find((s) => s.id === weeklyStageId(meta.clearedMax)) ?? STAGES[9])); // 👥
       this.rule = null;
       return;
     }
@@ -286,6 +287,7 @@ export class BattleScene extends Phaser.Scene {
     // 📅 오늘의 도전 — 오늘 규칙 + 깬 관문 근처
     this.rule = data.mode === 'daily' ? dailyRule(meta.today()) : null;
     if (this.rule) this.stage = dailyStage(STAGES.find((s) => s.id === dailyStageId(meta.today(), meta.clearedMax)) ?? STAGES[2], this.rule);
+    this.stage = thinStage(this.stage); // 👥 적 수 줄이고 한 마리를 세게(spawnEnemy의 dense)
   }
 
   /** 🖼️ 이 전투의 배경 그림(월드에 그림이 있으면) — 무한 모드는 코드 배경 */
@@ -472,7 +474,7 @@ export class BattleScene extends Phaser.Scene {
     this.runGold = 0;
     this.battleUpg = {};
     this.waves = new WaveSystem(this.stage);
-    this.prodInterval = Math.max(2.5, 4.5 - this.stage.id * 0.3);
+    this.prodInterval = Math.max(2.5, 4.5 - this.stage.id * 0.3) * DENSE_MULT; // 👥 적 성 생산도 덜 자주(대신 센 적)
     this.prodTimer = this.prodInterval;
     this.prodIdx = 0;
     this.beat = 0;
@@ -1117,7 +1119,7 @@ export class BattleScene extends Phaser.Scene {
   }
 
   /** 적 등장 — at: 위치(없으면 적 기지 앞) · exact: 변종으로 바꾸지 않음(소환·분열) */
-  private spawnEnemy(type: string, elite = false, at?: number, exact = false): void {
+  private spawnEnemy(type: string, elite = false, at?: number, exact = false, dense = false): void {
     if (!exact && !BOSS.has(type)) type = pickVariant(type, enemyLevel(this.endless, this.stage.id, this.waveNo), VARIANTS, Math.random); // 👾 변종
     const stats = ENEMIES[type];
     if (!stats) return;
@@ -1142,6 +1144,13 @@ export class BattleScene extends Phaser.Scene {
     e.reward = Math.round(stats.reward * (this.rule?.reward ?? 1) * this.ring('ring_gold')); // 📅 도전 보상 배수 · 💍 황금의 반지
     e.maxHp = Math.round(e.maxHp * HERO_ENEMY_HP); // ⚖️ 영웅이 생긴 만큼 적 체력 +15%
     e.hp = e.maxHp;
+    if (dense && !BOSS.has(type)) {
+      // 👥 수를 줄인 만큼 한 마리를 세게 — 체력·공격·보상(골드·경험치) ×1/밀도
+      e.maxHp = Math.round(e.maxHp * DENSE_MULT);
+      e.hp = e.maxHp;
+      e.stats = { ...e.stats, atk: Math.round(e.stats.atk * DENSE_MULT) };
+      e.reward = Math.round(e.reward * DENSE_MULT);
+    }
     const mult = this.endless ? endlessMult(endlessWaveAt(this.clock)) : this.stage.enemyMult ?? 1;
     if (mult !== 1) {
       e.stats = { ...e.stats, atk: Math.round(e.stats.atk * (1 + (mult - 1) * 0.6)) };
@@ -1229,7 +1238,7 @@ export class BattleScene extends Phaser.Scene {
     this.heroCd = this.heroCd.map((c) => Math.max(0, c - dt));
     this.updateHero(dt);
     this.updateCastles(dt);
-    for (const ev of this.waves.update(dt)) this.spawnEnemy(ev.type);
+    for (const ev of this.waves.update(dt)) this.spawnEnemy(ev.type, false, undefined, false, true); // 👥 줄인 만큼 센 적
     if (!this.endless && !this.weekly && this.clock > 2) {
       const nw = this.waves.nextWave(WAVE_LEAD);
       if (nw) this.announceWave(nw);
@@ -1240,7 +1249,7 @@ export class BattleScene extends Phaser.Scene {
       this.prodTimer -= dt * (this.sRule === 'hold' ? 1 / holdProdMult(holdSeconds(this.stage.id) - this.holdLeft, holdSeconds(this.stage.id)) : 1); // 🏰 수성: 점점 빨리
       if (this.prodTimer <= 0) {
         this.prodTimer = this.prodInterval;
-        this.spawnEnemy(PROD_TYPES[this.prodIdx % PROD_TYPES.length]);
+        this.spawnEnemy(PROD_TYPES[this.prodIdx % PROD_TYPES.length], false, undefined, false, true);
         this.prodIdx++;
       }
     }
@@ -2677,7 +2686,8 @@ ${info.desc}`, { fontFamily: 'sans-serif', fontSize: '24px', fontStyle: 'bold', 
     // 👾 변종 특수 웨이브 — 그 변종이 나오는 단계부터
     const lv = enemyLevel(this.endless, this.stage.id, this.waveNo);
     const exact = (type: string, n: number, gap: number) => (): void => {
-      for (let i = 0; i < n; i++) this.time.delayedCall(i * gap, () => !this.over && this.spawnEnemy(type, false, undefined, true));
+      const m = thinCount(n); // 👥
+      for (let i = 0; i < m; i++) this.time.delayedCall((i * gap * n) / m, () => !this.over && this.spawnEnemy(type, false, undefined, true, true));
     };
     if (lv >= 3) events.push({ text: '💣 고블린 폭탄 돌격!', go: exact('goblin_bomber', 5, 420) });
     if (lv >= 4) events.push({ text: '🧪 독 부대 행진!', go: () => (exact('poison_slime', 3, 600)(), exact('toxic_mushroom', 3, 700)()) });
@@ -2742,7 +2752,8 @@ ${info.desc}`, { fontFamily: 'sans-serif', fontSize: '24px', fontStyle: 'bold', 
   }
 
   private burstSpawn(type: string, n: number, gapMs: number): void {
-    for (let i = 0; i < n; i++) this.time.delayedCall(i * gapMs, () => !this.over && this.spawnEnemy(type));
+    const m = thinCount(n); // 👥
+    for (let i = 0; i < m; i++) this.time.delayedCall((i * gapMs * n) / m, () => !this.over && this.spawnEnemy(type, false, undefined, false, true));
   }
 
   /** 👑 보스 패턴 — 골렘: 땅 내려치기(주변 기절) / 드래곤: 화염 숨결 + 박쥐 소환. 0.8초 전 경고 */

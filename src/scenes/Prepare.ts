@@ -13,6 +13,7 @@ import { formatTime } from '../systems/pacing';
 import { cuteButton, cuteTitle, drawSky, type SkyTheme } from '../ui/cute';
 import { sfx } from '../systems/sound';
 import { preloadNeeded, stageEnemyTypes } from '../systems/assetLoad';
+import { thinStage } from '../systems/density';
 import { WEAPONS, WEAPON_SLOTS } from '../systems/weapons';
 import { FEATURES, featureOn, reachedStage } from '../systems/tutorial';
 
@@ -42,7 +43,7 @@ export class PrepareScene extends Phaser.Scene {
   }
 
   create(): void {
-    const stage = STAGES.find((s) => s.id === this.stageId) ?? STAGES[0];
+    const stage = thinStage(STAGES.find((s) => s.id === this.stageId) ?? STAGES[0]); // 👥 실제로 나오는 수
     drawSky(this, { theme: WORLDS[(stage.world ?? 1) - 1].theme as SkyTheme });
     const sr = stageRule(stage.id);
     const info = sr === 'normal' ? null : RULE_INFO[sr];
