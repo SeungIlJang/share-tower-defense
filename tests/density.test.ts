@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { DENSE_MULT, ENEMY_DENSITY, thinCount, thinStage } from '../src/systems/density';
+import { DENSE_MULT, ENEMY_DENSITY, enemyPower, thinCount, thinStage } from '../src/systems/density';
 import { STAGES } from '../src/systems/worlds';
 import { isBoss } from '../src/systems/bosses';
 
@@ -9,10 +9,17 @@ const lastSpawn = (s: typeof STAGES[number]): number => Math.max(...s.waves.flat
 
 describe('👥 적 밀도', () => {
   it('마릿수는 줄고 최소 1, 한 마리는 그만큼 셈', () => {
-    expect(thinCount(10)).toBe(6);
+    expect(thinCount(10)).toBe(5);
     expect(thinCount(1)).toBe(1);
     expect(thinCount(2)).toBe(1);
     expect(DENSE_MULT * ENEMY_DENSITY).toBeCloseTo(1);
+  });
+  it('💪 난이도 — 1~3관문은 그대로, 4관문부터 세짐(보스는 덜)', () => {
+    expect(enemyPower(1, false)).toBe(1);
+    expect(enemyPower(3, false)).toBe(1);
+    expect(enemyPower(4, false)).toBeGreaterThan(1);
+    expect(enemyPower(1, true)).toBeGreaterThan(1);
+    expect(enemyPower(10, false, true)).toBeLessThan(enemyPower(10, false));
   });
   it('관문마다 일반 적 약 60% · 보스 수는 그대로 · 마지막 적이 나오는 시각은 거의 그대로', () => {
     for (const s of STAGES) {

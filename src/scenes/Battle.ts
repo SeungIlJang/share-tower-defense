@@ -42,7 +42,7 @@ import { showRewarded } from '../systems/ads';
 import { DUEL_LIMIT, LOSE_RAGE, LOSE_RAGE_SEC, SPECIAL_CD, SPECIAL_MULT, WIN_MORALE, duelFoeStats, duelPlanned, duelTime, pickChampion } from '../systems/duel';
 import { enemyPortrait } from '../ui/enemyArt';
 import { cuteButton } from '../ui/cute';
-import { DENSE_MULT, thinCount, thinStage } from '../systems/density';
+import { DENSE_MULT, enemyPower, thinCount, thinStage } from '../systems/density';
 import { CHAIN_SHOW_FROM, CHAIN_VOLLEY_PCT, chainRate, chainReward, chainScale, nextChain } from '../systems/perfectChain';
 import { REINFORCE_AD, REINFORCE_AD_COUNT, REINFORCE_FREE, reinforceCount } from '../systems/reinforce';
 import { groupInfo, unitGroup } from '../systems/unitGroups';
@@ -86,6 +86,7 @@ const STUN_TINT = 0x9a9a9a;
 
 const PERFECT_HINT_RUNS = 3; // ⏱️ PERFECT 안내 글씨를 보여 줄 판 수
 const WAVE_LEAD = 5; // 📣 다음 무리 예고 — 몇 초 전에
+const DUEL_ZOOM = 1.45; // ⚔️ 일기토 카메라 확대
 const BG_PARALLAX = 0.5; // 🖼️ 배경 그림이 카메라를 따라 움직이는 비율(원근감)
 const BG_GROUND = 388 / 744; // 🖼️ 월드에 bgGround 가 없을 때 쓰는 땅 윗선 높이(그림 높이 대비)
 const WAVE_SHOW_MS = 3800;
@@ -207,7 +208,7 @@ export class BattleScene extends Phaser.Scene {
   private feat: Record<Feature, boolean> = { heroSkill: true, weapon: true, prepare: true, volley: true, levelup: true, perfect: true, duel: true };
   // ⚔️ 일기토 — 진행 중이면 다른 전투는 멈추고 둘만 싸움
   private duel: {
-    phase: 'offer' | 'fight';
+    phase: 'offer' | 'intro' | 'fight' | 'finish';
     forced: boolean; // 일기토 관문(거절 없음, 승패 = 관문 승패)
     foeType: string;
     foe: Enemy | null;
@@ -219,6 +220,12 @@ export class BattleScene extends Phaser.Scene {
     mark: Phaser.GameObjects.Rectangle | null;
     tag: Phaser.GameObjects.Text | null;
     btn: Phaser.GameObjects.Arc | null;
+    hpA?: Phaser.GameObjects.Rectangle; // 🎬 아래 레터박스의 큰 체력 막대(내 유닛)
+    hpF?: Phaser.GameObjects.Rectangle; // (적장)
+    freeze?: number; // 필살 맞은 순간 잠깐 멈춤(히트스톱)
+    finishT?: number; // 마지막 한 방 슬로모션 남은 시간
+    win?: boolean;
+    hidden?: (Phaser.GameObjects.GameObject & Phaser.GameObjects.Components.Visible)[]; // 결투 동안 숨긴 UI
   } | null = null;
   private duelAt = 0; // 적장이 나오는 시각(0 = 이번 판엔 없음)
   private enemyMorale = 1; // 일기토 승리 → 적 공격력 ×0.8
@@ -1151,38 +1158,104 @@ export class BattleScene extends Phaser.Scene {
     f.reward = Math.round(base.reward * 4);
     this.enemies.push(f);
     d.foe = f;
-    d.phase = 'fight';
+    d.phase = 'intro';
     d.t = 0;
     d.spCd = 0;
-    this.lookAt(cx);
-    this.lookT = 999;
-    // 결투 화면 — 제목 · 박자 막대 · ⚔️ 필살 버튼
+    d.freeze = 0;
+    // 🎬 연출 — 구경꾼은 흐리게, 카메라는 두 결투자에게 확대, 위·아래 검은 띠(HUD를 덮음)
+    for (const o of [...this.units, ...this.enemies]) if (o.active && o !== u && o !== f) o.setDim(true);
+    this.hero?.setDim(true);
+    // 화면 위 UI(HUD·영웅 스킬·지원군·안내·배너)는 잠시 숨김 — 결투 화면만 보이게(끝나면 되살림)
+    d.hidden = this.children.list.filter((o) => {
+      const v = o as Phaser.GameObjects.GameObject & { visible?: boolean; depth?: number };
+      return v.visible && (v.depth ?? 0) >= 95 && (v.depth ?? 0) < 150;
+    }) as (Phaser.GameObjects.GameObject & Phaser.GameObjects.Components.Visible)[];
+    for (const o of d.hidden) o.setVisible(false);
+    this.tip.hide(); // 🎓 안내 말풍선도 치움
+    const cam = this.cameras.main;
+    this.lookX = null;
+    cam.pan(cx, LANE_Y - 10, 600, 'Sine.easeInOut'); // 바닥선이 화면 가운데쯤(아래 검은 띠에 가리지 않게)
+    cam.zoomTo(DUEL_ZOOM, 600, 'Sine.easeInOut');
     const before = new Set(this.children.list);
-    this.add.text(640, 76, '⚔️ 일기토', { fontFamily: 'sans-serif', fontSize: '28px', fontStyle: 'bold', color: '#ffe680', stroke: '#000000', strokeThickness: 6 }).setOrigin(0.5).setDepth(120);
-    this.add.rectangle(640, 112, 324, 18, 0x000000, 0.6).setDepth(120);
-    this.add.rectangle(640, 112, 320, 12, 0x2a3348).setDepth(121);
-    this.add.rectangle(640, 112, 320 * BattleScene.PERFECT_WIN * 2 * 1.5, 12, 0x3fd06a).setDepth(121);
-    d.mark = this.add.rectangle(640, 112, 6, 24, 0xffffff).setDepth(122);
-    d.btn = this.add.circle(640, 168, 40, 0xd8502a).setStrokeStyle(4, 0xffe680).setDepth(120).setInteractive({ useHandCursor: true });
-    this.add.text(640, 168, '⚔️\n필살', { fontFamily: 'sans-serif', fontSize: '17px', fontStyle: 'bold', color: '#ffffff', align: 'center' }).setOrigin(0.5).setDepth(121);
+    const top = this.add.rectangle(640, -40, VIEW_W, 80, 0x000000, 1).setOrigin(0.5, 0.5).setDepth(150);
+    const bottom = this.add.rectangle(640, 720 + 170, VIEW_W, 340, 0x05070d, 0.97).setDepth(150);
+    this.tweens.add({ targets: top, y: 28, duration: 400, ease: 'Quad.easeOut' });
+    this.tweens.add({ targets: bottom, y: 720 - 160, duration: 400, ease: 'Quad.easeOut' });
+    this.add.text(640, 30, '⚔️  일 기 토  ⚔️', { fontFamily: 'sans-serif', fontSize: '30px', fontStyle: 'bold', color: '#ffd34d', stroke: '#3a2000', strokeThickness: 6 }).setOrigin(0.5).setDepth(151);
+    // 큰 체력 막대 — 왼쪽 내 유닛, 오른쪽 적장
+    const barW = 380;
+    const by = 452;
+    this.add.text(640 - 40 - barW, by - 26, `🗡️ ${UNITS[type].name}`, { fontFamily: 'sans-serif', fontSize: '22px', fontStyle: 'bold', color: '#cfe8ff' }).setOrigin(0, 0.5).setDepth(152);
+    this.add.text(640 + 40 + barW, by - 26, `👺 적장 ${ENEMIES[d.foeType]?.name ?? ''}`, { fontFamily: 'sans-serif', fontSize: '22px', fontStyle: 'bold', color: '#ffb0a0' }).setOrigin(1, 0.5).setDepth(152);
+    this.add.rectangle(640 - 40 - barW / 2, by, barW + 6, 22, 0x000000).setStrokeStyle(2, 0x4a6aa8).setDepth(151);
+    this.add.rectangle(640 + 40 + barW / 2, by, barW + 6, 22, 0x000000).setStrokeStyle(2, 0xa84a4a).setDepth(151);
+    d.hpA = this.add.rectangle(640 - 40, by, barW, 16, 0x5cc8ff).setOrigin(1, 0.5).setDepth(152); // 가운데에서 바깥으로 줄어듦
+    d.hpF = this.add.rectangle(640 + 40, by, barW, 16, 0xff6a5a).setOrigin(0, 0.5).setDepth(152);
+    this.add.text(640, by, 'VS', { fontFamily: 'sans-serif', fontSize: '22px', fontStyle: 'bold', color: '#ffd34d' }).setOrigin(0.5).setDepth(152);
+    // 박자 막대(넓게) + ⚔️ 필살 버튼(크게)
+    const bw = 560;
+    this.add.rectangle(640, 520, bw + 8, 26, 0x000000).setStrokeStyle(2, 0x3a4560).setDepth(151);
+    this.add.rectangle(640, 520, bw, 16, 0x1e2638).setDepth(152);
+    this.add.rectangle(640, 520, bw * BattleScene.PERFECT_WIN * 2 * 1.5, 16, 0x3fd06a).setDepth(152);
+    d.mark = this.add.rectangle(640, 520, 8, 34, 0xffffff).setDepth(153);
+    d.btn = this.add.circle(640, 612, 62, 0xd8502a).setStrokeStyle(6, 0xffe680).setDepth(152).setInteractive({ useHandCursor: true });
+    this.add.text(640, 612, '⚔️\n필살', { fontFamily: 'sans-serif', fontSize: '24px', fontStyle: 'bold', color: '#ffffff', align: 'center', stroke: '#5a2000', strokeThickness: 4 }).setOrigin(0.5).setDepth(153);
+    this.add.text(640, 690, '초록 칸에 하얀 막대가 올 때 누르세요!', { fontFamily: 'sans-serif', fontSize: '16px', fontStyle: 'bold', color: '#8a96b8' }).setOrigin(0.5).setDepth(152);
     d.btn.on('pointerdown', () => this.duelSpecial());
-    d.tag = this.add.text(f.x, LANE_Y - 120, `👺 적장 ${ENEMIES[d.foeType]?.name ?? ''}`, { fontFamily: 'sans-serif', fontSize: '15px', fontStyle: 'bold', color: '#ffb0a0', stroke: '#000000', strokeThickness: 4 }).setOrigin(0.5).setDepth(80);
-    d.ui = this.children.list.filter((o) => !before.has(o));
-    this.banner(`⚔️ ${UNITS[type].name} vs 👺 ${ENEMIES[d.foeType]?.name ?? ''}`, 0xffe680);
+    d.tag = this.add.text(f.x, LANE_Y - 125, `👺 적장`, { fontFamily: 'sans-serif', fontSize: '15px', fontStyle: 'bold', color: '#ffb0a0', stroke: '#000000', strokeThickness: 4 }).setOrigin(0.5).setDepth(80);
+    // VS 카드 — 양옆에서 미끄러져 들어와 부딪힘 → FIGHT!
+    const vsDim = this.add.rectangle(640, 300, VIEW_W, 300, 0x000000, 0.55).setDepth(165);
+    const lp = this.add.rectangle(-300, 260, 420, 170, 0x173a7a, 0.95).setStrokeStyle(4, 0x7ab8ff).setDepth(166);
+    const rp = this.add.rectangle(1580, 260, 420, 170, 0x7a1a1a, 0.95).setStrokeStyle(4, 0xff8a7a).setDepth(166);
+    const faceKey = this.textures.exists(iconKey(this.looks[type] ?? type)) ? iconKey(this.looks[type] ?? type) : iconKey(type);
+    const lf = this.textures.exists(faceKey) ? this.add.image(-380, 260, faceKey).setDisplaySize(120, 120).setDepth(167) : null;
+    const ln = this.add.text(-250, 260, UNITS[type].name, { fontFamily: 'sans-serif', fontSize: '30px', fontStyle: 'bold', color: '#ffffff', stroke: '#000000', strokeThickness: 5 }).setOrigin(0, 0.5).setDepth(167);
+    const rf = enemyPortrait(this, d.foeType, 1660, 262, 130, 130)?.setDepth(167) ?? null;
+    const rn = this.add.text(1530, 260, `👺 ${ENEMIES[d.foeType]?.name ?? ''}`, { fontFamily: 'sans-serif', fontSize: '30px', fontStyle: 'bold', color: '#ffffff', stroke: '#000000', strokeThickness: 5 }).setOrigin(1, 0.5).setDepth(167);
+    const vs = this.add.text(640, 260, 'VS', { fontFamily: 'sans-serif', fontSize: '84px', fontStyle: 'bold', color: '#ffd34d', stroke: '#5a2000', strokeThickness: 10 }).setOrigin(0.5).setDepth(168).setScale(0);
+    this.tweens.add({ targets: [lp, ln, ...(lf ? [lf] : [])], x: '+=680', duration: 380, ease: 'Back.easeOut', delay: 200 });
+    this.tweens.add({ targets: [rp, rn, ...(rf ? [rf] : [])], x: '-=680', duration: 380, ease: 'Back.easeOut', delay: 200 });
+    this.time.delayedCall(560, () => {
+      sfx(this, 'boss');
+      this.cameras.main.shake(180, 0.01);
+      this.tweens.add({ targets: vs, scale: 1, duration: 260, ease: 'Back.easeOut' });
+    });
+    const card = [vsDim, lp, rp, ln, rn, vs, ...(lf ? [lf] : []), ...(rf ? [rf] : [])];
+    this.time.delayedCall(1700, () => {
+      this.tweens.add({ targets: card, alpha: 0, duration: 250, onComplete: () => card.forEach((o) => o.destroy()) });
+      const go = this.add.text(640, 250, 'FIGHT!', { fontFamily: 'sans-serif', fontSize: '76px', fontStyle: 'bold', color: '#ffffff', stroke: '#c0392b', strokeThickness: 10 }).setOrigin(0.5).setDepth(168).setScale(2.2).setAlpha(0);
+      this.tweens.add({ targets: go, scale: 1, alpha: 1, duration: 220, ease: 'Quad.easeOut' });
+      this.tweens.add({ targets: go, alpha: 0, scale: 1.3, delay: 520, duration: 260, onComplete: () => go.destroy() });
+      if (this.duel === d) d.phase = 'fight';
+    });
+    d.ui = this.children.list.filter((o) => !before.has(o) && !(card as Phaser.GameObjects.GameObject[]).includes(o));
     track('duel_start', { stage: this.stage.id, unit: type, foe: d.foeType, forced: d.forced });
   }
 
-  /** ⚔️ 결투 진행 — 둘이 다가가 싸움(나머지는 멈춤) */
+  /** ⚔️ 결투 진행 — 둘이 다가가 싸움(나머지는 멈춤) · 필살 히트스톱 · 마지막 한 방 슬로모션 */
   private updateDuel(dt: number): void {
     const d = this.duel;
-    if (!d || d.phase !== 'fight' || !d.ally || !d.foe) return;
-    d.t += dt;
-    d.spCd = Math.max(0, d.spCd - dt);
-    d.mark?.setX(640 - 160 + 320 * Phaser.Math.Clamp(this.beat, 0, 1));
-    d.btn?.setAlpha(d.spCd > 0 ? 0.45 : 1);
+    if (!d || !d.ally || !d.foe) return;
     const a = d.ally;
     const f = d.foe;
+    d.mark?.setX(640 - 280 + 560 * Phaser.Math.Clamp(this.beat, 0, 1));
+    d.btn?.setAlpha(d.phase !== 'fight' || d.spCd > 0 ? 0.45 : 1);
+    d.hpA?.setSize(380 * Phaser.Math.Clamp(a.hp / a.maxHp, 0, 1), 16);
+    d.hpF?.setSize(380 * Phaser.Math.Clamp(f.hp / f.maxHp, 0, 1), 16);
     d.tag?.setX(f.x);
+    if (d.phase === 'intro') return;
+    if (d.phase === 'finish') {
+      d.finishT = (d.finishT ?? 0) - dt;
+      if (d.finishT <= 0) this.endDuel(d.win ?? false);
+      return;
+    }
+    if (d.phase !== 'fight') return;
+    d.t += dt;
+    d.spCd = Math.max(0, d.spCd - dt);
+    if ((d.freeze ?? 0) > 0) {
+      d.freeze = (d.freeze ?? 0) - dt; // 💥 히트스톱
+      return;
+    }
     for (const [att, def, dir] of [[a, f, 1], [f, a, -1]] as const) {
       if (!att.active || att.hp <= 0) continue;
       att.cooldown -= dt;
@@ -1192,12 +1265,31 @@ export class BattleScene extends Phaser.Scene {
     }
     for (const p of this.projectiles) if (p.active && p.update(dt)) this.projPool.release(p);
     this.projectiles = this.projectiles.filter((p) => p.active);
-    if (f.hp <= 0) this.endDuel(true);
-    else if (a.hp <= 0) this.endDuel(false);
-    else if (d.t >= DUEL_LIMIT) this.endDuel(f.hp / f.maxHp < a.hp / a.maxHp);
+    if (f.hp <= 0) this.finishDuel(true);
+    else if (a.hp <= 0) this.finishDuel(false);
+    else if (d.t >= DUEL_LIMIT) this.finishDuel(f.hp / f.maxHp < a.hp / a.maxHp);
   }
 
-  /** ⚔️ 필살 — 초록 박자(PERFECT)면 큰 한 방 + 기절, 아니면 빗나감 */
+  /** 🎬 마지막 한 방 — 슬로모션 + 더 확대 + K.O. */
+  private finishDuel(win: boolean): void {
+    const d = this.duel;
+    if (!d || d.phase !== 'fight') return;
+    d.phase = 'finish';
+    d.win = win;
+    d.finishT = 0.45;
+    this.slowmo = 0.3;
+    this.applySpeed();
+    const loser = win ? d.foe : d.ally;
+    if (loser) this.cameras.main.pan(loser.x, LANE_Y - 20, 300, 'Sine.easeOut');
+    this.cameras.main.zoomTo(DUEL_ZOOM * 1.18, 300, 'Sine.easeOut');
+    this.cameras.main.flash(180, 255, 255, 255);
+    sfx(this, win ? 'levelup' : 'boss');
+    const ko = this.add.text(640, 230, win ? 'K.O.!' : '패배…', { fontFamily: 'sans-serif', fontSize: win ? '96px' : '64px', fontStyle: 'bold', color: win ? '#ffd34d' : '#ff8a8a', stroke: win ? '#5a2000' : '#3a0000', strokeThickness: 12 }).setOrigin(0.5).setDepth(168).setScale(2.5).setAlpha(0);
+    this.tweens.add({ targets: ko, scale: 1, alpha: 1, duration: 160, ease: 'Back.easeOut' });
+    d.ui.push(ko);
+  }
+
+  /** ⚔️ 필살 — 초록 박자(PERFECT)면 큰 한 방 + 기절 + 히트스톱·번쩍, 아니면 빗나감 */
   private duelSpecial(): void {
     const d = this.duel;
     if (!d || d.phase !== 'fight' || !d.ally || !d.foe || d.spCd > 0 || this.paused) return;
@@ -1206,18 +1298,22 @@ export class BattleScene extends Phaser.Scene {
     const f = d.foe;
     const perfect = Math.abs(this.beat - 0.5) <= BattleScene.PERFECT_WIN * 1.5;
     if (!perfect) {
-      const t = this.add.text(a.x, LANE_Y - 110, '빗나감…', { fontFamily: 'sans-serif', fontSize: '20px', fontStyle: 'bold', color: '#a8b4c8', stroke: '#000000', strokeThickness: 4 }).setOrigin(0.5).setDepth(90);
+      const t = this.add.text(a.x, LANE_Y - 110, '빗나감…', { fontFamily: 'sans-serif', fontSize: '22px', fontStyle: 'bold', color: '#a8b4c8', stroke: '#000000', strokeThickness: 4 }).setOrigin(0.5).setDepth(90);
       this.tweens.add({ targets: t, y: t.y - 26, alpha: 0, duration: 600, onComplete: () => t.destroy() });
       return;
     }
     const mul = SPECIAL_MULT * (counterMult(a.type, f.type) > 1 ? COUNTER_MULT : 1);
     f.takeDamage(computeDamage(a.stats.atk * mul, f.stats.def), true);
     f.stunUntil = this.time.now + 700;
+    d.freeze = 0.14; // 💥 히트스톱
     a.skillMotion();
-    playFx(this, 'critical', f.x, LANE_Y - 40, { scale: 1.3 });
-    this.cameras.main.shake(220, 0.012);
-    const t = this.add.text(f.x, LANE_Y - 130, '⚔️ 필살!', { fontFamily: 'sans-serif', fontSize: '32px', fontStyle: 'bold', color: '#ffe14d', stroke: '#5a2000', strokeThickness: 7 }).setOrigin(0.5).setDepth(90);
-    this.tweens.add({ targets: t, y: t.y - 36, alpha: 0, delay: 250, duration: 600, onComplete: () => t.destroy() });
+    playFx(this, 'critical', f.x, LANE_Y - 40, { scale: 2 });
+    playFx(this, 'slash', f.x - 10, LANE_Y - 50, { scale: 1.6, volume: 0.6 });
+    this.cameras.main.shake(260, 0.016);
+    this.cameras.main.flash(120, 255, 240, 200);
+    const t = this.add.text(640, 200, '⚔️ 필살!', { fontFamily: 'sans-serif', fontSize: '58px', fontStyle: 'bold', color: '#ffe14d', stroke: '#5a2000', strokeThickness: 9 }).setOrigin(0.5).setDepth(160).setScale(1.8);
+    this.tweens.add({ targets: t, scale: 1, duration: 140, ease: 'Back.easeOut' });
+    this.tweens.add({ targets: t, alpha: 0, y: 170, delay: 420, duration: 380, onComplete: () => t.destroy() });
   }
 
   /** ⚔️ 결투 끝 — win: true 승리 · false 패배 · null 거절. 일기토 관문은 관문 승패 */
@@ -1227,6 +1323,15 @@ export class BattleScene extends Phaser.Scene {
     for (const o of d.ui) o.destroy();
     d.tag?.destroy();
     this.duel = null;
+    // 🎬 연출 되돌리기 — 속도·카메라·흐린 구경꾼
+    if (this.slowmo !== 1) {
+      this.slowmo = 1;
+      this.applySpeed();
+    }
+    this.cameras.main.zoomTo(1, 450, 'Sine.easeInOut');
+    for (const o of d.hidden ?? []) if (o.active) o.setVisible(true);
+    for (const o of [...this.units, ...this.enemies]) if (o.active) o.setDim(false);
+    this.hero?.setDim(false);
     this.lookT = 0.6;
     if (win === null) {
       this.banner('일기토를 거절했어요', 0xa8b4c8);
@@ -1383,6 +1488,13 @@ export class BattleScene extends Phaser.Scene {
       e.stats = { ...e.stats, atk: Math.round(e.stats.atk * DENSE_MULT) };
       e.reward = Math.round(e.reward * DENSE_MULT);
     }
+    // 💪 난이도 — 4관문부터 적 체력·공격 추가 배수(보상은 그대로)
+    const pw = enemyPower(this.stage.id, this.endless, BOSS.has(type));
+    if (pw !== 1) {
+      e.maxHp = Math.round(e.maxHp * pw);
+      e.hp = e.maxHp;
+      e.stats = { ...e.stats, atk: Math.round(e.stats.atk * pw) };
+    }
     const mult = this.endless ? endlessMult(endlessWaveAt(this.clock)) : this.stage.enemyMult ?? 1;
     if (mult !== 1) {
       e.stats = { ...e.stats, atk: Math.round(e.stats.atk * (1 + (mult - 1) * 0.6)) };
@@ -1456,8 +1568,7 @@ export class BattleScene extends Phaser.Scene {
 
     this.clock += dt;
     if (this.duel) {
-      this.updateDuel(dt); // ⚔️ 일기토 중 — 나머지는 멈춰서 지켜봄
-      this.updateCamera(dt);
+      this.updateDuel(dt); // ⚔️ 일기토 중 — 나머지는 멈춰서 지켜봄(카메라는 연출이 잡음)
       return;
     }
     if (this.duelAt > 0 && this.clock >= this.duelAt) {

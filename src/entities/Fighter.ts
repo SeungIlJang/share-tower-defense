@@ -120,7 +120,7 @@ export class Fighter {
     this.auraHue = null;
     this.aura.setVisible(false);
 
-    this.root.setPosition(x, y).setVisible(true);
+    this.root.setPosition(x, y).setVisible(true).setAlpha(1);
     this.updateHp();
   }
 
@@ -282,6 +282,11 @@ export class Fighter {
   /** 몸에 장식 붙이기(🛒 마차 바퀴·덮개 등 — 다음 spawn 때 지워짐) */
   attach(o: Phaser.GameObjects.GameObject): void {
     this.char.add(o);
+  }
+
+  /** ⚔️ 일기토 — 구경꾼은 흐리게(두 결투자만 또렷하게) */
+  setDim(on: boolean): void {
+    this.root.setAlpha(on ? 0.3 : 1);
   }
 
   /** ⚔️ 일기토 — 결투장을 비우려고 옆으로 물러남(걷는 모습으로 미끄러지듯) */

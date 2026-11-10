@@ -7,8 +7,16 @@
 import type { StageData } from '../types';
 import { isBoss } from './bosses';
 
-export const ENEMY_DENSITY = 0.6; // 적 수 60% — 숫자 하나로 조절
+export const ENEMY_DENSITY = 0.45; // 적 수 45% — 숫자 하나로 조절(한 마리는 ×2.2)
 export const DENSE_MULT = 1 / ENEMY_DENSITY; // 그만큼 한 마리 체력·공격·보상 배수
+export const ENEMY_POWER = 1.25; // 💪 난이도 — 적 체력·공격 추가 배수(보상은 그대로)
+export const EASY_UNTIL = 3; // 이 관문까지는 처음 하는 사람용으로 추가 배수 없음
+
+/** 💪 이 관문 적의 추가 세기 — 1~3관문 ×1, 4관문부터(무한 포함) ×1.25. 보스는 그 60%만 */
+export function enemyPower(stageId: number, endless: boolean, boss = false): number {
+  const p = endless || stageId > EASY_UNTIL ? ENEMY_POWER : 1;
+  return boss ? 1 + (p - 1) * 0.6 : p;
+}
 
 /** n마리 → 줄인 마릿수(최소 1) */
 export function thinCount(n: number): number {
