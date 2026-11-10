@@ -1367,8 +1367,15 @@ export class BattleScene extends Phaser.Scene {
   private doBattleUpgrade(type: string): void {
     if (this.over || this.picking) return;
     const cost = this.upgCost(type);
-    if (this.runGold < cost) return;
+    if (this.runGold < cost) {
+      this.hud.upgradeDeny(type, cost, this.runGold); // 🪙 부족 — 왜 안 되는지 보여 줌
+      sfx(this, 'click');
+      return;
+    }
     this.runGold -= cost;
+    this.hud.spendFx(type, cost); // 🪙 골드를 썼다는 느낌
+    sfx(this, 'coin');
+    this.tipDone('upgrade');
     const old = 1 + (this.battleUpg[type] ?? 0) * 0.2;
     this.battleUpg[type] = (this.battleUpg[type] ?? 0) + 1;
     const neu = 1 + this.battleUpg[type] * 0.2;
@@ -1382,7 +1389,7 @@ export class BattleScene extends Phaser.Scene {
       }
     }
     const t = this.add
-      .text(this.playerBase.x + 60, LANE_Y - 70, '🛠️ 강화!', { fontFamily: 'sans-serif', fontSize: '20px', fontStyle: 'bold', color: '#8affb0' })
+      .text(this.playerBase.x + 60, LANE_Y - 70, `🛠️ ${UNITS[type]?.name ?? ''} 강화! +20%`, { fontFamily: 'sans-serif', fontSize: '20px', fontStyle: 'bold', color: '#8affb0', stroke: '#000000', strokeThickness: 4 })
       .setOrigin(0.5)
       .setDepth(70);
     this.tweens.add({ targets: t, y: LANE_Y - 110, alpha: 0, duration: 650, onComplete: () => t.destroy() });
@@ -2111,6 +2118,7 @@ export class BattleScene extends Phaser.Scene {
     const ready: Partial<Record<TipKey, boolean>> = {
       summon: this.clock > 0.3,
       hero: this.reached >= HERO_TIP_STAGE && this.clock > 2 && !!this.hero?.active,
+      upgrade: this.clock > 3 && !!this.deck.length && this.runGold >= this.upgCost(this.deck[0]),
       mace: this.feat.heroSkill && this.hero?.active && ahead && this.mana.amount >= HERO_SKILLS[0].mana && (this.heroCd[0] ?? 0) <= 0,
       weapon: this.feat.weapon && wi >= 0 && live.length > 0,
       volley: this.feat.volley && this.volleyT <= 0 && live.some((e) => e.x - this.playerBase.x <= 520),
@@ -2123,6 +2131,10 @@ export class BattleScene extends Phaser.Scene {
       const p = this.hud.unitCardPos(Object.keys(UNITS).find((u) => meta.ownsUnit(u)) ?? '');
       if (p) this.tip.show(k, p.x, p.y, t, { ring: 74, bubbleY: 300 });
     } else if (k === 'hero') this.tip.show(k, this.hero.x - 40, LANE_Y - 40, t, { drag: true, ring: 0, bubbleY: 180, world: true });
+    else if (k === 'upgrade') {
+      const p = this.hud.upgradePos(this.deck[0]);
+      if (p) this.tip.show(k, p.x, p.y, t, { from: 'above', ring: 30, bubbleY: 300 });
+    }
     else if (k === 'mace') {
       const p = this.hud.heroSkillPos(0);
       if (p) this.tip.show(k, p.x, p.y, t, { ring: 50, bubbleY: 230 });

@@ -198,7 +198,7 @@ export class Hud {
       scene.input.off('pointermove', rMove);
       scene.input.off('pointerup', rUp);
     });
-    this.goldText = scene.add.text(808, 22, '🪙 0', { fontFamily: 'sans-serif', fontSize: '22px', fontStyle: 'bold', color: '#ffd34d' }).setOrigin(0, 0.5).setDepth(d + 1);
+    this.goldText = scene.add.text(788, 22, '전투 🪙 0', { fontFamily: 'sans-serif', fontSize: '22px', fontStyle: 'bold', color: '#ffd34d' }).setOrigin(0, 0.5).setDepth(d + 1);
 
     // 하단 HUD 판(전장과 구분)
     scene.add.rectangle(640, 565, VIEW_W, 310, 0x0b0f1a, 0.92).setDepth(d - 1);
@@ -304,8 +304,9 @@ export class Hud {
       if (ck) add(scene.add.text(cx + 46, cy - 30, `▶${KIND_INFO[ck].icon}`, { fontSize: '17px', backgroundColor: '#0d1424dd', padding: { x: 3, y: 1, top: 6 } }).setOrigin(0.5));
       const goodTag = ck ? add(scene.add.text(cx, cy - 36, '🎯 유리!', { fontFamily: 'sans-serif', fontSize: '17px', fontStyle: 'bold', color: '#ffe14d', stroke: '#000000', strokeThickness: 4 }).setOrigin(0.5).setVisible(false)) : null;
       // 🛠️ 전장 실시간 강화 버튼(카드 우상단) — 소환 탭과 분리
-      const upBtn = add(scene.add.rectangle(cx + CARD_W / 2 - 36, cy - 66, 62, 28, 0x2f7a4d).setStrokeStyle(1, 0x5cff9e));
-      const upText = add(scene.add.text(cx + CARD_W / 2 - 36, cy - 66, '⬆', { fontFamily: 'sans-serif', fontSize: '15px', fontStyle: 'bold', color: '#fff' }).setOrigin(0.5));
+      // 🛠️ 전장 강화 — 전투 골드(🪙)를 쓰는 버튼으로 보이게 금화 색 · '⬆🪙40'
+      const upBtn = add(scene.add.rectangle(cx + CARD_W / 2 - 38, cy - 66, 70, 28, 0x6a4a08).setStrokeStyle(2, 0xffd34d));
+      const upText = add(scene.add.text(cx + CARD_W / 2 - 38, cy - 66, '⬆🪙', { fontFamily: 'sans-serif', fontSize: '15px', fontStyle: 'bold', color: '#ffe680' }).setOrigin(0.5));
       tap(upBtn, () => onUpgrade(key));
       const cdShade = add(scene.add.rectangle(cx, cy - CARD_H / 2, CARD_W, 0, 0x000000, 0.6).setOrigin(0.5, 0));
       this.slots.push({ key, cx, rect, label, cost, icon, face, upBtn, upText, lvText, cdShade, goodTag, col });
@@ -541,6 +542,37 @@ export class Hud {
     return s ? { x: s.cx + this.strip.x, y: CARD_CY } : null;
   }
 
+  /** 🛠️ 카드의 ⬆ 전장 강화 버튼 위치(🎓 안내용) */
+  upgradePos(key: string): { x: number; y: number } | null {
+    const s = this.slots.find((x) => x.key === key) ?? this.slots[0];
+    return s ? { x: s.upBtn.x + this.strip.x, y: s.upBtn.y } : null;
+  }
+
+  /** 🪙 전투 골드를 썼다 — 위 골드 숫자에서 '−40🪙'가 튀고 숫자가 번쩍, 버튼도 통 */
+  spendFx(key: string, cost: number): void {
+    const s = this.slots.find((x) => x.key === key);
+    const g = this.goldText;
+    const t = this.scene.add.text(g.x + g.width / 2, g.y + 18, `−${cost}🪙`, { fontFamily: 'sans-serif', fontSize: '22px', fontStyle: 'bold', color: '#ff9a6a', stroke: '#000000', strokeThickness: 4 }).setOrigin(0.5).setDepth(140);
+    this.scene.tweens.add({ targets: t, y: t.y + 30, alpha: 0, duration: 800, ease: 'Quad.easeOut', onComplete: () => t.destroy() });
+    g.setColor('#ff9a6a');
+    this.scene.tweens.add({ targets: g, scale: 1.2, duration: 110, yoyo: true, onComplete: () => g.setColor('#ffd34d') });
+    if (s) {
+      this.scene.tweens.add({ targets: [s.upBtn, s.upText], scale: 1.25, duration: 100, yoyo: true });
+      const c = this.scene.add.text(s.upBtn.x + this.strip.x, s.upBtn.y, '🪙', { fontSize: '22px', padding: { top: 6, bottom: 2 } }).setOrigin(0.5).setDepth(140);
+      this.scene.tweens.add({ targets: c, y: c.y - 46, alpha: 0, duration: 600, ease: 'Quad.easeOut', onComplete: () => c.destroy() });
+    }
+  }
+
+  /** 🪙 전투 골드가 모자람 — 버튼 흔들기 + '🪙 부족!' */
+  upgradeDeny(key: string, cost: number, have: number): void {
+    const s = this.slots.find((x) => x.key === key);
+    if (!s) return;
+    const bx = s.upBtn.x;
+    this.scene.tweens.add({ targets: [s.upBtn, s.upText], x: bx + 5, duration: 45, yoyo: true, repeat: 2, onComplete: () => { s.upBtn.x = bx; s.upText.x = bx; } });
+    const t = this.scene.add.text(bx + this.strip.x, s.upBtn.y - 26, `🪙 부족! (${have}/${cost})`, { fontFamily: 'sans-serif', fontSize: '16px', fontStyle: 'bold', color: '#ff7a7a', stroke: '#000000', strokeThickness: 4 }).setOrigin(0.5).setDepth(140);
+    this.scene.tweens.add({ targets: t, y: t.y - 22, alpha: 0, delay: 350, duration: 500, onComplete: () => t.destroy() });
+  }
+
   weaponPos(index: number): { x: number; y: number } | null {
     const b = this.weaponBtns.find((w) => w.index === index);
     return b ? { x: b.cx + (b.bg.parentContainer?.x ?? 0), y: b.cy } : null;
@@ -605,7 +637,7 @@ export class Hud {
       this.xpFill.setSize(XP_W * this.xpShown, 10);
       this.xpText.setText(`${Math.floor(s.xp ?? 0)}/${s.xpNext}`);
     }
-    this.goldText.setText(`🪙 ${s.gold}`);
+    this.goldText.setText(`전투 🪙 ${s.gold}`); // 이번 판에서 모은 골드(⬆ 강화에 씀) — 보유 골드와 구분
     if (s.radar) this.drawRadar(s.radar);
     this.energyFill.setSize(396 * Phaser.Math.Clamp(s.energy / s.energyMax, 0, 1), 18);
     this.energyText.setText(`${Math.floor(s.energy)} / ${s.energyMax}`);
@@ -651,8 +683,8 @@ export class Hud {
       const up = s.upg[slot.key];
       if (up) {
         slot.lvText.setText(`Lv${up.lv}`);
-        slot.upText.setText(`⬆${up.cost}`);
-        slot.upBtn.setAlpha(up.afford ? 1 : 0.4);
+        slot.upText.setText(`⬆🪙${up.cost}`).setColor(up.afford ? '#ffe680' : '#9aa0b0');
+        slot.upBtn.setFillStyle(up.afford ? 0x6a4a08 : 0x2a2e38).setStrokeStyle(2, up.afford ? 0xffd34d : 0x4a4f5c);
       }
     }
   }

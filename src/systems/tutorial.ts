@@ -39,11 +39,12 @@ export function unlockedBy(stageId: number, prevClearedMax: number): FeatureDef 
 }
 
 /** 👆 안내 단계 — 순서대로 하나씩, 조건이 맞을 때 보여 주고 그 행동을 하면 끝 */
-export type TipKey = 'summon' | 'hero' | 'mace' | 'weapon' | 'volley' | 'levelup' | 'perfect';
+export type TipKey = 'summon' | 'hero' | 'upgrade' | 'mace' | 'weapon' | 'volley' | 'levelup' | 'perfect';
 
 export const TIP_TEXT: Record<TipKey, string> = {
   summon: '👆 카드를 눌러 아군을 소환하세요!',
   hero: '👆 전장을 좌우로 밀면 👑영웅이 움직여요\n⭕ 노란 원 안의 아군이 강해져요',
+  upgrade: '🪙 적을 잡아 모은 전투 골드로 유닛 강화!\n⬆ 누를 때마다 체력·공격 +20% (이번 판만)',
   mace: '👆 영웅 스킬! 철퇴를 던져요 (💧마나 사용)',
   weapon: '👆 게이지가 찼어요! 특수 무기 발사!',
   volley: '👆 우리 성을 눌러 성 특수 공격!',
@@ -68,7 +69,7 @@ export function nextTip(
   seen: readonly string[],
   ready: Partial<Record<TipKey, boolean>>
 ): TipKey | null {
-  const order: TipKey[] = ['summon', 'hero', 'mace', 'weapon', 'volley', 'perfect'];
+  const order: TipKey[] = ['summon', 'hero', 'upgrade', 'mace', 'weapon', 'volley', 'perfect'];
   return order.find((k) => !seen.includes(k) && ready[k]) ?? null;
 }
 
