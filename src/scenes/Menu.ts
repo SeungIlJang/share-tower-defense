@@ -6,7 +6,7 @@ import { ACHIEVEMENTS, missionText, type Mission } from '../systems/missions';
 import { GROUND_Y, cuteButton, drawSky } from '../ui/cute';
 import { openKeypad } from '../ui/Keypad';
 import { DEV_PIN_LEN, checkDevPin } from '../systems/dev';
-import { VIEW_W } from '../systems/view';
+import { VIEW_L, VIEW_R, VIEW_W } from '../systems/view';
 import { TITLES, titleName } from '../systems/titles';
 import { hideBanner, showMenuBanner, showRewarded } from '../systems/ads';
 import { grantNewChest } from '../systems/chestGrant';
@@ -199,11 +199,14 @@ export class MenuScene extends Phaser.Scene {
     const base = (key: string, x: number): Phaser.GameObjects.Sprite | null => {
       const d = spriteOf(key);
       if (!d || !this.textures.exists(textureKey(key))) return null;
-      return this.add.sprite(x, GROUND_Y + 4, textureKey(key), d.anims.idle!.frames[0]).setOrigin(0.5, 1).setScale(d.scale * 1.15);
+      return this.add.sprite(x, GROUND_Y + 4, textureKey(key), d.anims.idle!.frames[0]).setOrigin(0.5, 1).setScale(d.scale * 1.15).setDepth(2); // 성이 행진 유닛보다 앞 — 유닛이 성문에서 나오는 것처럼
     };
+    // 📱 성은 실제 화면 양 끝에(넓은 휴대폰이면 1280 밖까지 화면이 넓어서, 예전 자리면 성 바깥 빈 땅에서 유닛이 튀어나왔음)
+    const allyX = VIEW_L + 90;
+    const enemyX = VIEW_R - 90;
     // 🛠️ 우리 성을 누르면 비밀번호 → 개발자 모드
-    base('base_ally', 90)?.setInteractive({ useHandCursor: true }).on('pointerdown', () => this.askDevPin());
-    base('base_enemy', 1190);
+    base('base_ally', allyX)?.setInteractive({ useHandCursor: true }).on('pointerdown', () => this.askDevPin());
+    base('base_enemy', enemyX);
 
     const walker = (type: string, fromX: number, toX: number, delay: number, faceLeft: boolean): void => {
       const d = spriteOf(type);
@@ -213,8 +216,9 @@ export class MenuScene extends Phaser.Scene {
         .sprite(fromX, y, textureKey(type), d.anims.idle!.frames[0])
         .setOrigin(0.5, d.footY / d.frameHeight)
         .setScale(d.scale * 1.1)
-        .setFlipX(faceLeft);
-      const shadow = this.add.ellipse(fromX, y + 2, d.frameWidth * d.scale * 0.6, 8, 0x000000, 0.18);
+        .setFlipX(faceLeft)
+        .setDepth(1);
+      const shadow = this.add.ellipse(fromX, y + 2, d.frameWidth * d.scale * 0.6, 8, 0x000000, 0.18).setDepth(1);
       s.play(animKey(type, d.anims.walk ? 'walk' : 'idle'));
       const dur = Math.abs(toX - fromX) * 26;
       this.tweens.add({
@@ -229,8 +233,9 @@ export class MenuScene extends Phaser.Scene {
         },
       });
     };
-    PARADE_ALLY.forEach((t, i) => walker(t, -60, 1340, i * 2600, false));
-    PARADE_ENEMY.forEach((t, i) => walker(t, 1340, -60, 1300 + i * 3800, true));
+    // 우리 유닛은 우리 성문에서 나와 적 성으로 들어가고, 적은 반대로(성 뒤에서 나타나고 사라짐)
+    PARADE_ALLY.forEach((t, i) => walker(t, allyX, enemyX, i * 2600, false));
+    PARADE_ENEMY.forEach((t, i) => walker(t, enemyX, allyX, 1300 + i * 3800, true));
   }
 
   /** 통통 튀는 제목 + 부제 */
