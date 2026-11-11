@@ -14,6 +14,8 @@ import { cuteButton, cuteTitle, drawSky, type SkyTheme } from '../ui/cute';
 import { sfx } from '../systems/sound';
 import { preloadNeeded, stageEnemyTypes } from '../systems/assetLoad';
 import { thinStage } from '../systems/density';
+import { structureStage } from '../systems/waveStructure';
+import { stageEvent } from '../systems/stageEvents';
 import { pickChampion } from '../systems/duel';
 import { WEAPONS, WEAPON_SLOTS } from '../systems/weapons';
 import { FEATURES, featureOn, reachedStage } from '../systems/tutorial';
@@ -44,7 +46,7 @@ export class PrepareScene extends Phaser.Scene {
   }
 
   create(): void {
-    const stage = thinStage(STAGES.find((s) => s.id === this.stageId) ?? STAGES[0]); // 👥 실제로 나오는 수
+    const stage = structureStage(thinStage(STAGES.find((s) => s.id === this.stageId) ?? STAGES[0]), ENEMIES); // 👥 실제로 나오는 수 · 🌊 웨이브 구조
     drawSky(this, { theme: WORLDS[(stage.world ?? 1) - 1].theme as SkyTheme });
     const sr = stageRule(stage.id);
     const info = sr === 'normal' ? null : RULE_INFO[sr];
@@ -81,6 +83,13 @@ export class PrepareScene extends Phaser.Scene {
       this.add.text(x, y + 44, ENEMIES[e.type]?.name ?? e.type, { fontFamily: 'sans-serif', fontSize: '14px', fontStyle: 'bold', color: boss ? '#d8323a' : '#3a3a5a' }).setOrigin(0.5);
       this.add.text(x, y + 60, boss ? '👑 보스' : `×${e.count}`, { fontFamily: 'sans-serif', fontSize: '13px', fontStyle: 'bold', color: boss ? '#d8323a' : '#7a86a8' }).setOrigin(0.5);
     });
+    // 🌊 웨이브 수 · ⚠️ 마지막 웨이브 특수 이벤트(관문마다 정해짐)
+    if (!champ) {
+      const ev = stageEvent(stage.id);
+      this.add
+        .text(310, 374, `🌊 웨이브 ${stage.waves.length}개${ev ? `   ·   ⚠️ 마지막 웨이브: ${ev.text}` : ''}`, { fontFamily: 'sans-serif', fontSize: '15px', fontStyle: 'bold', color: '#a0522d' })
+        .setOrigin(0.5);
+    }
     // 🎯 적 종류 → 추천 유닛
     const champKind = champ ? enemyKind(champ) : null;
     const kinds = champ ? (champKind ? [{ kind: champKind, count: 1 }] : []) : stageKinds(stage).slice(0, 3);

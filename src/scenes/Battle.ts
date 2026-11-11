@@ -43,6 +43,8 @@ import { DUEL_LIMIT, LOSE_RAGE, LOSE_RAGE_SEC, SPECIAL_CD, SPECIAL_MULT, WIN_MOR
 import { enemyPortrait } from '../ui/enemyArt';
 import { cuteButton } from '../ui/cute';
 import { DENSE_MULT, enemyPower, thinCount, thinStage } from '../systems/density';
+import { structureStage, waveInfo, type WaveInfo } from '../systems/waveStructure';
+import { eventsFor, stageEvent, type StageEvent } from '../systems/stageEvents';
 import { CHAIN_SHOW_FROM, CHAIN_VOLLEY_PCT, chainRate, chainReward, chainScale, nextChain } from '../systems/perfectChain';
 import { REINFORCE_AD, REINFORCE_AD_COUNT, REINFORCE_FREE, reinforceCount } from '../systems/reinforce';
 import { groupInfo, unitGroup } from '../systems/unitGroups';
@@ -79,8 +81,8 @@ const THEMES = {
   endless: [0x1a1428, 0x2e2448, 0x5a4a8a],
 } as const;
 
-const ELITE_CHANCE = 0.08; // 일반 적이 엘리트로 나올 확률(2스테이지부터)
-const EVENT_FIRST = 35; // 특수 웨이브 첫 발생(초)
+const ELITE_CHANCE = 0.08; // ♾️ 무한 모드에서 일반 적이 엘리트로 나올 확률(관문은 웨이브 마지막 적이 엘리트 — waveStructure)
+const EVENT_FIRST = 35; // ♾️ 무한 모드 특수 이벤트 첫 발생(초) — 관문은 마지막 웨이브에 정해진 이벤트
 const EVENT_EVERY = 40; // 이후 간격(초)
 const STUN_TINT = 0x9a9a9a;
 
@@ -268,6 +270,8 @@ export class BattleScene extends Phaser.Scene {
   private endless = false;
   private waveNo = 0;
   private waveText: Phaser.GameObjects.Text | null = null;
+  private waveShown = 0; // 🌊 배너를 띄운 마지막 웨이브 번호
+  private stageEventDone = false; // ⚠️ 관문 특수 이벤트(마지막 웨이브) 했음
   // 🤝 조합 · 📋 이번 판 기록 · 🌊 특수 웨이브
   private synergies: Synergy[] = [];
   private synergyKeys = '';
@@ -307,7 +311,7 @@ export class BattleScene extends Phaser.Scene {
     this.weekly = null;
     if (data.mode === 'weekly') {
       this.weekly = { boss: weeklyBoss(weekIndex(meta.today())), left: WEEKLY_SEC, unit: 1, foe: null, text: null };
-      this.stage = thinStage(weeklyStage(STAGES.find((s) => s.id === weeklyStageId(meta.clearedMax)) ?? STAGES[9])); // 👥
+      this.stage = structureStage(thinStage(weeklyStage(STAGES.find((s) => s.id === weeklyStageId(meta.clearedMax)) ?? STAGES[9])), ENEMIES); // 👥 · 🌊
       this.rule = null;
       return;
     }
@@ -316,6 +320,7 @@ export class BattleScene extends Phaser.Scene {
     this.rule = data.mode === 'daily' ? dailyRule(meta.today()) : null;
     if (this.rule) this.stage = dailyStage(STAGES.find((s) => s.id === dailyStageId(meta.today(), meta.clearedMax)) ?? STAGES[2], this.rule);
     this.stage = thinStage(this.stage); // 👥 적 수 줄이고 한 마리를 세게(spawnEnemy의 dense)
+    if (!this.endless) this.stage = structureStage(this.stage, ENEMIES); // 🌊 웨이브 1/4 → 휴식 → 2/4 …
   }
 
   /** 🖼️ 이 전투의 배경 그림(월드에 그림이 있으면) — 무한 모드는 코드 배경 */
@@ -496,6 +501,13 @@ export class BattleScene extends Phaser.Scene {
     this.devHud();
     this.waveNo = 0;
     this.waveText = null;
+    this.waveShown = 0;
+    this.stageEventDone = false;
+    if (!this.endless && !this.weekly && this.sRule !== 'duel')
+      this.waveText = this.add
+        .text(335, 22, '', { fontFamily: 'sans-serif', fontSize: '17px', fontStyle: 'bold', color: '#9ad8ff', stroke: '#000000', strokeThickness: 3 }) // 🌊 웨이브 2/4 · 휴식 카운트다운
+        .setOrigin(0.5)
+        .setDepth(101);
     if (this.endless) {
       this.add.text(this.enemyBase.x, this.enemyBase.top - 26, '∞', { fontFamily: 'sans-serif', fontSize: '30px', fontStyle: 'bold', color: '#d8b0ff', stroke: '#2a1a4a', strokeThickness: 5 }).setOrigin(0.5).setDepth(60);
       this.waveText = this.add
@@ -1514,7 +1526,7 @@ export class BattleScene extends Phaser.Scene {
       e.reward = Math.round(e.reward * (1 + (mult - 1) * 0.3));
     }
     this.enemies.push(e);
-    if (elite || (!BOSS.has(type) && (this.endless || this.stage.id >= 2) && Math.random() < ELITE_CHANCE)) this.makeElite(e);
+    if (elite || (!BOSS.has(type) && this.endless && Math.random() < ELITE_CHANCE)) this.makeElite(e); // ⭐ 관문은 웨이브 마지막 적만(무작위 X), 무한은 확률
     if (BOSS.has(type)) {
       this.cameras.main.shake(300, 0.012);
       sfx(this, 'boss'); // 👑 보스 등장 전용 소리
@@ -1602,14 +1614,17 @@ export class BattleScene extends Phaser.Scene {
     this.heroCd = this.heroCd.map((c) => Math.max(0, c - dt));
     this.updateHero(dt);
     this.updateCastles(dt);
-    if (this.sRule !== 'duel') for (const ev of this.waves.update(dt)) this.spawnEnemy(ev.type, false, undefined, false, true); // 👥 줄인 만큼 센 적(⚔️ 일기토 관문은 없음)
+    if (this.sRule !== 'duel') for (const ev of this.waves.update(dt)) this.spawnEnemy(ev.type, !!ev.elite, undefined, false, true); // 👥 줄인 만큼 센 적 · ⭐ 웨이브 마지막은 엘리트(⚔️ 일기토 관문은 없음)
+    const wi = this.endless ? null : waveInfo(this.stage, this.waves.now);
+    if (wi && this.sRule !== 'duel') this.updateWaveHud(wi);
     if (!this.endless && !this.weekly && this.clock > 2) {
       const nw = this.waves.nextWave(WAVE_LEAD);
       if (nw) this.announceWave(nw);
     }
 
     // 적 기지가 병력을 계속 생산(기지 파괴 전까지) → 기지를 부숴야 생산이 멈춤
-    if (!this.enemyBase.destroyed && this.sRule !== 'duel') {
+    const resting = !!wi && wi.phase === 'rest' && this.sRule !== 'hold'; // 🌊 웨이브 사이 휴식 — 적 성도 쉼
+    if (!this.enemyBase.destroyed && this.sRule !== 'duel' && !resting) {
       this.prodTimer -= dt * (this.sRule === 'hold' ? 1 / holdProdMult(holdSeconds(this.stage.id) - this.holdLeft, holdSeconds(this.stage.id)) : 1); // 🏰 수성: 점점 빨리
       if (this.prodTimer <= 0) {
         this.prodTimer = this.prodInterval;
@@ -3054,33 +3069,52 @@ ${info.desc}`, { fontFamily: 'sans-serif', fontSize: '24px', fontStyle: 'bold', 
   }
 
   /** 🌊 특수 웨이브 — 2스테이지부터 주기적으로 */
+  /** ⚠️ 특수 이벤트 — 무한 모드는 일정 시간마다 무작위. 관문은 마지막 웨이브 시작에 정해진 것(updateWaveHud) */
   private updateEvents(dt: number): void {
-    if ((!this.endless && this.stage.id < 2) || this.enemyBase.destroyed) return;
+    if (!this.endless || this.enemyBase.destroyed) return;
     this.eventT -= dt;
     if (this.eventT > 0) return;
     this.eventT = EVENT_EVERY;
-    const events = [
-      { text: '🦇 박쥐 떼 습격!', go: () => this.burstSpawn('bat', 8, 260) },
-      { text: '🐺 늑대 무리 돌진!', go: () => this.burstSpawn('wolf', 6, 320) },
-      { text: '⭐ 엘리트 부대 출현!', go: () => ['goblin', 'orc', 'skeleton'].forEach((t, i) => this.time.delayedCall(i * 700, () => this.spawnEnemy(t, true))) },
-      { text: '👻 유령 행렬!', go: () => this.burstSpawn('ghost', 6, 360) },
-    ];
-    // 👾 변종 특수 웨이브 — 그 변종이 나오는 단계부터
-    const lv = enemyLevel(this.endless, this.stage.id, this.waveNo);
-    const exact = (type: string, n: number, gap: number) => (): void => {
+    const list = eventsFor(enemyLevel(true, this.stage.id, this.waveNo));
+    this.runStageEvent(list[Math.floor(Math.random() * list.length)]);
+  }
+
+  private runStageEvent(ev: StageEvent): void {
+    const exact = (type: string, n: number, gap: number): void => {
       const m = thinCount(n); // 👥
       for (let i = 0; i < m; i++) this.time.delayedCall((i * gap * n) / m, () => !this.over && this.spawnEnemy(type, false, undefined, true, true));
     };
-    if (lv >= 3) events.push({ text: '💣 고블린 폭탄 돌격!', go: exact('goblin_bomber', 5, 420) });
-    if (lv >= 4) events.push({ text: '🧪 독 부대 행진!', go: () => (exact('poison_slime', 3, 600)(), exact('toxic_mushroom', 3, 700)()) });
-    if (lv >= 5) events.push({ text: '🏹 해골 궁수대!', go: exact('skeleton_archer', 5, 500) });
-    if (lv >= 6) events.push({ text: '🟡 킹 슬라임 출현!', go: exact('king_slime', 1, 0) });
-    if (lv >= 8) events.push({ text: '💀 강령술사 등장!', go: () => (exact('necromancer', 1, 0)(), exact('skeleton_knight', 2, 900)()) });
-    if (lv >= 9) events.push({ text: '🐲 새끼 드래곤 무리!', go: exact('baby_dragon', 3, 800) });
-    const ev = events[Math.floor(Math.random() * events.length)];
     sfx(this, 'alert');
     this.banner(ev.text, 0xff9a3c);
-    ev.go();
+    switch (ev.key) {
+      case 'bats': return this.burstSpawn('bat', 8, 260);
+      case 'wolves': return this.burstSpawn('wolf', 6, 320);
+      case 'elites': return ['goblin', 'orc', 'skeleton'].forEach((t, i) => this.time.delayedCall(i * 700, () => this.spawnEnemy(t, true)));
+      case 'ghosts': return this.burstSpawn('ghost', 6, 360);
+      case 'bombers': return exact('goblin_bomber', 5, 420);
+      case 'poison': return (exact('poison_slime', 3, 600), exact('toxic_mushroom', 3, 700));
+      case 'skelArchers': return exact('skeleton_archer', 5, 500);
+      case 'kingSlime': return exact('king_slime', 1, 0);
+      case 'necro': return (exact('necromancer', 1, 0), exact('skeleton_knight', 2, 900));
+      case 'babyDragons': return exact('baby_dragon', 3, 800);
+    }
+  }
+
+  /** 🌊 웨이브 표시 — '웨이브 2/4' · 휴식 중 '다음 웨이브 5초' · 웨이브 시작 배너 · 마지막 웨이브에 정해진 특수 이벤트 */
+  private updateWaveHud(wi: WaveInfo): void {
+    if (this.waveText) {
+      const txt = wi.phase === 'rest' ? `🌊 ${wi.index}/${wi.total} · ${Math.ceil(wi.nextIn)}초 뒤` : wi.phase === 'wave' ? `🌊 웨이브 ${wi.index}/${wi.total}` : '🏰 적 성을 부숴라!';
+      if (this.waveText.text !== txt) this.waveText.setText(txt).setColor(wi.phase === 'rest' ? '#a8ffb0' : wi.phase === 'wave' ? '#9ad8ff' : '#ffd34d');
+    }
+    if (wi.phase !== 'wave' || wi.index === this.waveShown) return;
+    this.waveShown = wi.index;
+    const last = wi.index === wi.total;
+    this.banner(last ? `🌊 마지막 웨이브! (${wi.index}/${wi.total})` : `🌊 웨이브 ${wi.index}/${wi.total}`, last ? 0xff9a6a : 0x9ad8ff);
+    const ev = last && !this.stageEventDone && !this.weekly ? stageEvent(this.stage.id) : null;
+    if (ev) {
+      this.stageEventDone = true;
+      this.time.delayedCall(1500, () => !this.over && !this.enemyBase.destroyed && this.runStageEvent(ev));
+    }
   }
 
   /** 👾 변종 능력 — 💚 치유(3초마다 주변 적) · 📣 소환 · 😡 분노(체력 40% 아래 공격력 ×1.8) */

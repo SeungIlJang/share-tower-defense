@@ -2,6 +2,7 @@ import type { StageData } from '../types';
 
 export interface SpawnEvent {
   type: string;
+  elite?: boolean; // ⭐ 웨이브 마지막 적
 }
 
 /**
@@ -15,7 +16,7 @@ export interface WavePreview {
 
 export class WaveSystem {
   private elapsed = 0;
-  private queue: { time: number; type: string }[] = [];
+  private queue: { time: number; type: string; elite?: boolean }[] = [];
   private cursor = 0;
   private previews: WavePreview[] = []; // 📣 예고용 웨이브 목록(시각순)
   private announced = 0;
@@ -28,7 +29,7 @@ export class WaveSystem {
     for (const wave of stage.waves) {
       for (const group of wave.enemies) {
         for (let i = 0; i < group.count; i++) {
-          this.queue.push({ time: wave.at + i * group.interval, type: group.type });
+          this.queue.push({ time: wave.at + (group.delay ?? 0) + i * group.interval, type: group.type, elite: group.elite });
         }
       }
     }
@@ -40,7 +41,7 @@ export class WaveSystem {
     this.elapsed += dt;
     const out: SpawnEvent[] = [];
     while (this.cursor < this.queue.length && this.queue[this.cursor].time <= this.elapsed) {
-      out.push({ type: this.queue[this.cursor].type });
+      out.push({ type: this.queue[this.cursor].type, elite: this.queue[this.cursor].elite });
       this.cursor++;
     }
     return out;

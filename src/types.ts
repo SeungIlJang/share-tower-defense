@@ -37,6 +37,8 @@ export interface WaveEnemy {
   type: string;
   count: number;
   interval: number; // 소환 간격(초)
+  delay?: number; // 🌊 웨이브 시작 후 이 묶음이 나오기 시작하는 시각(초) — 웨이브 구조(waveStructure.ts)
+  elite?: boolean; // ⭐ 엘리트로 나옴(웨이브 마지막 적)
 }
 
 export interface Wave {
