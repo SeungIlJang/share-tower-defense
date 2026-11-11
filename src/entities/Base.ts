@@ -12,6 +12,7 @@ const BASE_SCALE = 1.50; // 🏰 성 크기 — LV버튼 안 가리면서 적당
  */
 export class Base {
   private hpBar: Phaser.GameObjects.Rectangle;
+  private lvText: Phaser.GameObjects.Text | null = null; // 🏰 체력 바 밑 레벨·단계 표시
   private sprite: Phaser.GameObjects.Sprite | null = null;
   private shadow: Phaser.GameObjects.Ellipse | null = null;
   private rect: Phaser.GameObjects.Rectangle | null = null;
@@ -82,7 +83,18 @@ export class Base {
     }
     this.top = Math.max(barY, 70); // 상단 바에 가리지 않게
     this.hpBar.setPosition((this.sprite?.x ?? this.x) - 40, this.top); // 체력 바는 성 그림 가운데 위
+    this.lvText?.setPosition(this.sprite?.x ?? this.x, this.top + 18);
     this.refresh();
+  }
+
+  /** 🏰 체력 바 바로 밑 이름표 — 우리 성 '🏰 Lv7' · 적 성 '☠️ 2단계' */
+  setLevelLabel(text: string, color = '#ffe680'): void {
+    if (!this.lvText)
+      this.lvText = this.scene.add
+        .text(0, 0, '', { fontFamily: 'sans-serif', fontSize: '16px', fontStyle: 'bold', color, stroke: '#000000', strokeThickness: 3, backgroundColor: '#0d1424cc', padding: { x: 6, y: 2 } })
+        .setOrigin(0.5)
+        .setDepth(1);
+    this.lvText.setText(text).setColor(color).setPosition(this.sprite?.x ?? this.x, this.top + 18);
   }
 
   /** 🎯 성을 누르면(특수 공격) — 그림이 바뀌어도 유지 */
@@ -134,6 +146,7 @@ export class Base {
   /** 🏰 무너짐 — 흔들리다 주저앉으며 흐려짐(적 성 함락 연출) */
   collapse(ms = 1100): void {
     this.hpBar.setVisible(false);
+    this.lvText?.setVisible(false);
     const s = this.sprite ?? this.rect;
     if (!s) return;
     this.scene.tweens.killTweensOf(s);

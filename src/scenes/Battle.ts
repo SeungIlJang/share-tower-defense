@@ -469,6 +469,8 @@ export class BattleScene extends Phaser.Scene {
     this.sRule = this.endless || this.rule || this.weekly ? 'normal' : stageRule(this.stage.id);
     const tough = this.sRule === 'hold' || this.sRule === 'breach' || !!this.weekly; // 수성·돌파·주간 보스는 적 성을 부술 필요 없음
     this.enemyBase = new Base(this, W - 105, LANE_Y - 10, this.endless || tough ? 1e9 : Math.round(this.stage.baseHp * enemyPower(this.stage.id, false)), 0xc0392b, [castleLook('enemy', this.enemyTier), 'base_enemy'], 1 + 0.04 * this.enemyTier); // 💪 적 성 체력도 난이도 배수
+    this.playerBase.setLevelLabel(`🏰 Lv${meta.castleLevel('castle')}`); // 성 강화 레벨(강화 화면 기지 탭과 같은 숫자)
+    this.enemyBase.setLevelLabel(`☠️ ${this.enemyTier + 1}단계`, '#ffb0a0'); // 적 성 단계(관문으로 정해짐)
     this.allyGunT = 1;
     this.enemyGunT = 2.5;
     this.archers = { ally: [], enemy: [] };
@@ -755,6 +757,7 @@ export class BattleScene extends Phaser.Scene {
     const clv = meta.castleLevel('castle');
     this.playerBase.setMaxHp(Math.round(this.stage.baseHp * castleHpMult(clv)));
     const nt = allyCastleTier(clv);
+    this.playerBase.setLevelLabel(`🏰 Lv${clv}`); // 상점에서 성을 올렸으면 바로
     if (castleLook('ally', nt) !== this.playerBase.look) {
       this.playerBase.setLook([castleLook('ally', nt), 'base_ally'], 1 + 0.04 * nt);
       this.placeArchers('ally');
@@ -1644,6 +1647,7 @@ export class BattleScene extends Phaser.Scene {
         if (et > this.enemyTier) {
           this.enemyTier = et; // 🏰 무한 모드: 적 성 진화
           this.enemyBase.setLook([castleLook('enemy', et), 'base_enemy'], 1 + 0.04 * et);
+          this.enemyBase.setLevelLabel(`☠️ ${et + 1}단계`, '#ffb0a0');
           this.placeArchers('enemy');
           this.cameras.main.shake(400, 0.01);
           this.time.delayedCall(900, () => this.banner(`🏰 적 성이 강해졌다! ${ENEMY_CASTLE_TIERS[et].name}`, 0xff5a4a));
