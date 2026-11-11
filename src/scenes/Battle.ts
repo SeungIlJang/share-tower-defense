@@ -1395,12 +1395,13 @@ export class BattleScene extends Phaser.Scene {
     this.tweens.add({ targets: t, y: LANE_Y - 110, alpha: 0, duration: 650, onComplete: () => t.destroy() });
   }
 
-  private upgMap(): Record<string, { lv: number; cost: number; afford: boolean }> {
-    const m: Record<string, { lv: number; cost: number; afford: boolean }> = {};
+  /** 카드 표시 — perm: 유닛 영구 강화 레벨(강화 화면과 같음) · lv: 이번 판 전장 강화 횟수(0부터, 카드엔 '+n') */
+  private upgMap(): Record<string, { perm: number; lv: number; cost: number; afford: boolean }> {
+    const m: Record<string, { perm: number; lv: number; cost: number; afford: boolean }> = {};
     for (const k of Object.keys(UNITS)) {
       const lv = this.battleUpg[k] ?? 0;
       const cost = this.upgCost(k);
-      m[k] = { lv: lv + 1, cost, afford: this.runGold >= cost };
+      m[k] = { perm: meta.level(k), lv, cost, afford: this.runGold >= cost };
     }
     return m;
   }

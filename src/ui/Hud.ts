@@ -24,7 +24,7 @@ export interface HudState {
   cd: Record<string, number>; // ⏱️ 유닛별 소환 대기 남은 비율(0~1)
   beat: number; // ⏱️ 리듬 소환 마커 위치 0~1
   perfectWin: number; // 퍼펙트 허용 폭(중앙 ±)
-  upg: Record<string, { lv: number; cost: number; afford: boolean }>; // 전장 실시간 강화
+  upg: Record<string, { perm: number; lv: number; cost: number; afford: boolean }>; // perm = 유닛 영구 강화 레벨 · lv = 이번 판 전장 강화 횟수(0부터)
   weapons: ({ ratio: number; ready: boolean } | null)[]; // 특수 무기 게이지(구매 안 한 것 = null)
   good?: Record<string, boolean>; // ⚔️ 지금 전장에 상성 적이 있는 유닛
 }
@@ -74,7 +74,8 @@ interface Slot {
   face: Phaser.GameObjects.Image | null; // 얼굴 아이콘(없으면 색 네모만)
   upBtn: Phaser.GameObjects.Rectangle;
   upText: Phaser.GameObjects.Text;
-  lvText: Phaser.GameObjects.Text;
+  lvText: Phaser.GameObjects.Text; // 유닛 영구 강화 레벨(강화 화면과 같은 숫자)
+  plusText: Phaser.GameObjects.Text; // 이번 판 전장 강화 '+n'(0이면 숨김)
   cdShade: Phaser.GameObjects.Rectangle; // ⏱️ 소환 대기 — 위에서부터 어둡게 덮음
   goodTag: Phaser.GameObjects.Text | null; // ⚔️ '유리!' 표시
   col: number;
@@ -287,7 +288,8 @@ export class Hud {
       const col = UNIT_COLORS[key] ?? 0x4a9eff;
       const rect = add(scene.add.rectangle(cx, cy, CARD_W, CARD_H, 0x2a3348).setStrokeStyle(3, col));
       // 윗줄: 레벨(좌) · 전장 강화 버튼(우) / 가운데 얼굴 / 아래 이름 + 비용
-      const lvText = add(scene.add.text(cx - CARD_W / 2 + 8, cy - 66, 'Lv1', { fontFamily: 'sans-serif', fontSize: '16px', fontStyle: 'bold', color: '#ffd34d' }).setOrigin(0, 0.5));
+      const lvText = add(scene.add.text(cx - CARD_W / 2 + 8, cy - 66, 'Lv0', { fontFamily: 'sans-serif', fontSize: '16px', fontStyle: 'bold', color: '#ffd34d' }).setOrigin(0, 0.5));
+      const plusText = add(scene.add.text(cx - CARD_W / 2 + 8, cy - 66, '', { fontFamily: 'sans-serif', fontSize: '16px', fontStyle: 'bold', color: '#7cff9a', stroke: '#000000', strokeThickness: 3 }).setOrigin(0, 0.5));
       const icon = add(scene.add.rectangle(cx, cy - 2, FACE, FACE, col));
       const faceKey = scene.textures.exists(iconKey(looks[key] ?? key)) ? iconKey(looks[key] ?? key) : iconKey(key);
       // 얼굴 그림은 머리를 꽉 채운 그림(가장자리까지 닿음)이라 틀보다 조금 작게 넣고, 테두리는 그 위에 — 틀 밖으로 삐져나와 보이지 않게
@@ -309,7 +311,7 @@ export class Hud {
       const upText = add(scene.add.text(cx + CARD_W / 2 - 38, cy - 66, '⬆🪙', { fontFamily: 'sans-serif', fontSize: '15px', fontStyle: 'bold', color: '#ffe680' }).setOrigin(0.5));
       tap(upBtn, () => onUpgrade(key));
       const cdShade = add(scene.add.rectangle(cx, cy - CARD_H / 2, CARD_W, 0, 0x000000, 0.6).setOrigin(0.5, 0));
-      this.slots.push({ key, cx, rect, label, cost, icon, face, upBtn, upText, lvText, cdShade, goodTag, col });
+      this.slots.push({ key, cx, rect, label, cost, icon, face, upBtn, upText, lvText, plusText, cdShade, goodTag, col });
     });
     this.scroller(strip, cy, CARD_H, keys.length * (CARD_W + CARD_GAP) - CARD_GAP, d);
 
@@ -622,7 +624,7 @@ export class Hud {
   }
 
   update(s: HudState): void {
-    this.lvText.setText(`LV ${s.lv}`);
+    this.lvText.setText(`전투 LV ${s.lv}`); // 이번 판 전투 레벨(카드의 유닛 Lv와 구분)
     if (s.xpNext) {
       const target = Phaser.Math.Clamp((s.xp ?? 0) / s.xpNext, 0, 1);
       if (s.lv > this.lastLv && this.lastLv > 0) {
@@ -682,7 +684,12 @@ export class Hud {
       if (good && slot.goodTag) slot.goodTag.setScale(1 + 0.08 * Math.sin(this.scene.time.now / 120));
       const up = s.upg[slot.key];
       if (up) {
-        slot.lvText.setText(`Lv${up.lv}`);
+        slot.lvText.setText(`Lv${up.perm}`);
+        const plus = up.lv > 0 ? `+${up.lv}` : '';
+        if (slot.plusText.text !== plus) {
+          slot.plusText.setText(plus).setX(slot.lvText.x + slot.lvText.width + 4);
+          if (plus) this.scene.tweens.add({ targets: slot.plusText, scale: 1.4, duration: 120, yoyo: true });
+        }
         slot.upText.setText(`⬆🪙${up.cost}`).setColor(up.afford ? '#ffe680' : '#9aa0b0');
         slot.upBtn.setFillStyle(up.afford ? 0x6a4a08 : 0x2a2e38).setStrokeStyle(2, up.afford ? 0xffd34d : 0x4a4f5c);
       }
