@@ -1193,7 +1193,7 @@ export class BattleScene extends Phaser.Scene {
     this.tip.hide(); // 🎓 안내 말풍선도 치움
     const cam = this.cameras.main;
     this.lookX = null;
-    cam.pan(cx, LANE_Y - 10, 600, 'Sine.easeInOut'); // 바닥선이 화면 가운데쯤(아래 검은 띠에 가리지 않게)
+    cam.pan(cx, LANE_Y + 20, 600, 'Sine.easeInOut'); // 바닥선이 아래 검은 띠(390~) 위쪽에 오게 — 발·그림자까지 보임
     cam.zoomTo(DUEL_ZOOM, 600, 'Sine.easeInOut');
     const before = new Set(this.children.list);
     const top = this.add.rectangle(640, -40, VIEW_W, 80, 0x000000, 1).setOrigin(0.5, 0.5).setDepth(150);
@@ -1299,7 +1299,7 @@ export class BattleScene extends Phaser.Scene {
     this.slowmo = 0.3;
     this.applySpeed();
     const loser = win ? d.foe : d.ally;
-    if (loser) this.cameras.main.pan(loser.x, LANE_Y - 20, 300, 'Sine.easeOut');
+    if (loser) this.cameras.main.pan(loser.x, LANE_Y + 25, 300, 'Sine.easeOut'); // 확대해도 발이 검은 띠에 안 가리게
     this.cameras.main.zoomTo(DUEL_ZOOM * 1.18, 300, 'Sine.easeOut');
     this.cameras.main.flash(180, 255, 255, 255);
     sfx(this, win ? 'levelup' : 'boss');
