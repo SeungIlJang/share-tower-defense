@@ -468,7 +468,7 @@ export class BattleScene extends Phaser.Scene {
     // 무한 모드: 적 기지는 부서지지 않는 생산 기지(버틴 웨이브가 기록)
     this.sRule = this.endless || this.rule || this.weekly ? 'normal' : stageRule(this.stage.id);
     const tough = this.sRule === 'hold' || this.sRule === 'breach' || !!this.weekly; // 수성·돌파·주간 보스는 적 성을 부술 필요 없음
-    this.enemyBase = new Base(this, W - 105, LANE_Y - 10, this.endless || tough ? 1e9 : this.stage.baseHp, 0xc0392b, [castleLook('enemy', this.enemyTier), 'base_enemy'], 1 + 0.04 * this.enemyTier);
+    this.enemyBase = new Base(this, W - 105, LANE_Y - 10, this.endless || tough ? 1e9 : Math.round(this.stage.baseHp * enemyPower(this.stage.id, false)), 0xc0392b, [castleLook('enemy', this.enemyTier), 'base_enemy'], 1 + 0.04 * this.enemyTier); // 💪 적 성 체력도 난이도 배수
     this.allyGunT = 1;
     this.enemyGunT = 2.5;
     this.archers = { ally: [], enemy: [] };
@@ -2414,7 +2414,7 @@ ${info.desc}`, { fontFamily: 'sans-serif', fontSize: '24px', fontStyle: 'bold', 
     }
     if (!this.enemyBase.destroyed || this.endless) {
       const mult = this.endless ? endlessMult(this.waveNo) : this.stage.enemyMult ?? 1;
-      const gun = enemyCastleGun(this.enemyTier, mult);
+      const gun = enemyCastleGun(this.enemyTier, mult * enemyPower(this.stage.id, this.endless)); // 💪 적 성 공격도 난이도 배수
       this.enemyGunT -= dt;
       if (this.enemyGunT <= 0) {
         const targets: Unit[] = this.hero?.active ? [...this.units, this.hero] : this.units;
