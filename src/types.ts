@@ -39,6 +39,7 @@ export interface WaveEnemy {
   interval: number; // 소환 간격(초)
   delay?: number; // 🌊 웨이브 시작 후 이 묶음이 나오기 시작하는 시각(초) — 웨이브 구조(waveStructure.ts)
   elite?: boolean; // ⭐ 엘리트로 나옴(웨이브 마지막 적)
+  budget?: string; // 🗺️ 월드 고유 적으로 바뀐 자리 — 원래 적의 체력·공격·보상을 그대로 씀(난이도 유지)
 }
 
 export interface Wave {

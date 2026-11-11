@@ -69,3 +69,26 @@ describe('🌊 웨이브 구조', () => {
     }
   });
 });
+
+describe('🗺️ 월드 고유 적', () => {
+  it('1월드는 기본 적 그대로, 2월드부터 바뀐 적은 원래 자리(budget)를 기억하고 마릿수는 같음', async () => {
+    const { WORLD_ROSTER } = await import('../src/systems/worlds');
+    const base = ['goblin', 'orc', 'wolf', 'slime', 'bat', 'skeleton', 'mushroom', 'ghost'];
+    for (const s of STAGES) {
+      const w = s.world ?? Math.ceil(s.id / 10);
+      for (const wv of s.waves)
+        for (const g of wv.enemies) {
+          if (w === 1) expect(g.budget).toBeUndefined();
+          if (g.budget) {
+            expect(base).toContain(g.budget);
+            expect(WORLD_ROSTER[w]?.[g.budget]).toBe(g.type);
+          } else if (w >= 2) expect(WORLD_ROSTER[w]?.[g.type]).toBeUndefined(); // 바꿀 적이 남아 있지 않음
+        }
+    }
+  });
+  it('구조화·줄이기를 거쳐도 budget이 소환까지 이어짐', () => {
+    const s = structureStage(STAGES.find((x) => x.id === 26)!, E);
+    const evs = new WaveSystem(s).update(9999);
+    expect(evs.some((e) => e.budget)).toBe(true);
+  });
+});

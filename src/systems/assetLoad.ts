@@ -55,7 +55,7 @@ export function stageEnemyTypes(stage: StageData, extraBoss?: string | null): st
   const set = new Set<string>();
   for (const w of stage.waves) for (const e of w.enemies) set.add(e.type);
   if (extraBoss) set.add(extraBoss);
-  for (const [k, v] of Object.entries(ENEMIES)) if (v.variantOf && set.has(v.variantOf) && (v.minStage ?? 1) <= stage.id) set.add(k); // 👾 변종
+  // 👾 무작위 변종은 무한 모드만(관문은 월드 고유 적이 웨이브에 이미 들어 있음) — 무한은 allEnemyTypes로 전부 받음
   for (const t of [...set]) {
     const s = BOSSES[t]?.summon?.type;
     if (s) set.add(s); // 👑 보스 졸개(버섯·해골 등)

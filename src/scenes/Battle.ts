@@ -13,7 +13,7 @@ import { anyDevFlag, devFlags } from '../systems/dev';
 import { UNIT_TIERS, tierBodyScale } from '../systems/evolution';
 import { milestoneBonus, milestoneCost, type MilestoneBonus } from '../systems/milestones';
 import { enemyLevel, hexColor, pickVariant, variantTable } from '../systems/enemyVariants';
-import { STAGES, WORLDS, goldMultFor } from '../systems/worlds';
+import { STAGES, WORLDS, WORLD_ROSTER, goldMultFor } from '../systems/worlds';
 import { BOSSES, BOSS_KEYS, bossForStage, isBoss } from '../systems/bosses';
 import { COUNTER_MULT, DECK_SIZE, KIND_INFO, counterMult, enemyKind, UNIT_COUNTER, type EnemyKind } from '../systems/counters';
 import { dailyBonus, dailyRule, dailyStage, dailyStageId, dailyUnits, type DailyRule } from '../systems/daily';
@@ -390,7 +390,8 @@ export class BattleScene extends Phaser.Scene {
     const units = [...unitPreloadKeys(owned, (k) => !!spriteOf(k), (u) => meta.tier(u), (u) => meta.equippedSkin(u))];
     // 🏰 성: 우리 성 지금·다음 단계, 적 성은 이 관문 단계(무한 모드는 웨이브마다 바뀌어 전부)
     const castles = castleTypes(allyCastleTier(meta.castleLevel('castle')), this.endless ? [0, 1, 2, 3, 4] : [enemyCastleTier(false, this.stage.id, 0)]);
-    preloadNeeded(this, [...enemies, ...units, ...castles], { fx: true, battleBgm: true });
+    const prod = PROD_TYPES.map((t) => (this.endless ? t : WORLD_ROSTER[this.stage.world ?? 1]?.[t] ?? t)); // 🗺️ 적 성이 뽑는 월드 적
+    preloadNeeded(this, [...enemies, ...prod, ...units, ...castles], { fx: true, battleBgm: true });
     const bg = this.bgKey();
     if (bg && !this.textures.exists(bg)) this.load.image(bg, `backgrounds/${bg}.webp`); // 🖼️ 월드 배경(약 50KB)
   }
@@ -1482,10 +1483,13 @@ export class BattleScene extends Phaser.Scene {
   }
 
   /** 적 등장 — at: 위치(없으면 적 기지 앞) · exact: 변종으로 바꾸지 않음(소환·분열) */
-  private spawnEnemy(type: string, elite = false, at?: number, exact = false, dense = false): void {
-    if (!exact && !BOSS.has(type)) type = pickVariant(type, enemyLevel(this.endless, this.stage.id, this.waveNo), VARIANTS, Math.random); // 👾 변종
-    const stats = ENEMIES[type];
-    if (!stats) return;
+  private spawnEnemy(type: string, elite = false, at?: number, exact = false, dense = false, budget?: string): void {
+    // 👾 무작위 변종은 무한 모드만 — 관문은 월드 고유 적(WORLD_ROSTER)으로 정해짐
+    if (this.endless && !exact && !BOSS.has(type)) type = pickVariant(type, enemyLevel(this.endless, this.stage.id, this.waveNo), VARIANTS, Math.random); // 👾 변종
+    const own0 = ENEMIES[type];
+    if (!own0) return;
+    const b = budget ? ENEMIES[budget] : null;
+    const stats = b ? { ...own0, hp: b.hp, atk: b.atk, reward: b.reward } : own0; // 🗺️ 바뀐 자리는 원래 적의 세기·보상
     const e = this.enemyPool.acquire();
     const x = Phaser.Math.Clamp(at ?? this.enemyBase.x - BASE_FRONT, this.playerBase.x + BASE_FRONT, this.enemyBase.x - BASE_FRONT);
     // 전용 그림이 없으면 빌린 그림(색상 회전 사본 또는 곱하기 색)
@@ -1617,7 +1621,7 @@ export class BattleScene extends Phaser.Scene {
     this.heroCd = this.heroCd.map((c) => Math.max(0, c - dt));
     this.updateHero(dt);
     this.updateCastles(dt);
-    if (this.sRule !== 'duel') for (const ev of this.waves.update(dt)) this.spawnEnemy(ev.type, !!ev.elite, undefined, false, true); // 👥 줄인 만큼 센 적 · ⭐ 웨이브 마지막은 엘리트(⚔️ 일기토 관문은 없음)
+    if (this.sRule !== 'duel') for (const ev of this.waves.update(dt)) this.spawnEnemy(ev.type, !!ev.elite, undefined, false, true, ev.budget); // 👥 줄인 만큼 센 적 · ⭐ 웨이브 마지막은 엘리트 · 🗺️ 월드 적은 원래 자리 세기(⚔️ 일기토 관문은 없음)
     const wi = this.endless ? null : waveInfo(this.stage, this.waves.now);
     if (wi && this.sRule !== 'duel') this.updateWaveHud(wi);
     if (!this.endless && !this.weekly && this.clock > 2) {
@@ -1631,7 +1635,9 @@ export class BattleScene extends Phaser.Scene {
       this.prodTimer -= dt * (this.sRule === 'hold' ? 1 / holdProdMult(holdSeconds(this.stage.id) - this.holdLeft, holdSeconds(this.stage.id)) : 1); // 🏰 수성: 점점 빨리
       if (this.prodTimer <= 0) {
         this.prodTimer = this.prodInterval;
-        this.spawnEnemy(PROD_TYPES[this.prodIdx % PROD_TYPES.length], false, undefined, false, true);
+        const pt = PROD_TYPES[this.prodIdx % PROD_TYPES.length];
+        const wt = this.endless ? undefined : WORLD_ROSTER[this.stage.world ?? 1]?.[pt]; // 🗺️ 적 성도 그 월드 적을 뽑음(세기는 원래 자리)
+        this.spawnEnemy(wt ?? pt, false, undefined, false, true, wt ? pt : undefined);
         this.prodIdx++;
       }
     }
