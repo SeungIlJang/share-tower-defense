@@ -113,7 +113,7 @@ export class Fighter {
     }
     this.hpBg.setY(barY);
     this.hpBar.setY(barY);
-    this.stars.setY(barY - 9).setVisible(false);
+    this.stars.setPosition(0, barY - 9).setVisible(false); // 머리 위 이름표(setHeadLabel)가 옮겼을 수 있어 제자리로
     this.footY = footOffset;
     this.scene.tweens.killTweensOf(this.aura);
     this.auraHue?.remove();
@@ -224,9 +224,42 @@ export class Fighter {
   }
 
   /** ⭐ 진화 단계 표시(★★ 이상만, HP 바 위) */
-  /** 👑 머리 위 이름표(영웅 레벨 등) — 유닛 별(★) 자리를 씀 */
+  /** 👑 머리 위 이름표(영웅 레벨 등) — 유닛 별(★) 자리를 쓰되, 그림의 실제 머리 꼭대기 바로 위에 둠 */
   setHeadLabel(text: string, color = '#ffd34d'): void {
     this.stars.setText(text).setColor(color).setFontSize(13).setVisible(!!text);
+    const top = this.headTop();
+    if (top) this.stars.setPosition(top.x, top.y - 9);
+  }
+
+  /** 그림 첫 프레임에서 실제로 칠해진 가장 위(빈 여백 제외) — 맨 위 몇 줄의 가운데 x · 꼭대기 y(이 유닛 좌표). 그림이 없으면 null */
+  private headTop(): { x: number; y: number } | null {
+    const s = this.sprite;
+    const d = this.spriteDef;
+    if (!s || !d) return null;
+    const key = s.texture.key;
+    const frame = s.frame.name;
+    const fw = s.frame.width;
+    const fh = s.frame.height;
+    const tm = this.scene.textures;
+    const solid = (x: number, y: number): boolean => (tm.getPixelAlpha(x, y, key, frame) ?? 0) > 40;
+    for (let y = 0; y < fh; y += 2) {
+      for (let x = 0; x < fw; x += 3) {
+        if (!solid(x, y)) continue;
+        // 머리·어깨 높이(키의 12~30% 아래) — 칠해진 칸들의 가운데. 맨 꼭대기(들어 올린 무기 끝)는 피함
+        const h = Math.max(1, d.footY - y);
+        let sum = 0;
+        let n = 0;
+        for (let yy = Math.round(y + h * 0.12); yy < Math.min(fh, y + h * 0.3); yy += 2)
+          for (let xx = 0; xx < fw; xx += 3)
+            if (solid(xx, yy)) {
+              sum += xx;
+              n++;
+            }
+        const cx = (sum / Math.max(1, n) - fw * s.originX) * d.scale * this.char.scaleX;
+        return { x: cx, y: this.footY + (y - d.footY) * d.scale };
+      }
+    }
+    return null;
   }
 
   setStars(n: number, branch: 'atk' | 'def' | null = null): void {
