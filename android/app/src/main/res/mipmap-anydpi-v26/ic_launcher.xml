@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- 배경은 @color/ic_launcher_background(#FFFFFF) 였다. 전경이 Capacitor 기본
+     플레이스홀더(거의 흰색)였던 탓에 흰 바탕에 흰 그림이 되어 안드로이드 8 이상에선
+     아이콘이 없는 것처럼 보였다. 이제 둘 다 실제 아트에서 만든다. -->
 <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
-    <background android:drawable="@color/ic_launcher_background"/>
+    <background android:drawable="@mipmap/ic_launcher_bg"/>
     <foreground android:drawable="@mipmap/ic_launcher_foreground"/>
 </adaptive-icon>

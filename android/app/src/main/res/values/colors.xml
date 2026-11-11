@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 런처 아이콘 바깥쪽 네이비(store-assets/icon-512.png 모서리 색).
+         안드로이드 12+ 스플래시 배경으로 쓴다. -->
+    <color name="splash_background">#0B182F</color>
+</resources>
