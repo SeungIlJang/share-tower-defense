@@ -15,7 +15,7 @@ export interface FeatureDef {
 export const FEATURES: FeatureDef[] = [
   { key: 'heroSkill', stage: 2, name: '👑 영웅 스킬' },
   { key: 'weapon', stage: 3, name: '🔥 특수 무기' },
-  { key: 'prepare', stage: 3, name: '⚔️ 출전 준비(적 미리보기·덱)' },
+  { key: 'prepare', stage: 1, name: '⚔️ 출전 준비(적 미리보기·덱)' }, // 1관문부터 — 나오는 적을 먼저 보고 시작
   { key: 'volley', stage: 4, name: '🏰 성 특수 공격' },
   { key: 'levelup', stage: 5, name: '🃏 레벨업 카드' },
   { key: 'perfect', stage: 6, name: '⏱️ PERFECT 소환' },

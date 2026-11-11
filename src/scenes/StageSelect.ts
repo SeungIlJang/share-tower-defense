@@ -277,7 +277,7 @@ export class StageSelectScene extends Phaser.Scene {
       hit.on('pointerover', () => this.tweens.add({ targets: node, angle: 6, duration: 100, yoyo: true }));
       hit.on('pointerdown', () => {
         this.tweens.add({ targets: node, scale: 0.9, duration: 80, yoyo: true });
-        this.time.delayedCall(170, () => (featureOn('prepare', reachedStage(id, meta.clearedMax)) ? this.scene.start('Prepare', { stageId: id }) : this.scene.start('Battle', { stageId: id }))); // ⚔️ 3관문부터 출전 준비 // 눌림 연출 후 이동(통통 트윈과 무관하게)
+        this.time.delayedCall(170, () => (featureOn('prepare', reachedStage(id, meta.clearedMax)) ? this.scene.start('Prepare', { stageId: id }) : this.scene.start('Battle', { stageId: id }))); // ⚔️ 출전 준비(나오는 적 미리보기) 화면을 거쳐 시작 // 눌림 연출 후 이동(통통 트윈과 무관하게)
       });
     }
   }
