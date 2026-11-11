@@ -630,6 +630,7 @@ export class BattleScene extends Phaser.Scene {
   private makeHud(): Hud {
     const hud = this.buildHud();
     hud.setRadar(this.worldW, (x) => this.lookAt(x)); // 🗺️ 지도로 둘러보기
+    hud.setHeroLevel(meta.heroLevel('hero')); // 👑 체력 막대에 영웅 레벨
     hud.setChain(this.chain);
     hud.setSkillIcon(0, textureKey('equip_weapon_icons'), (HERO_WEAPONS.find((w) => w.key === meta.weaponEq) ?? HERO_WEAPONS[0]).frame); // 🛡️ 장착 무기
     return hud;
@@ -761,7 +762,9 @@ export class BattleScene extends Phaser.Scene {
       h.maxHp = Math.round(base.hp * hm);
       h.hp = h.maxHp * ratio;
       h.heal(0);
+      h.setHeadLabel(`👑 Lv${meta.heroLevel('hero')}`);
     }
+    this.hud.setHeroLevel(meta.heroLevel('hero'));
     // 🛡️ 새 유닛 · 🔥 무기 · 👑 스킬 · 👗 스킨 → HUD 다시
     if (this.shopSnapshot() !== snap) {
       this.looks = Object.fromEntries(Object.keys(UNITS).map((k) => [k, ensureSkin(this, k, meta.equippedSkin(k), meta.tier(k))]));
@@ -2098,6 +2101,7 @@ export class BattleScene extends Phaser.Scene {
     this.hero.spawn(this.playerBase.x + BASE_FRONT + 40, LANE_Y, { ...base, hp: Math.round(base.hp * hm * this.ring('ring_life')), atk: Math.round(base.atk * hm) }, HERO_TYPE, 'ally', look); // 💍 생명의 반지
     this.rallyUntil = 0;
     this.hero.setBodyScale(heroBodyScale(tier));
+    this.hero.setHeadLabel(`👑 Lv${meta.heroLevel('hero')}`); // 영웅 영구 레벨(강화 화면 영웅 탭과 같은 숫자)
     this.heroTarget = null;
     this.heroDir = 0;
     this.heroCd = HERO_SKILLS.map(() => 0);

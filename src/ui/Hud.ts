@@ -140,6 +140,7 @@ export class Hud {
   private manaText: Phaser.GameObjects.Text | null = null;
   private heroHpFill!: Phaser.GameObjects.Rectangle;
   private heroHpText!: Phaser.GameObjects.Text;
+  private heroLv = 0; // 👑 영웅 영구 레벨(체력 막대에 함께)
   private synergyText!: Phaser.GameObjects.Text;
   private beatMark: Phaser.GameObjects.Triangle | null = null;
   private chainText: Phaser.GameObjects.Text | null = null; // 🔥 PERFECT 체인 수(리듬 바 오른쪽)
@@ -478,13 +479,18 @@ export class Hud {
     this.scene.tweens.add({ targets: r, alpha: 0.15, duration: 260, yoyo: true, repeat: 5, onComplete: () => r.destroy() });
   }
 
+  /** 👑 영웅 레벨 표시(전투 시작·상점에서 올렸을 때) */
+  setHeroLevel(lv: number): void {
+    this.heroLv = lv;
+  }
+
   /** 👑 마나·스킬 대기 표시 */
   updateHero(mana: number, manaMax: number, skills: { cd: number; enough: boolean }[], heroHp = 1): void {
     const r = Phaser.Math.Clamp(heroHp, 0, 1);
     const danger = r < 0.3;
     this.heroHpFill.setSize(128 * r, 16).setFillStyle(danger ? 0xff4a4a : r < 0.6 ? 0xffc04a : 0x5cff9e);
     this.heroHpFill.setAlpha(danger && Math.floor(this.scene.time.now / 250) % 2 === 0 ? 0.4 : 1); // 위험하면 깜빡
-    this.heroHpText.setText(`👑 ${Math.round(r * 100)}%`);
+    this.heroHpText.setText(`👑Lv${this.heroLv} ${Math.round(r * 100)}%`);
     this.manaFill?.setSize(128 * Phaser.Math.Clamp(mana / manaMax, 0, 1), 16);
     this.manaText?.setText(`💧 ${Math.floor(mana)} / ${manaMax}`);
     this.heroBtns.forEach((b, i) => {

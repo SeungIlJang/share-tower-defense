@@ -224,7 +224,13 @@ export class Fighter {
   }
 
   /** ⭐ 진화 단계 표시(★★ 이상만, HP 바 위) */
+  /** 👑 머리 위 이름표(영웅 레벨 등) — 유닛 별(★) 자리를 씀 */
+  setHeadLabel(text: string, color = '#ffd34d'): void {
+    this.stars.setText(text).setColor(color).setFontSize(13).setVisible(!!text);
+  }
+
   setStars(n: number, branch: 'atk' | 'def' | null = null): void {
+    this.stars.setFontSize(11);
     this.stars.setText(headStars(n)).setVisible(n >= 2).setColor(n >= 5 ? '#ff9af0' : '#ffd34d'); // 초월은 🌟N
     this.scene.tweens.killTweensOf(this.aura);
     this.auraHue?.remove();
