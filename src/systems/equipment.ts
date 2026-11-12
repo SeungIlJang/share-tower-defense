@@ -1,3 +1,4 @@
+import { tr } from './i18n';
 /**
  * 🛡️ 영웅 장비 — 무기 1칸(🔨 J 스킬이 바뀜) + 반지 1칸(패시브), 등급 1~5. 순수 로직(Vitest 검증).
  * 그림: public/sprites/equip_weapon_icons · equip_ring_icons(프레임 = 아래 순서). 프롬프트: docs/equip-totem-prompts.md
@@ -6,7 +7,7 @@
 
 export const EQUIP_MAX = 5;
 export const GRADE_COLORS = [0x8a92a8, 0x5cd88a, 0x4a9eff, 0xb07aff, 0xffc93a]; // 등급 1~5 테두리(회색·초록·파랑·보라·금)
-export const GRADE_NAMES = ['일반', '고급', '희귀', '영웅', '전설'];
+export const GRADE_NAMES = [tr('일반'), tr('고급'), tr('희귀'), tr('영웅'), tr('전설')];
 
 export type WeaponKey = 'mace' | 'frost_mace' | 'thunder_hammer' | 'flame_mace' | 'healing_scepter' | 'golden_mace';
 export type RingKey = 'ring_exp' | 'ring_gold' | 'ring_mana' | 'ring_life' | 'ring_wind' | 'ring_luck';
@@ -19,21 +20,21 @@ export interface EquipDef {
 }
 
 export const HERO_WEAPONS: (EquipDef & { key: WeaponKey })[] = [
-  { key: 'mace', name: '철퇴', frame: 0, desc: (g) => `앞쪽 적 2명 관통 · 피해 ${pctOf(weaponPower(g))}` },
-  { key: 'frost_mace', name: '서리 철퇴', frame: 1, desc: (g) => `맞은 적 ${frostSec(g)}초 느려짐` },
-  { key: 'thunder_hammer', name: '번개 망치', frame: 2, desc: (g) => `번개가 옆 적 ${chainCount(g)}명에게 튐` },
-  { key: 'flame_mace', name: '화염 메이스', frame: 3, desc: (g) => `떨어진 자리 3초 불바다(초당 ${Math.round(burnMult(g) * 100)}%)` },
-  { key: 'healing_scepter', name: '치유의 홀', frame: 4, desc: (g) => `오라 안 아군 체력 ${Math.round(scepterHeal(g) * 100)}% 회복` },
-  { key: 'golden_mace', name: '황금 철퇴', frame: 5, desc: (g) => `철퇴로 처치하면 골드 ×${goldMaceMult(g)}` },
+  { key: 'mace', name: tr('철퇴'), frame: 0, desc: (g) => tr('앞쪽 적 2명 관통 · 피해 {0}', pctOf(weaponPower(g))) },
+  { key: 'frost_mace', name: tr('서리 철퇴'), frame: 1, desc: (g) => tr('맞은 적 {0}초 느려짐', frostSec(g)) },
+  { key: 'thunder_hammer', name: tr('번개 망치'), frame: 2, desc: (g) => tr('번개가 옆 적 {0}명에게 튐', chainCount(g)) },
+  { key: 'flame_mace', name: tr('화염 메이스'), frame: 3, desc: (g) => tr('떨어진 자리 3초 불바다(초당 {0}%)', Math.round(burnMult(g) * 100)) },
+  { key: 'healing_scepter', name: tr('치유의 홀'), frame: 4, desc: (g) => tr('오라 안 아군 체력 {0}% 회복', Math.round(scepterHeal(g) * 100)) },
+  { key: 'golden_mace', name: tr('황금 철퇴'), frame: 5, desc: (g) => tr('철퇴로 처치하면 골드 ×{0}', goldMaceMult(g)) },
 ];
 
 export const RINGS: (EquipDef & { key: RingKey })[] = [
-  { key: 'ring_exp', name: '경험의 반지', frame: 0, desc: (g) => `전투 경험치 +${ringPct('ring_exp', g)}%` },
-  { key: 'ring_gold', name: '황금의 반지', frame: 1, desc: (g) => `처치 골드 +${ringPct('ring_gold', g)}%` },
-  { key: 'ring_mana', name: '마나의 반지', frame: 2, desc: (g) => `💧 마나 충전 +${ringPct('ring_mana', g)}%` },
-  { key: 'ring_life', name: '생명의 반지', frame: 3, desc: (g) => `👑 영웅 체력 +${ringPct('ring_life', g)}%` },
-  { key: 'ring_wind', name: '바람의 반지', frame: 4, desc: (g) => `영웅 이동 속도 +${ringPct('ring_wind', g)}%` },
-  { key: 'ring_luck', name: '행운의 반지', frame: 5, desc: (g) => `치명타 +${ringPct('ring_luck', g)}% · 상자 등급업 ${ringPct('ring_luck', g) * 2}%` },
+  { key: 'ring_exp', name: tr('경험의 반지'), frame: 0, desc: (g) => tr('전투 경험치 +{0}%', ringPct('ring_exp', g)) },
+  { key: 'ring_gold', name: tr('황금의 반지'), frame: 1, desc: (g) => tr('처치 골드 +{0}%', ringPct('ring_gold', g)) },
+  { key: 'ring_mana', name: tr('마나의 반지'), frame: 2, desc: (g) => tr('💧 마나 충전 +{0}%', ringPct('ring_mana', g)) },
+  { key: 'ring_life', name: tr('생명의 반지'), frame: 3, desc: (g) => tr('👑 영웅 체력 +{0}%', ringPct('ring_life', g)) },
+  { key: 'ring_wind', name: tr('바람의 반지'), frame: 4, desc: (g) => tr('영웅 이동 속도 +{0}%', ringPct('ring_wind', g)) },
+  { key: 'ring_luck', name: tr('행운의 반지'), frame: 5, desc: (g) => tr('치명타 +{0}% · 상자 등급업 {1}%', ringPct('ring_luck', g), ringPct('ring_luck', g) * 2) },
 ];
 
 const pctOf = (m: number): string => `×${m.toFixed(2)}`;

@@ -9,6 +9,7 @@ import { fromRadar, toRadar } from '../systems/camera';
 import { VIEW_L, VIEW_OFF, VIEW_R, VIEW_W, uiX } from '../systems/view';
 import { FEATURES } from '../systems/tutorial';
 import { groupInfo, unitGroup } from '../systems/unitGroups';
+import { tr } from '../systems/i18n';
 
 export interface HudState {
   lv: number;
@@ -200,7 +201,7 @@ export class Hud {
       scene.input.off('pointermove', rMove);
       scene.input.off('pointerup', rUp);
     });
-    this.goldText = scene.add.text(788, 22, '전투 🪙 0', { fontFamily: 'sans-serif', fontSize: '22px', fontStyle: 'bold', color: '#ffd34d' }).setOrigin(0, 0.5).setDepth(d + 1);
+    this.goldText = scene.add.text(788, 22, tr('전투 🪙 0'), { fontFamily: 'sans-serif', fontSize: '22px', fontStyle: 'bold', color: '#ffd34d' }).setOrigin(0, 0.5).setDepth(d + 1);
 
     // 하단 HUD 판(전장과 구분)
     scene.add.rectangle(640, 565, VIEW_W, 310, 0x0b0f1a, 0.92).setDepth(d - 1);
@@ -213,11 +214,11 @@ export class Hud {
     scene.add.rectangle(fl + 240, by, 400, 22, 0x000000, 0.5).setDepth(d);
     this.foodFill = scene.add.rectangle(fl + 42, by, 396, 18, 0xe0a24e).setOrigin(0, 0.5).setDepth(d + 1);
     this.foodText = scene.add.text(fl + 240, by, '', { fontFamily: 'sans-serif', fontSize: '15px', fontStyle: 'bold', color: '#fff', stroke: '#000000', strokeThickness: 3 }).setOrigin(0.5).setDepth(d + 2);
-    scene.add.text(fl + 22, by, '🍖 인구', { fontFamily: 'sans-serif', fontSize: '14px', fontStyle: 'bold', color: '#fff', stroke: '#000000', strokeThickness: 3 }).setOrigin(0, 0.5).setDepth(d + 2);
+    scene.add.text(fl + 22, by, tr('🍖 인구'), { fontFamily: 'sans-serif', fontSize: '14px', fontStyle: 'bold', color: '#fff', stroke: '#000000', strokeThickness: 3 }).setOrigin(0, 0.5).setDepth(d + 2);
     scene.add.rectangle(er + 1040, by, 400, 22, 0x000000, 0.5).setDepth(d);
     this.energyFill = scene.add.rectangle(er + 842, by, 396, 18, 0x4ac8e0).setOrigin(0, 0.5).setDepth(d + 1);
     this.energyText = scene.add.text(er + 1040, by, '', { fontFamily: 'sans-serif', fontSize: '14px', fontStyle: 'bold', color: '#fff', stroke: '#000000', strokeThickness: 3 }).setOrigin(0.5).setDepth(d + 2);
-    scene.add.text(er + 1238, by, '⚡ 소환', { fontFamily: 'sans-serif', fontSize: '14px', fontStyle: 'bold', color: '#fff', stroke: '#000000', strokeThickness: 3 }).setOrigin(1, 0.5).setDepth(d + 2);
+    scene.add.text(er + 1238, by, tr('⚡ 소환'), { fontFamily: 'sans-serif', fontSize: '14px', fontStyle: 'bold', color: '#fff', stroke: '#000000', strokeThickness: 3 }).setOrigin(1, 0.5).setDepth(d + 2);
 
     // ⏱️ 리듬 소환 바 (초록 중앙 = PERFECT) — 하단 HUD, 인구/에너지 바 사이
     const beatY = by + 4;
@@ -225,7 +226,7 @@ export class Hud {
       if (features.perfectHint) {
         // 처음 3판 — 크게, 통통 튀며(그 뒤엔 안 보임: 막대만으로 충분)
         const hint = scene.add
-          .text(this.beatX + this.beatW / 2, by - 22, '⏱️ 초록에 맞춰 소환하면 PERFECT 강화!', { fontFamily: 'sans-serif', fontSize: '19px', fontStyle: 'bold', color: '#ffe14d', stroke: '#000000', strokeThickness: 5, backgroundColor: '#0d1424cc', padding: { x: 10, y: 3 } })
+          .text(this.beatX + this.beatW / 2, by - 22, tr('⏱️ 초록에 맞춰 소환하면 PERFECT 강화!'), { fontFamily: 'sans-serif', fontSize: '19px', fontStyle: 'bold', color: '#ffe14d', stroke: '#000000', strokeThickness: 5, backgroundColor: '#0d1424cc', padding: { x: 10, y: 3 } })
           .setOrigin(0.5)
           .setDepth(d + 3);
         scene.tweens.add({ targets: hint, scale: 1.08, duration: 500, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
@@ -243,7 +244,7 @@ export class Hud {
       const at = FEATURES.find((f) => f.key === 'perfect')?.stage ?? 6;
       scene.add.rectangle(this.beatX + this.beatW / 2, beatY - 4, this.beatW + 4, 28, 0x1a2338, 0.95).setStrokeStyle(2, 0xffd34d, 0.6).setDepth(d);
       scene.add
-        .text(this.beatX + this.beatW / 2, beatY - 4, `🔒 ${at - 1}관문을 깨면 ⏱️ PERFECT 소환이 열려요`, { fontFamily: 'sans-serif', fontSize: '15px', fontStyle: 'bold', color: '#ffe680', stroke: '#000000', strokeThickness: 3 })
+        .text(this.beatX + this.beatW / 2, beatY - 4, tr('🔒 {0}관문을 깨면 ⏱️ PERFECT 소환이 열려요', at - 1), { fontFamily: 'sans-serif', fontSize: '15px', fontStyle: 'bold', color: '#ffe680', stroke: '#000000', strokeThickness: 3 })
         .setOrigin(0.5)
         .setDepth(d + 1);
     }
@@ -282,7 +283,7 @@ export class Hud {
           add(scene.add.text(cx, cy - 6, '🔒', { fontSize: '30px', padding: { top: 12, bottom: 4 } }).setOrigin(0.5).setAlpha(0.75));
           groupTag(cx, units[key]).forEach((o) => o.setAlpha(0.6));
         } else add(scene.add.rectangle(cx, cy - 2, FACE - 12, FACE - 12).setStrokeStyle(2, 0x3a3f4a, 0.8)); // 빈 칸 — 자물쇠 없이 빈 틀만
-        add(scene.add.text(cx, cy + 68, key ? '🛒 강화에서 구매' : '빈 칸', { fontFamily: 'sans-serif', fontSize: '14px', color: key ? '#a8b4c8' : '#6a7488' }).setOrigin(0.5));
+        add(scene.add.text(cx, cy + 68, key ? tr('🛒 강화에서 구매') : tr('빈 칸'), { fontFamily: 'sans-serif', fontSize: '14px', color: key ? '#a8b4c8' : '#6a7488' }).setOrigin(0.5));
         return;
       }
       const u = units[key];
@@ -305,7 +306,7 @@ export class Hud {
       // ⚔️ 상성 — 얼굴 오른쪽 아래에 강한 적 종류, 그 적이 전장에 있으면 '유리!'
       const ck = UNIT_COUNTER[key];
       if (ck) add(scene.add.text(cx + 46, cy - 30, `▶${KIND_INFO[ck].icon}`, { fontSize: '17px', backgroundColor: '#0d1424dd', padding: { x: 3, y: 1, top: 6 } }).setOrigin(0.5));
-      const goodTag = ck ? add(scene.add.text(cx, cy - 36, '🎯 유리!', { fontFamily: 'sans-serif', fontSize: '17px', fontStyle: 'bold', color: '#ffe14d', stroke: '#000000', strokeThickness: 4 }).setOrigin(0.5).setVisible(false)) : null;
+      const goodTag = ck ? add(scene.add.text(cx, cy - 36, tr('🎯 유리!'), { fontFamily: 'sans-serif', fontSize: '17px', fontStyle: 'bold', color: '#ffe14d', stroke: '#000000', strokeThickness: 4 }).setOrigin(0.5).setVisible(false)) : null;
       // 🛠️ 전장 실시간 강화 버튼(카드 우상단) — 소환 탭과 분리
       // 🛠️ 전장 강화 — 전투 골드(🪙)를 쓰는 버튼으로 보이게 금화 색 · '⬆🪙40'
       const upBtn = add(scene.add.rectangle(cx + CARD_W / 2 - 38, cy - 66, 70, 28, 0x6a4a08).setStrokeStyle(2, 0xffd34d));
@@ -320,7 +321,7 @@ export class Hud {
     const wStrip = scene.add.container(VIEW_L, 0).setDepth(d);
     const wy = W_CARD_CY;
     if (!features.weapon) {
-      scene.add.text(640, wy, `🔒 특수 무기 — ${(FEATURES.find((f) => f.key === 'weapon')?.stage ?? 3) - 1}관문을 깨면 열려요`, { fontFamily: 'sans-serif', fontSize: '20px', fontStyle: 'bold', color: '#7c8aa0' }).setOrigin(0.5).setDepth(d);
+      scene.add.text(640, wy, tr('🔒 특수 무기 — {0}관문을 깨면 열려요', (FEATURES.find((f) => f.key === 'weapon')?.stage ?? 3) - 1), { fontFamily: 'sans-serif', fontSize: '20px', fontStyle: 'bold', color: '#7c8aa0' }).setOrigin(0.5).setDepth(d);
     }
     if (features.weapon) weaponSlots.forEach((i, j) => {
       const w = WEAPONS[i];
@@ -338,7 +339,7 @@ export class Hud {
         wStrip.add([
           scene.add.text(cx, wy, '🔒', { fontSize: '24px', padding: { top: 12, bottom: 4 } }).setOrigin(0.5).setAlpha(0.6),
           scene.add.text(tx, wy - 12, w.name, { fontFamily: 'sans-serif', fontSize: '16px', fontStyle: 'bold', color: '#7c8698' }).setOrigin(0, 0.5),
-          scene.add.text(tx, wy + 14, '🛒 구매', { fontFamily: 'sans-serif', fontSize: '13px', color: '#7c8aa0' }).setOrigin(0, 0.5),
+          scene.add.text(tx, wy + 14, tr('🛒 구매'), { fontFamily: 'sans-serif', fontSize: '13px', color: '#7c8aa0' }).setOrigin(0, 0.5),
           num,
         ]);
         return;
@@ -577,7 +578,7 @@ export class Hud {
     if (!s) return;
     const bx = s.upBtn.x;
     this.scene.tweens.add({ targets: [s.upBtn, s.upText], x: bx + 5, duration: 45, yoyo: true, repeat: 2, onComplete: () => { s.upBtn.x = bx; s.upText.x = bx; } });
-    const t = this.scene.add.text(bx + this.strip.x, s.upBtn.y - 26, `🪙 부족! (${have}/${cost})`, { fontFamily: 'sans-serif', fontSize: '16px', fontStyle: 'bold', color: '#ff7a7a', stroke: '#000000', strokeThickness: 4 }).setOrigin(0.5).setDepth(140);
+    const t = this.scene.add.text(bx + this.strip.x, s.upBtn.y - 26, tr('🪙 부족! ({0}/{1})', have, cost), { fontFamily: 'sans-serif', fontSize: '16px', fontStyle: 'bold', color: '#ff7a7a', stroke: '#000000', strokeThickness: 4 }).setOrigin(0.5).setDepth(140);
     this.scene.tweens.add({ targets: t, y: t.y - 22, alpha: 0, delay: 350, duration: 500, onComplete: () => t.destroy() });
   }
 
@@ -624,13 +625,13 @@ export class Hud {
     const slot = this.slots.find((s) => s.key === key);
     if (!slot) return;
     this.scene.tweens.add({ targets: slot.rect, x: slot.cx + 6, duration: 50, yoyo: true, repeat: 2 });
-    const msg = reason === 'energy' ? '⚡ 부족!' : reason === 'food' ? '🍖 꽉 참!' : '⏱️ 대기 중!';
+    const msg = reason === 'energy' ? tr('⚡ 부족!') : reason === 'food' ? tr('🍖 꽉 참!') : tr('⏱️ 대기 중!');
     const t = this.scene.add.text(slot.cx + this.strip.x, 440, msg, { fontFamily: 'sans-serif', fontSize: '18px', fontStyle: 'bold', color: '#ff7a7a' }).setOrigin(0.5).setDepth(130);
     this.scene.tweens.add({ targets: t, y: 395, alpha: 0, duration: 650, onComplete: () => t.destroy() });
   }
 
   update(s: HudState): void {
-    this.lvText.setText(`전투 LV ${s.lv}`); // 이번 판 전투 레벨(카드의 유닛 Lv와 구분)
+    this.lvText.setText(tr('전투 LV {0}', s.lv)); // 이번 판 전투 레벨(카드의 유닛 Lv와 구분)
     if (s.xpNext) {
       const target = Phaser.Math.Clamp((s.xp ?? 0) / s.xpNext, 0, 1);
       if (s.lv > this.lastLv && this.lastLv > 0) {
@@ -645,7 +646,7 @@ export class Hud {
       this.xpFill.setSize(XP_W * this.xpShown, 10);
       this.xpText.setText(`${Math.floor(s.xp ?? 0)}/${s.xpNext}`);
     }
-    this.goldText.setText(`전투 🪙 ${s.gold}`); // 이번 판에서 모은 골드(⬆ 강화에 씀) — 보유 골드와 구분
+    this.goldText.setText(tr('전투 🪙 {0}', s.gold)); // 이번 판에서 모은 골드(⬆ 강화에 씀) — 보유 골드와 구분
     if (s.radar) this.drawRadar(s.radar);
     this.energyFill.setSize(396 * Phaser.Math.Clamp(s.energy / s.energyMax, 0, 1), 18);
     this.energyText.setText(`${Math.floor(s.energy)} / ${s.energyMax}`);

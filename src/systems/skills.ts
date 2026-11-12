@@ -1,3 +1,4 @@
+import { tr } from './i18n';
 /** 레벨업 스킬(로그라이트, 한 판 단위) — 순수 로직 */
 
 export type Grade = 'common' | 'rare' | 'legend';
@@ -17,9 +18,9 @@ export interface SkillDef {
 
 /** 등급별 등장 가중치(%) · 카드 색 · 이름 */
 export const GRADES: Record<Grade, { weight: number; color: number; edge: number; label: string }> = {
-  common: { weight: 60, color: 0x1f4a7a, edge: 0x6ab8ff, label: '일반' },
-  rare: { weight: 30, color: 0x4a2a7a, edge: 0xc08aff, label: '희귀' },
-  legend: { weight: 10, color: 0x7a5410, edge: 0xffd34d, label: '전설' },
+  common: { weight: 60, color: 0x1f4a7a, edge: 0x6ab8ff, label: tr('일반') },
+  rare: { weight: 30, color: 0x4a2a7a, edge: 0xc08aff, label: tr('희귀') },
+  legend: { weight: 10, color: 0x7a5410, edge: 0xffd34d, label: tr('전설') },
 };
 
 const pct = (x: number): string => `${Math.round(x * 100)}%`;
@@ -27,26 +28,26 @@ const lines = (...l: string[]): string => l.join('\n');
 
 export const SKILLS: SkillDef[] = [
   // 일반
-  { key: 'supply', icon: '🍖', name: '인구 증가', grade: 'common', desc: lines('한 번에 더 많은 유닛을', '전장에 내보낼 수 있어요'), value: (lv) => `최대 인구 +${supplyBonus(lv)}`, max: Infinity },
-  { key: 'mimic', icon: '📚', name: '경험치 보너스', grade: 'common', desc: lines('적을 잡으면 경험치를', '더 받아 레벨업이 빨라져요'), value: (lv) => `경험치 +${pct(mimicMult(lv) - 1)}`, max: 9 },
-  { key: 'vigor', icon: '❤️', name: '튼튼한 몸', grade: 'common', desc: lines('새로 부르는 유닛의', '체력이 늘어나요'), value: (lv) => `체력 +${pct(vigorMult(lv) - 1)}`, max: 5, awaken: { name: '강철 피부', desc: '아군이 받는 피해 -15%' } },
-  { key: 'recharge', icon: '🔋', name: '에너지 충전', grade: 'common', desc: lines('⚡에너지가 차는 속도가', '빨라져요'), value: (lv) => `충전 속도 +${pct(rechargeMult(lv) - 1)}`, max: 4, awaken: { name: '마력 폭주', desc: '에너지 최대치 +50' } },
-  { key: 'energyNow', icon: '⚡', name: '에너지 가득', grade: 'common', desc: lines('지금 바로 ⚡에너지를', '가득 채워요'), max: Infinity, instant: true },
+  { key: 'supply', icon: '🍖', name: tr('인구 증가'), grade: 'common', desc: lines(tr('한 번에 더 많은 유닛을'), tr('전장에 내보낼 수 있어요')), value: (lv) => tr('최대 인구 +{0}', supplyBonus(lv)), max: Infinity },
+  { key: 'mimic', icon: '📚', name: tr('경험치 보너스'), grade: 'common', desc: lines(tr('적을 잡으면 경험치를'), tr('더 받아 레벨업이 빨라져요')), value: (lv) => tr('경험치 +{0}', pct(mimicMult(lv) - 1)), max: 9 },
+  { key: 'vigor', icon: '❤️', name: tr('튼튼한 몸'), grade: 'common', desc: lines(tr('새로 부르는 유닛의'), tr('체력이 늘어나요')), value: (lv) => tr('체력 +{0}', pct(vigorMult(lv) - 1)), max: 5, awaken: { name: tr('강철 피부'), desc: tr('아군이 받는 피해 -15%') } },
+  { key: 'recharge', icon: '🔋', name: tr('에너지 충전'), grade: 'common', desc: lines(tr('⚡에너지가 차는 속도가'), tr('빨라져요')), value: (lv) => tr('충전 속도 +{0}', pct(rechargeMult(lv) - 1)), max: 4, awaken: { name: tr('마력 폭주'), desc: tr('에너지 최대치 +50') } },
+  { key: 'energyNow', icon: '⚡', name: tr('에너지 가득'), grade: 'common', desc: lines(tr('지금 바로 ⚡에너지를'), tr('가득 채워요')), max: Infinity, instant: true },
   // 희귀
-  { key: 'haste', icon: '⚔️', name: '빠른 공격', grade: 'rare', desc: lines('우리 유닛 모두', '더 빨리 때려요'), value: (lv) => `공격 속도 +${pct(1 / hasteMult(lv) - 1)}`, max: 3, awaken: { name: '연속 공격', desc: '20% 확률로 곧바로 한 번 더 공격' } },
-  { key: 'magic', icon: '💎', name: '소환 할인', grade: 'rare', desc: lines('유닛 부를 때 드는', '⚡에너지가 줄어요'), value: (lv) => `소환 비용 -${pct(1 - magicMult(lv))}`, max: 5, awaken: { name: '마나 순환', desc: '5번째 소환마다 공짜' } },
-  { key: 'power', icon: '💪', name: '공격력 강화', grade: 'rare', desc: lines('우리 유닛 모두', '더 세게 때려요'), value: (lv) => `공격력 +${pct(powerMult(lv) - 1)}`, max: 5, awaken: { name: '일격필살', desc: '치명타 피해 1.5배 → 2.25배' } },
-  { key: 'crit', icon: '🎯', name: '치명타', grade: 'rare', desc: lines('큰 피해를 주는', '치명타가 더 자주 터져요'), value: (lv) => `치명타 확률 ${pct(critChance(lv))}`, max: 4, awaken: { name: '연쇄 폭발', desc: '치명타 때 주변 적도 절반 피해' } },
-  { key: 'repair', icon: '🔧', name: '기지 수리', grade: 'rare', desc: lines('우리 기지 체력을', '30% 바로 회복해요'), max: Infinity, instant: true },
+  { key: 'haste', icon: '⚔️', name: tr('빠른 공격'), grade: 'rare', desc: lines(tr('우리 유닛 모두'), tr('더 빨리 때려요')), value: (lv) => tr('공격 속도 +{0}', pct(1 / hasteMult(lv) - 1)), max: 3, awaken: { name: tr('연속 공격'), desc: tr('20% 확률로 곧바로 한 번 더 공격') } },
+  { key: 'magic', icon: '💎', name: tr('소환 할인'), grade: 'rare', desc: lines(tr('유닛 부를 때 드는'), tr('⚡에너지가 줄어요')), value: (lv) => tr('소환 비용 -{0}', pct(1 - magicMult(lv))), max: 5, awaken: { name: tr('마나 순환'), desc: tr('5번째 소환마다 공짜') } },
+  { key: 'power', icon: '💪', name: tr('공격력 강화'), grade: 'rare', desc: lines(tr('우리 유닛 모두'), tr('더 세게 때려요')), value: (lv) => tr('공격력 +{0}', pct(powerMult(lv) - 1)), max: 5, awaken: { name: tr('일격필살'), desc: tr('치명타 피해 1.5배 → 2.25배') } },
+  { key: 'crit', icon: '🎯', name: tr('치명타'), grade: 'rare', desc: lines(tr('큰 피해를 주는'), tr('치명타가 더 자주 터져요')), value: (lv) => tr('치명타 확률 {0}', pct(critChance(lv))), max: 4, awaken: { name: tr('연쇄 폭발'), desc: tr('치명타 때 주변 적도 절반 피해') } },
+  { key: 'repair', icon: '🔧', name: tr('기지 수리'), grade: 'rare', desc: lines(tr('우리 기지 체력을'), tr('30% 바로 회복해요')), max: Infinity, instant: true },
   // 전설
-  { key: 'charge', icon: '🔥', name: '무기 충전', grade: 'legend', desc: lines('특수 무기 게이지가', '더 빨리 차요'), value: (lv) => `충전 속도 +${pct(chargeMult(lv) - 1)}`, max: 3, awaken: { name: '무기 달인', desc: '발사 후 게이지 30% 남김' } },
-  { key: 'freeSummon', icon: '🎁', name: '무료 소환', grade: 'legend', desc: lines('다음 3번 소환은', '⚡에너지 없이 공짜!'), max: Infinity, instant: true },
+  { key: 'charge', icon: '🔥', name: tr('무기 충전'), grade: 'legend', desc: lines(tr('특수 무기 게이지가'), tr('더 빨리 차요')), value: (lv) => tr('충전 속도 +{0}', pct(chargeMult(lv) - 1)), max: 3, awaken: { name: tr('무기 달인'), desc: tr('발사 후 게이지 30% 남김') } },
+  { key: 'freeSummon', icon: '🎁', name: tr('무료 소환'), grade: 'legend', desc: lines(tr('다음 3번 소환은'), tr('⚡에너지 없이 공짜!')), max: Infinity, instant: true },
   // ⭕ 오라(👑 영웅 주변)
-  { key: 'auraSize', icon: '⭕', name: '오라 확장', grade: 'common', desc: lines('영웅 주변 노란 원이', '더 넓어져요'), value: (lv) => `오라 반지름 +${25 * lv}`, max: 4, awaken: { name: '거대 오라', desc: '오라 반지름 +100 더' } },
-  { key: 'auraGuard', icon: '🛡️', name: '수호 오라', grade: 'common', desc: lines('노란 원 안 아군이', '덜 아프게 맞아요'), value: (lv) => `오라 안 받는 피해 -${6 * lv}%`, max: 5, awaken: { name: '치유의 땅', desc: '오라 안 아군 초당 2% 회복' } },
-  { key: 'prayer', icon: '🙏', name: '기도', grade: 'common', desc: lines('영웅 스킬에 쓰는', '💧마나가 빨리 차요'), value: (lv) => `마나 회복 +${20 * lv}%`, max: 5 },
-  { key: 'auraBerserk', icon: '😡', name: '광폭 오라', grade: 'rare', desc: lines('원 안 유닛이 체력 30%', '아래면 크게 강해져요'), value: (lv) => `위기 때 공격력 +${40 * lv}%`, max: 2, awaken: { name: '최후의 발악', desc: '위기 때 공격 속도도 2배' } },
-  { key: 'auraSkill', icon: '🌟', name: '기술 오라', grade: 'rare', desc: lines('원 안 유닛의 고유 스킬이', '더 자주 터져요'), value: (lv) => `스킬 주기 -${lv}타`, max: 3, awaken: { name: '오라 공명', desc: '오라 안 스킬 피해 +50%' } },
+  { key: 'auraSize', icon: '⭕', name: tr('오라 확장'), grade: 'common', desc: lines(tr('영웅 주변 노란 원이'), tr('더 넓어져요')), value: (lv) => tr('오라 반지름 +{0}', 25 * lv), max: 4, awaken: { name: tr('거대 오라'), desc: tr('오라 반지름 +100 더') } },
+  { key: 'auraGuard', icon: '🛡️', name: tr('수호 오라'), grade: 'common', desc: lines(tr('노란 원 안 아군이'), tr('덜 아프게 맞아요')), value: (lv) => tr('오라 안 받는 피해 -{0}%', 6 * lv), max: 5, awaken: { name: tr('치유의 땅'), desc: tr('오라 안 아군 초당 2% 회복') } },
+  { key: 'prayer', icon: '🙏', name: tr('기도'), grade: 'common', desc: lines(tr('영웅 스킬에 쓰는'), tr('💧마나가 빨리 차요')), value: (lv) => tr('마나 회복 +{0}%', 20 * lv), max: 5 },
+  { key: 'auraBerserk', icon: '😡', name: tr('광폭 오라'), grade: 'rare', desc: lines(tr('원 안 유닛이 체력 30%'), tr('아래면 크게 강해져요')), value: (lv) => tr('위기 때 공격력 +{0}%', 40 * lv), max: 2, awaken: { name: tr('최후의 발악'), desc: tr('위기 때 공격 속도도 2배') } },
+  { key: 'auraSkill', icon: '🌟', name: tr('기술 오라'), grade: 'rare', desc: lines(tr('원 안 유닛의 고유 스킬이'), tr('더 자주 터져요')), value: (lv) => tr('스킬 주기 -{0}타', lv), max: 3, awaken: { name: tr('오라 공명'), desc: tr('오라 안 스킬 피해 +50%') } },
 ];
 
 export const SKILL_BY_KEY: Record<string, SkillDef> = Object.fromEntries(SKILLS.map((s) => [s.key, s]));

@@ -11,17 +11,18 @@ import { cuteButton, cuteTitle, drawSky } from '../ui/cute';
 import { enemyPortrait } from '../ui/enemyArt';
 import { VIEW_W } from '../systems/view';
 import { allEnemyTypes, preloadNeeded } from '../systems/assetLoad';
+import { tr } from '../systems/i18n';
 
 const ENEMIES = enemiesData as Record<string, EnemyStats>;
 const UNITS = unitsData as Record<string, UnitStats>;
 
 const ABILITY: Record<string, string> = {
-  explode: '💥 죽을 때 폭발',
-  heal: '💚 주변 적 회복',
-  lifesteal: '🩸 흡혈',
-  rage: '😡 체력이 낮으면 광폭',
-  split: '🟢 죽으면 분열',
-  summon: '💀 부하 소환',
+  explode: tr('💥 죽을 때 폭발'),
+  heal: tr('💚 주변 적 회복'),
+  lifesteal: tr('🩸 흡혈'),
+  rage: tr('😡 체력이 낮으면 광폭'),
+  split: tr('🟢 죽으면 분열'),
+  summon: tr('💀 부하 소환'),
 };
 
 /** 📖 몬스터 도감 — 잡은 적은 그림·이름이 보이고, 못 잡은 적은 그림자. 발견 보상 · 수집 단계 보상 */
@@ -38,10 +39,10 @@ export class CodexScene extends Phaser.Scene {
 
   create(): void {
     drawSky(this, { stars: 10 });
-    cuteTitle(this, 640, 40, '📖 몬스터 도감', 40);
+    cuteTitle(this, 640, 40, tr('📖 몬스터 도감'), 40);
     this.layer = this.add.container(0, 0);
     this.render();
-    cuteButton(this, 640, 676, 240, 54, '🏠 홈으로', 0x4a8bff, 0x2a5fd0, '22px', () => this.scene.start('Menu'));
+    cuteButton(this, 640, 676, 240, 54, tr('🏠 홈으로'), 0x4a8bff, 0x2a5fd0, '22px', () => this.scene.start('Menu'));
   }
 
   private render(): void {
@@ -56,10 +57,10 @@ export class CodexScene extends Phaser.Scene {
     bar.fillStyle(0x5cd88a, 1).fillRoundedRect(300, 82, Math.max(22, 480 * Math.min(1, found / keys.length)), 22, 11);
     this.layer.add([
       bar,
-      this.add.text(540, 93, `발견 ${found} / ${keys.length}`, { fontFamily: 'sans-serif', fontSize: '16px', fontStyle: 'bold', color: '#ffffff', stroke: '#000000', strokeThickness: 4 }).setOrigin(0.5),
+      this.add.text(540, 93, tr('발견 {0} / {1}', found, keys.length), { fontFamily: 'sans-serif', fontSize: '16px', fontStyle: 'bold', color: '#ffffff', stroke: '#000000', strokeThickness: 4 }).setOrigin(0.5),
     ]);
     if (step) {
-      const label = can >= 0 ? `🎁 ${step.need}마리 보상 받기!` : `🎁 ${step.need}마리: 🪙${step.gold} + 🃏전 유닛 ${step.shards}`;
+      const label = can >= 0 ? tr('🎁 {0}마리 보상 받기!', step.need) : tr('🎁 {0}마리: 🪙{1} + 🃏전 유닛 {2}', step.need, step.gold, step.shards);
       const t = this.add
         .text(800, 93, label, { fontFamily: 'sans-serif', fontSize: '16px', fontStyle: 'bold', color: '#fff', backgroundColor: can >= 0 ? '#2fa25a' : '#4a5578', padding: { x: 10, y: 5 } })
         .setOrigin(0, 0.5);
@@ -68,7 +69,7 @@ export class CodexScene extends Phaser.Scene {
           const r = meta.claimCodexStep(Object.keys(UNITS).filter((k) => meta.ownsUnit(k)));
           if (!r) return;
           sfx(this, 'win');
-          this.toast(`🎉 🪙 +${r.gold} · 🃏 모든 유닛 조각 +${r.shards}`);
+          this.toast(tr('🎉 🪙 +{0} · 🃏 모든 유닛 조각 +{1}', r.gold, r.shards));
           this.render();
         });
         this.tweens.add({ targets: t, scale: 1.08, duration: 400, yoyo: true, repeat: -1 });
@@ -105,7 +106,7 @@ export class CodexScene extends Phaser.Scene {
         if (unclaimed) {
           const g = meta.claimDiscover(k);
           sfx(this, 'coin', 1.4);
-          this.toast(`📖 ${ENEMIES[k].name} 발견 보상 🪙 +${g}`);
+          this.toast(tr('📖 {0} 발견 보상 🪙 +{1}', ENEMIES[k].name, g));
           this.render();
         } else this.detail(k);
       });
@@ -124,7 +125,7 @@ export class CodexScene extends Phaser.Scene {
     g.lineStyle(4, isBoss(k) ? 0xff6a6a : 0x6a8ad8, 1).strokeRoundedRect(390, 170, 500, 380, 28);
     d.add([dim, g]);
     if (!seen) {
-      d.add(this.add.text(640, 340, `❓ 아직 못 잡은 적이에요\n\n잡으면 도감에 등록되고\n발견 보상 🪙${discoverReward(k)}을 받아요`, { fontFamily: 'sans-serif', fontSize: '22px', fontStyle: 'bold', color: '#4a5a7a', align: 'center' }).setOrigin(0.5));
+      d.add(this.add.text(640, 340, tr('❓ 아직 못 잡은 적이에요\n\n잡으면 도감에 등록되고\n발견 보상 🪙{0}을 받아요', discoverReward(k)), { fontFamily: 'sans-serif', fontSize: '22px', fontStyle: 'bold', color: '#4a5a7a', align: 'center' }).setOrigin(0.5));
     } else {
       const art = enemyPortrait(this, k, 520, 290, 160, 140);
       if (art) d.add(art);
@@ -133,16 +134,16 @@ export class CodexScene extends Phaser.Scene {
       const lines = [
         `${isBoss(k) ? '👑 ' : ''}${e.name}`,
         `❤️ ${e.hp}   ⚔️ ${e.atk}   🛡️ ${e.def}`,
-        `🏃 이동 ${e.speed}   🎯 사거리 ${e.range}`,
+        tr('🏃 이동 {0}   🎯 사거리 {1}', e.speed, e.range),
         kind ? `${KIND_INFO[kind].icon} ${KIND_INFO[kind].name}` : '',
         e.ability ? ABILITY[e.ability] ?? '' : '',
-        `🗡️ 처치 ${meta.kills[k]}  ${'★'.repeat(codexStars(meta.kills[k] ?? 0))}`,
+        tr('🗡️ 처치 {0}  {1}', meta.kills[k], '★'.repeat(codexStars(meta.kills[k] ?? 0))),
       ].filter(Boolean);
       d.add(this.add.text(620, 196, lines.join('\n'), { fontFamily: 'sans-serif', fontSize: '19px', fontStyle: 'bold', color: '#2a3350', lineSpacing: 10 }).setOrigin(0, 0));
-      if (counters.length) d.add(this.add.text(640, 430, `🎯 상대하기 좋은 유닛: ${counters.join(' · ')} (피해 ×1.5)`, { fontFamily: 'sans-serif', fontSize: '17px', fontStyle: 'bold', color: '#2fa25a' }).setOrigin(0.5));
-      d.add(this.add.text(640, 462, '★ 처치 1 · ★★ 50 · ★★★ 300', { fontFamily: 'sans-serif', fontSize: '14px', color: '#8a96b8' }).setOrigin(0.5));
+      if (counters.length) d.add(this.add.text(640, 430, tr('🎯 상대하기 좋은 유닛: {0} (피해 ×1.5)', counters.join(' · ')), { fontFamily: 'sans-serif', fontSize: '17px', fontStyle: 'bold', color: '#2fa25a' }).setOrigin(0.5));
+      d.add(this.add.text(640, 462, tr('★ 처치 1 · ★★ 50 · ★★★ 300'), { fontFamily: 'sans-serif', fontSize: '14px', color: '#8a96b8' }).setOrigin(0.5));
     }
-    const close = this.add.text(640, 512, '닫기', { fontFamily: 'sans-serif', fontSize: '20px', fontStyle: 'bold', color: '#fff', backgroundColor: '#4a8bff', padding: { x: 26, y: 8 } }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+    const close = this.add.text(640, 512, tr('닫기'), { fontFamily: 'sans-serif', fontSize: '20px', fontStyle: 'bold', color: '#fff', backgroundColor: '#4a8bff', padding: { x: 26, y: 8 } }).setOrigin(0.5).setInteractive({ useHandCursor: true });
     d.add(close);
     const shut = (): void => {
       d.destroy();

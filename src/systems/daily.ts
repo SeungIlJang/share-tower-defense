@@ -4,6 +4,7 @@
  */
 import type { StageData } from '../types';
 import { bossForStage, isBoss } from './bosses';
+import { tr } from './i18n';
 
 export type DailyRuleKey = 'ranged' | 'bossRush' | 'double' | 'overload' | 'sky' | 'magic' | 'weapons';
 
@@ -22,13 +23,13 @@ export interface DailyRule {
 }
 
 export const DAILY_RULES: DailyRule[] = [
-  { key: 'ranged', icon: '🏹', name: '활과 마법만', desc: '원거리 유닛만 출전 · 보상 ×2', units: ['archer', 'mage', 'earthmage', 'darkmage', 'cannon', 'cleric'], reward: 2 },
-  { key: 'bossRush', icon: '👑', name: '보스 러시', desc: '웨이브마다 보스가 나와요 · 보상 ×2.5', reward: 2.5 },
-  { key: 'double', icon: '💰', name: '두 배 전쟁', desc: '적이 2배 · 처치 골드 ×3', enemyCount: 2, reward: 3 },
-  { key: 'overload', icon: '⚡', name: '에너지 폭주', desc: '소환 에너지 ×2 · 적 체력 ×1.6', energy: 2, enemyHp: 1.6, reward: 2 },
-  { key: 'sky', icon: '🦇', name: '하늘의 습격', desc: '모든 적이 하늘에서 · 궁수가 열쇠!', reward: 2 },
-  { key: 'magic', icon: '🔮', name: '마법 축제', desc: '마법 유닛만 · 마나 ×2', units: ['mage', 'earthmage', 'darkmage', 'cleric'], mana: 2, reward: 2.5 },
-  { key: 'weapons', icon: '🔥', name: '무기 대잔치', desc: '특수 무기 충전 ×3 · 적 체력 ×1.4', charge: 3, enemyHp: 1.4, reward: 2 },
+  { key: 'ranged', icon: '🏹', name: tr('활과 마법만'), desc: tr('원거리 유닛만 출전 · 보상 ×2'), units: ['archer', 'mage', 'earthmage', 'darkmage', 'cannon', 'cleric'], reward: 2 },
+  { key: 'bossRush', icon: '👑', name: tr('보스 러시'), desc: tr('웨이브마다 보스가 나와요 · 보상 ×2.5'), reward: 2.5 },
+  { key: 'double', icon: '💰', name: tr('두 배 전쟁'), desc: tr('적이 2배 · 처치 골드 ×3'), enemyCount: 2, reward: 3 },
+  { key: 'overload', icon: '⚡', name: tr('에너지 폭주'), desc: tr('소환 에너지 ×2 · 적 체력 ×1.6'), energy: 2, enemyHp: 1.6, reward: 2 },
+  { key: 'sky', icon: '🦇', name: tr('하늘의 습격'), desc: tr('모든 적이 하늘에서 · 궁수가 열쇠!'), reward: 2 },
+  { key: 'magic', icon: '🔮', name: tr('마법 축제'), desc: tr('마법 유닛만 · 마나 ×2'), units: ['mage', 'earthmage', 'darkmage', 'cleric'], mana: 2, reward: 2.5 },
+  { key: 'weapons', icon: '🔥', name: tr('무기 대잔치'), desc: tr('특수 무기 충전 ×3 · 적 체력 ×1.4'), charge: 3, enemyHp: 1.4, reward: 2 },
 ];
 
 /** 이 날의 규칙(날짜 index로 돌아감) */

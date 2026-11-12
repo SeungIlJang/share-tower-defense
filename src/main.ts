@@ -1,3 +1,4 @@
+import './systems/i18n'; // 🌐 언어팩 — 맨 먼저(데이터 이름 번역)
 import Phaser from 'phaser';
 import { BootScene } from './scenes/Boot';
 import { PreloadScene } from './scenes/Preload';

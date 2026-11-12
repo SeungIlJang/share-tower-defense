@@ -19,6 +19,7 @@ import { stageEvent } from '../systems/stageEvents';
 import { pickChampion } from '../systems/duel';
 import { WEAPONS, WEAPON_SLOTS } from '../systems/weapons';
 import { FEATURES, featureOn, reachedStage } from '../systems/tutorial';
+import { tr } from '../systems/i18n';
 
 const UNITS = unitsData as Record<string, UnitStats>;
 const ENEMIES = enemiesData as Record<string, EnemyStats>;
@@ -50,7 +51,7 @@ export class PrepareScene extends Phaser.Scene {
     drawSky(this, { theme: WORLDS[(stage.world ?? 1) - 1].theme as SkyTheme });
     const sr = stageRule(stage.id);
     const info = sr === 'normal' ? null : RULE_INFO[sr];
-    cuteTitle(this, 640, 44, `관문 ${stage.id}${info ? ` · ${info.icon} ${info.name}` : ''} — 출전 준비`, 38);
+    cuteTitle(this, 640, 44, tr('관문 {0}{1} — 출전 준비', stage.id, info ? ` · ${info.icon} ${info.name}` : ''), 38);
     if (info)
       this.add
         .text(592, 668, info.desc.replace('! ', '!\n'), { fontFamily: 'sans-serif', fontSize: '15px', fontStyle: 'bold', color: '#3a2a10', align: 'center', backgroundColor: '#fff4c8e8', padding: { x: 10, y: 5 } })
@@ -70,7 +71,7 @@ export class PrepareScene extends Phaser.Scene {
     panel(30, 560);
     // ⚔️ 일기토 관문은 적장 한 명만 나옴
     const champ = sr === 'duel' ? pickChampion([...new Set(stage.waves.flatMap((w) => w.enemies.map((g) => g.type)))], ENEMIES, isBoss) : null;
-    this.add.text(310, 112, champ ? '👺 일기토 상대' : '👀 나오는 적', { fontFamily: 'sans-serif', fontSize: '24px', fontStyle: 'bold', color: '#3a4a7a' }).setOrigin(0.5);
+    this.add.text(310, 112, champ ? tr('👺 일기토 상대') : tr('👀 나오는 적'), { fontFamily: 'sans-serif', fontSize: '24px', fontStyle: 'bold', color: '#3a4a7a' }).setOrigin(0.5);
     const list = champ ? [{ type: champ, count: 1 }] : stageEnemies(stage).slice(0, 10);
     list.forEach((e, i) => {
       const x = 92 + (i % 5) * 109;
@@ -81,13 +82,13 @@ export class PrepareScene extends Phaser.Scene {
       const k = enemyKind(e.type);
       if (k) this.add.text(x + 32, y - 30, KIND_INFO[k].icon, { fontSize: '18px', padding: { top: 6, bottom: 2 } }).setOrigin(0.5);
       this.add.text(x, y + 44, ENEMIES[e.type]?.name ?? e.type, { fontFamily: 'sans-serif', fontSize: '14px', fontStyle: 'bold', color: boss ? '#d8323a' : '#3a3a5a' }).setOrigin(0.5);
-      this.add.text(x, y + 60, boss ? '👑 보스' : `×${e.count}`, { fontFamily: 'sans-serif', fontSize: '13px', fontStyle: 'bold', color: boss ? '#d8323a' : '#7a86a8' }).setOrigin(0.5);
+      this.add.text(x, y + 60, boss ? tr('👑 보스') : `×${e.count}`, { fontFamily: 'sans-serif', fontSize: '13px', fontStyle: 'bold', color: boss ? '#d8323a' : '#7a86a8' }).setOrigin(0.5);
     });
     // 🌊 웨이브 수 · ⚠️ 마지막 웨이브 특수 이벤트(관문마다 정해짐)
     if (!champ) {
       const ev = stageEvent(stage.id);
       this.add
-        .text(310, 374, `🌊 웨이브 ${stage.waves.length}개${ev ? `   ·   ⚠️ 마지막 웨이브: ${ev.text}` : ''}`, { fontFamily: 'sans-serif', fontSize: '15px', fontStyle: 'bold', color: '#a0522d' })
+        .text(310, 374, tr('🌊 웨이브 {0}개{1}', stage.waves.length, ev ? tr('   ·   ⚠️ 마지막 웨이브: {0}', ev.text) : ''), { fontFamily: 'sans-serif', fontSize: '15px', fontStyle: 'bold', color: '#a0522d' })
         .setOrigin(0.5);
     }
     // 🎯 적 종류 → 추천 유닛
@@ -95,7 +96,7 @@ export class PrepareScene extends Phaser.Scene {
     const kinds = champ ? (champKind ? [{ kind: champKind, count: 1 }] : []) : stageKinds(stage).slice(0, 3);
     const box = this.add.graphics();
     box.fillStyle(0xeef3ff, 1).fillRoundedRect(46, 396, 528, 172, 16);
-    this.add.text(62, 414, '🎯 이번 관문 공략', { fontFamily: 'sans-serif', fontSize: '18px', fontStyle: 'bold', color: '#3a4a7a' }).setOrigin(0, 0.5);
+    this.add.text(62, 414, tr('🎯 이번 관문 공략'), { fontFamily: 'sans-serif', fontSize: '18px', fontStyle: 'bold', color: '#3a4a7a' }).setOrigin(0, 0.5);
     kinds.forEach((k, i) => {
       const y = 452 + i * 40;
       const units = Object.keys(UNITS).filter((u) => UNIT_COUNTER[u] === k.kind);
@@ -112,7 +113,7 @@ export class PrepareScene extends Phaser.Scene {
     });
     const rec = recommendedLevel(stage.id, stage.enemyMult ?? 1);
     const tt = targetTime(stage, sr);
-    this.add.text(310, 586, `권장 유닛 강화 Lv${rec}${tt ? `   ·   ⏱️ 목표 ${formatTime(tt)}` : ''}`, { fontFamily: 'sans-serif', fontSize: '15px', fontStyle: 'bold', color: '#6a76a0' }).setOrigin(0.5);
+    this.add.text(310, 586, tr('권장 유닛 강화 Lv{0}{1}', rec, tt ? tr('   ·   ⏱️ 목표 {0}', formatTime(tt)) : ''), { fontFamily: 'sans-serif', fontSize: '15px', fontStyle: 'bold', color: '#6a76a0' }).setOrigin(0.5);
 
     // 🃏 오른쪽: 출전 덱
     panel(620, 630);
@@ -126,7 +127,7 @@ export class PrepareScene extends Phaser.Scene {
       this.tabBtns.forEach((b) => {
         const on = b.key === this.tab;
         b.bg.setFillStyle(on ? 0x6a8ad8 : 0xe4e9f5).setStrokeStyle(2, on ? 0x3a5aa8 : 0xc0c8d8);
-        b.t.setColor(on ? '#ffffff' : '#5a6688').setText(b.key === 'units' ? `🃏 유닛 ${this.deck.length}/${DECK_SIZE}` : `🔥 무기 ${this.weaponDeck.length}/${WEAPON_SLOTS}`);
+        b.t.setColor(on ? '#ffffff' : '#5a6688').setText(b.key === 'units' ? tr('🃏 유닛 {0}/{1}', this.deck.length, DECK_SIZE) : tr('🔥 무기 {0}/{1}', this.weaponDeck.length, WEAPON_SLOTS));
       });
     };
     this.tabBtns = (['units', 'weapons'] as const).map((key, i) => {
@@ -143,8 +144,8 @@ export class PrepareScene extends Phaser.Scene {
     this.rerender = render;
     render();
 
-    cuteButton(this, 250, 668, 220, 58, '← 뒤로', 0x8a9ab8, 0x5a6a88, '22px', () => this.scene.start('StageSelect', { world: stage.world }));
-    cuteButton(this, 935, 668, 300, 64, '⚔️ 출전!', 0xff7a4a, 0xd8502a, '30px', () => {
+    cuteButton(this, 250, 668, 220, 58, tr('← 뒤로'), 0x8a9ab8, 0x5a6a88, '22px', () => this.scene.start('StageSelect', { world: stage.world }));
+    cuteButton(this, 935, 668, 300, 64, tr('⚔️ 출전!'), 0xff7a4a, 0xd8502a, '30px', () => {
       meta.setDeck(this.deck);
       meta.setWeaponDeck(this.weaponDeck);
       sfx(this, 'click');
@@ -159,12 +160,12 @@ export class PrepareScene extends Phaser.Scene {
     this.deckLayer.removeAll(true);
     if (!unlocked) {
       this.deckHint.setText('');
-      this.deckLayer.add(this.add.text(935, 330, `🔒 특수 무기는 ${(FEATURES.find((f) => f.key === 'weapon')?.stage ?? 3) - 1}관문을 깨면 열려요`, { fontFamily: 'sans-serif', fontSize: '20px', fontStyle: 'bold', color: '#7a86a8' }).setOrigin(0.5));
+      this.deckLayer.add(this.add.text(935, 330, tr('🔒 특수 무기는 {0}관문을 깨면 열려요', (FEATURES.find((f) => f.key === 'weapon')?.stage ?? 3) - 1), { fontFamily: 'sans-serif', fontSize: '20px', fontStyle: 'bold', color: '#7a86a8' }).setOrigin(0.5));
       return;
     }
     const owned = WEAPONS.filter((w) => meta.ownsWeapon(w.key)).map((w) => w.key);
     const editable = owned.length > WEAPON_SLOTS;
-    this.deckHint.setText(editable ? `눌러서 넣고 빼요 · 전투엔 ${WEAPON_SLOTS}개를 들고 가요` : `무기를 ${WEAPON_SLOTS + 1}개 이상 사면 고를 수 있어요 · 지금은 산 무기 모두 출전`);
+    this.deckHint.setText(editable ? tr('눌러서 넣고 빼요 · 전투엔 {0}개를 들고 가요', WEAPON_SLOTS) : tr('무기를 {0}개 이상 사면 고를 수 있어요 · 지금은 산 무기 모두 출전', WEAPON_SLOTS + 1));
     const iconTex = textureKey('weapon_icons');
     WEAPONS.forEach((w, i) => {
       const x = 688 + (i % 5) * 123;
@@ -176,7 +177,7 @@ export class PrepareScene extends Phaser.Scene {
       const a = on ? 1 : has ? 0.5 : 0.25;
       parts.push(this.textures.exists(iconTex) ? this.add.image(x, y - 18, iconTex, i).setDisplaySize(60, 60).setAlpha(a) : this.add.text(x, y - 18, w.icon, { fontSize: '40px', padding: { top: 10, bottom: 4 } }).setOrigin(0.5).setAlpha(a));
       parts.push(this.add.text(x, y + 26, w.name, { fontFamily: 'sans-serif', fontSize: '16px', fontStyle: 'bold', color: on ? '#2a3a2a' : '#8a92a8' }).setOrigin(0.5));
-      parts.push(this.add.text(x, y + 47, has ? w.desc : '🔒 강화에서 구매', { fontFamily: 'sans-serif', fontSize: '11px', color: '#7a86a8', align: 'center', wordWrap: { width: 108 } }).setOrigin(0.5, 0.5));
+      parts.push(this.add.text(x, y + 47, has ? w.desc : tr('🔒 강화에서 구매'), { fontFamily: 'sans-serif', fontSize: '11px', color: '#7a86a8', align: 'center', wordWrap: { width: 108 } }).setOrigin(0.5, 0.5));
       if (on) parts.push(this.add.text(x - 44, y - 50, String(this.weaponDeck.indexOf(w.key) + 1), { fontFamily: 'sans-serif', fontSize: '15px', fontStyle: 'bold', color: '#fff', backgroundColor: '#2fa25a', padding: { x: 6, y: 2 } }).setOrigin(0.5));
       if (editable && has) {
         card.setInteractive({ useHandCursor: true });
@@ -185,7 +186,7 @@ export class PrepareScene extends Phaser.Scene {
             if (this.weaponDeck.length <= 1) return;
             this.weaponDeck = this.weaponDeck.filter((d) => d !== w.key);
           } else if (this.weaponDeck.length >= WEAPON_SLOTS) {
-            this.toast('무기 칸이 가득 찼어요 — 하나를 먼저 빼 주세요');
+            this.toast(tr('무기 칸이 가득 찼어요 — 하나를 먼저 빼 주세요'));
             return;
           } else this.weaponDeck.push(w.key);
           sfx(this, 'click');
@@ -199,7 +200,7 @@ export class PrepareScene extends Phaser.Scene {
   private renderDeck(owned: string[], good: Set<string>): void {
     this.deckLayer.removeAll(true);
     const editable = owned.length > DECK_SIZE;
-    this.deckHint.setText(editable ? '눌러서 넣고 빼요 · 🎯 = 이번 관문에 유리' : `유닛이 ${DECK_SIZE + 1}개 이상이면 덱을 고를 수 있어요 · 🎯 = 유리`);
+    this.deckHint.setText(editable ? tr('눌러서 넣고 빼요 · 🎯 = 이번 관문에 유리') : tr('유닛이 {0}개 이상이면 덱을 고를 수 있어요 · 🎯 = 유리', DECK_SIZE + 1));
     owned.forEach((k, i) => {
       const x = 688 + (i % 5) * 123;
       const y = 222 + Math.floor(i / 5) * 122;
@@ -219,7 +220,7 @@ export class PrepareScene extends Phaser.Scene {
             if (this.deck.length <= 1) return;
             this.deck = this.deck.filter((d) => d !== k);
           } else if (this.deck.length >= DECK_SIZE) {
-            this.toast('덱이 가득 찼어요 — 하나를 먼저 빼 주세요');
+            this.toast(tr('덱이 가득 찼어요 — 하나를 먼저 빼 주세요'));
             return;
           } else this.deck.push(k);
           sfx(this, 'click');

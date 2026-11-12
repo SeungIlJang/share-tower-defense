@@ -1,3 +1,4 @@
+import { tr } from './i18n';
 /** 🏰 기지 강화(영구) — 인구 상한 · 소환 에너지. 순수 계산(Vitest 검증) */
 
 export type BaseKey = 'pop' | 'energy';
@@ -36,6 +37,6 @@ export function baseUpgradeCost(lv: number): number {
 }
 
 export const BASE_UPGRADES: BaseUpgrade[] = [
-  { key: 'pop', name: '인구', icon: '🍖', effect: (lv) => `최대 인구 ${FOOD_BASE + popBonus(lv)}` },
-  { key: 'energy', name: '소환', icon: '⚡', effect: (lv) => `에너지 초당 ${energyRate(lv)} · 최대 ${energyMax(lv)}` },
+  { key: 'pop', name: tr('인구'), icon: '🍖', effect: (lv) => tr('최대 인구 {0}', FOOD_BASE + popBonus(lv)) },
+  { key: 'energy', name: tr('소환'), icon: '⚡', effect: (lv) => tr('에너지 초당 {0} · 최대 {1}', energyRate(lv), energyMax(lv)) },
 ];

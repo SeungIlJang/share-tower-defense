@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { sfx } from '../systems/sound';
 import { VIEW_W } from '../systems/view';
+import { tr } from '../systems/i18n';
 
 export interface KeypadOptions {
   title: string;
@@ -61,9 +62,9 @@ export function openKeypad(
     layer.add([b, t]);
   });
   const ok = scene.add.rectangle(708, 630, 190, 62, 0x2f7a4d).setStrokeStyle(2, 0x5cff9e).setInteractive({ useHandCursor: true });
-  const okT = scene.add.text(708, 630, '✓ 확인', { fontFamily: 'sans-serif', fontSize: '26px', fontStyle: 'bold', color: '#fff' }).setOrigin(0.5);
+  const okT = scene.add.text(708, 630, tr('✓ 확인'), { fontFamily: 'sans-serif', fontSize: '26px', fontStyle: 'bold', color: '#fff' }).setOrigin(0.5);
   const no = scene.add.rectangle(540, 630, 130, 62, 0x5a3040).setStrokeStyle(2, 0xff7a8a).setInteractive({ useHandCursor: true });
-  const noT = scene.add.text(540, 630, '취소', { fontFamily: 'sans-serif', fontSize: '24px', fontStyle: 'bold', color: '#fff' }).setOrigin(0.5);
+  const noT = scene.add.text(540, 630, tr('취소'), { fontFamily: 'sans-serif', fontSize: '24px', fontStyle: 'bold', color: '#fff' }).setOrigin(0.5);
   ok.on('pointerdown', () => press('OK'));
   layer.add([ok, okT, no, noT]);
 

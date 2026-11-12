@@ -1,4 +1,5 @@
 import type { StageData, Wave } from '../types';
+import { tr } from './i18n';
 
 /**
  * ♾️ 무한 모드 — 20초마다 웨이브, 웨이브마다 적이 늘고 강해짐. 5·10번째마다 보스.
@@ -39,7 +40,7 @@ export function endlessWaves(): Wave[] {
 }
 
 export function endlessStage(): StageData {
-  return { id: ENDLESS_ID, name: '무한 모드', baseHp: 220, startGold: 160, goldRate: 15, waves: endlessWaves() };
+  return { id: ENDLESS_ID, name: tr('무한 모드'), baseHp: 220, startGold: 160, goldRate: 15, waves: endlessWaves() };
 }
 
 /** 기록 보상 골드 */

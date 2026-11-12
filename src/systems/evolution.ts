@@ -1,3 +1,4 @@
+import { tr } from './i18n';
 /**
  * ⭐ 유닛 진화 — 12단계(★1~★5 + 🌟초월 1~7, 기준 Lv 0·5·10·20·30·40·50·60·70·80·90·100). 순수 계산(Vitest 검증). 분석: 진화가 Lv5·Lv10뿐이라 후반(Lv10~32)에 변화가 없던 문제.
  * - 🔓 돌파: 레벨은 다음 단계 시작 레벨에서 멈춤 → '⭐ 진화'(골드 + 그 유닛 카드 조각)로 다음 단계 → 다시 강화.
@@ -18,19 +19,19 @@ export interface UnitTier {
 }
 
 export const UNIT_TIERS: UnitTier[] = [
-  { min: 0, stars: 1, name: '기본', mult: 1, gold: 0, shards: 0, perk: '' },
-  { min: 5, stars: 2, name: '숙련', mult: 1.1, gold: 300, shards: 0, perk: '❤️⚔️ +10%' },
-  { min: 10, stars: 3, name: '영웅', mult: 1.2, gold: 1500, shards: 15, perk: '❤️⚔️ +20% · ✨ 스킬 위력 ×1.25' },
-  { min: 20, stars: 4, name: '마스터', mult: 1.32, gold: 4000, shards: 30, perk: '❤️⚔️ +32% · ✨ 스킬 더 자주' },
-  { min: 30, stars: 5, name: '각성', mult: 1.45, gold: 9000, shards: 60, perk: '❤️⚔️ +45% · 🔥 각성(공격 속도 +20% · 치명타 +10%)' },
+  { min: 0, stars: 1, name: tr('기본'), mult: 1, gold: 0, shards: 0, perk: '' },
+  { min: 5, stars: 2, name: tr('숙련'), mult: 1.1, gold: 300, shards: 0, perk: '❤️⚔️ +10%' },
+  { min: 10, stars: 3, name: tr('영웅'), mult: 1.2, gold: 1500, shards: 15, perk: tr('❤️⚔️ +20% · ✨ 스킬 위력 ×1.25') },
+  { min: 20, stars: 4, name: tr('마스터'), mult: 1.32, gold: 4000, shards: 30, perk: tr('❤️⚔️ +32% · ✨ 스킬 더 자주') },
+  { min: 30, stars: 5, name: tr('각성'), mult: 1.45, gold: 9000, shards: 60, perk: tr('❤️⚔️ +45% · 🔥 각성(공격 속도 +20% · 치명타 +10%)') },
   // 🌟 초월 1~7 — Lv40~100(무한 모드·주간 보스용 긴 목표), 단계마다 ❤️⚔️ +10%p, 3·5·7단계는 특수 보너스
-  { min: 40, stars: 6, name: '초월 1', mult: 1.55, gold: 15000, shards: 80, perk: '❤️⚔️ +55%' },
-  { min: 50, stars: 7, name: '초월 2', mult: 1.65, gold: 22000, shards: 100, perk: '❤️⚔️ +65%' },
-  { min: 60, stars: 8, name: '초월 3', mult: 1.75, gold: 30000, shards: 120, perk: '❤️⚔️ +75% · ✨ 스킬 한 번 더 자주' },
-  { min: 70, stars: 9, name: '초월 4', mult: 1.85, gold: 40000, shards: 150, perk: '❤️⚔️ +85%' },
-  { min: 80, stars: 10, name: '초월 5', mult: 1.95, gold: 52000, shards: 180, perk: '❤️⚔️ +95% · 🔥 공격 속도 +30%' },
-  { min: 90, stars: 11, name: '초월 6', mult: 2.05, gold: 66000, shards: 210, perk: '❤️⚔️ +105%' },
-  { min: 100, stars: 12, name: '초월 7', mult: 2.15, gold: 82000, shards: 250, perk: '❤️⚔️ +115% · 💥 치명타 +20%' },
+  { min: 40, stars: 6, name: tr('초월 1'), mult: 1.55, gold: 15000, shards: 80, perk: '❤️⚔️ +55%' },
+  { min: 50, stars: 7, name: tr('초월 2'), mult: 1.65, gold: 22000, shards: 100, perk: '❤️⚔️ +65%' },
+  { min: 60, stars: 8, name: tr('초월 3'), mult: 1.75, gold: 30000, shards: 120, perk: tr('❤️⚔️ +75% · ✨ 스킬 한 번 더 자주') },
+  { min: 70, stars: 9, name: tr('초월 4'), mult: 1.85, gold: 40000, shards: 150, perk: '❤️⚔️ +85%' },
+  { min: 80, stars: 10, name: tr('초월 5'), mult: 1.95, gold: 52000, shards: 180, perk: tr('❤️⚔️ +95% · 🔥 공격 속도 +30%') },
+  { min: 90, stars: 11, name: tr('초월 6'), mult: 2.05, gold: 66000, shards: 210, perk: '❤️⚔️ +105%' },
+  { min: 100, stars: 12, name: tr('초월 7'), mult: 2.15, gold: 82000, shards: 250, perk: tr('❤️⚔️ +115% · 💥 치명타 +20%') },
 ];
 export const MAX_TIER = UNIT_TIERS.length - 1;
 
@@ -85,9 +86,9 @@ export const UNIT_GRADE: Record<string, UnitGrade> = {
   earthmage: 'epic', darkmage: 'epic', cavalry: 'epic', cannon: 'epic',
 };
 export const GRADE_INFO: Record<UnitGrade, { name: string; color: number; cost: number; bonus: number }> = {
-  common: { name: '일반', color: 0x8a92a8, cost: 0.8, bonus: 1 },
-  rare: { name: '희귀', color: 0x4a9eff, cost: 1, bonus: 1.1 },
-  epic: { name: '영웅', color: 0xb07aff, cost: 1.25, bonus: 1.2 },
+  common: { name: tr('일반'), color: 0x8a92a8, cost: 0.8, bonus: 1 },
+  rare: { name: tr('희귀'), color: 0x4a9eff, cost: 1, bonus: 1.1 },
+  epic: { name: tr('영웅'), color: 0xb07aff, cost: 1.25, bonus: 1.2 },
 };
 export function gradeOf(unit: string): UnitGrade {
   return UNIT_GRADE[unit] ?? 'rare';
@@ -106,8 +107,8 @@ export type Branch = 'atk' | 'def';
 export const BRANCH_TIER = 3; // ★4
 export const BRANCH_CHANGE_GOLD = 1000;
 export const BRANCH_INFO: Record<Branch, { name: string; color: number; desc: string }> = {
-  atk: { name: '⚔️ 공격형', color: 0xff6a4a, desc: '⚔️ 공격 +15% · 💥 치명타 +5% (★5부터 공격 속도 +10%)' },
-  def: { name: '🛡️ 방어형', color: 0x4aa8ff, desc: '❤️ 체력 +25% · 🛡️ 방어 +5 (★5부터 체력 +35% · 방어 +10)' },
+  atk: { name: tr('⚔️ 공격형'), color: 0xff6a4a, desc: tr('⚔️ 공격 +15% · 💥 치명타 +5% (★5부터 공격 속도 +10%)') },
+  def: { name: tr('🛡️ 방어형'), color: 0x4aa8ff, desc: tr('❤️ 체력 +25% · 🛡️ 방어 +5 (★5부터 체력 +35% · 방어 +10)') },
 };
 
 /** 💪 유닛 최종 보너스 — 단계 + 등급 + 갈래 */

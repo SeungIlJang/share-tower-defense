@@ -4,6 +4,7 @@
  * 1월드 3관문은 첫 경험(특수 무기 해금) 관문이라 일반 관문으로 둠.
  */
 import type { StageData } from '../types';
+import { tr } from './i18n';
 
 export type StageRule = 'normal' | 'escort' | 'hold' | 'breach' | 'duel';
 
@@ -14,10 +15,10 @@ export interface RuleInfo {
 }
 
 export const RULE_INFO: Record<Exclude<StageRule, 'normal'>, RuleInfo> = {
-  escort: { icon: '🛒', name: '마차 호위', desc: '짐마차가 적 성에 닿으면 승리! 마차가 부서지면 패배' },
-  hold: { icon: '🏰', name: '수성', desc: '시간이 끝날 때까지 우리 성을 지키면 승리! 적이 점점 빨리 몰려와요' },
-  breach: { icon: '🏃', name: '돌파', desc: '아군을 적 성 너머 결승선까지 보내면 승리! 빠른 유닛이 유리해요' },
-  duel: { icon: '⚔️', name: '일기토', desc: '적장과 1:1 결투! 유리한 유닛을 고르고 초록 박자에 ⚔️ 필살을 눌러요' },
+  escort: { icon: '🛒', name: tr('마차 호위'), desc: tr('짐마차가 적 성에 닿으면 승리! 마차가 부서지면 패배') },
+  hold: { icon: '🏰', name: tr('수성'), desc: tr('시간이 끝날 때까지 우리 성을 지키면 승리! 적이 점점 빨리 몰려와요') },
+  breach: { icon: '🏃', name: tr('돌파'), desc: tr('아군을 적 성 너머 결승선까지 보내면 승리! 빠른 유닛이 유리해요') },
+  duel: { icon: '⚔️', name: tr('일기토'), desc: tr('적장과 1:1 결투! 유리한 유닛을 고르고 초록 박자에 ⚔️ 필살을 눌러요') },
 };
 
 /** 관문 규칙 */

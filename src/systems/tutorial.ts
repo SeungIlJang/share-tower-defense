@@ -1,3 +1,4 @@
+import { tr } from './i18n';
 /**
  * 🎓 첫 경험 — 기능을 관문마다 하나씩 해금 + 처음 쓸 때 👆 손가락 안내. 순수 로직(Vitest 검증). 계획: docs/hit-plan.md A
  * 처음 하는 사람은 1관문에서 '소환'만 보고, 관문을 깰 때마다 새 기능이 하나씩 열림.
@@ -13,13 +14,13 @@ export interface FeatureDef {
 }
 
 export const FEATURES: FeatureDef[] = [
-  { key: 'heroSkill', stage: 2, name: '👑 영웅 스킬' },
-  { key: 'weapon', stage: 3, name: '🔥 특수 무기' },
-  { key: 'prepare', stage: 1, name: '⚔️ 출전 준비(적 미리보기·덱)' }, // 1관문부터 — 나오는 적을 먼저 보고 시작
-  { key: 'volley', stage: 4, name: '🏰 성 특수 공격' },
-  { key: 'levelup', stage: 5, name: '🃏 레벨업 카드' },
-  { key: 'perfect', stage: 6, name: '⏱️ PERFECT 소환' },
-  { key: 'duel', stage: 9, name: '⚔️ 일기토(적장과 1:1 결투)' },
+  { key: 'heroSkill', stage: 2, name: tr('👑 영웅 스킬') },
+  { key: 'weapon', stage: 3, name: tr('🔥 특수 무기') },
+  { key: 'prepare', stage: 1, name: tr('⚔️ 출전 준비(적 미리보기·덱)') }, // 1관문부터 — 나오는 적을 먼저 보고 시작
+  { key: 'volley', stage: 4, name: tr('🏰 성 특수 공격') },
+  { key: 'levelup', stage: 5, name: tr('🃏 레벨업 카드') },
+  { key: 'perfect', stage: 6, name: tr('⏱️ PERFECT 소환') },
+  { key: 'duel', stage: 9, name: tr('⚔️ 일기토(적장과 1:1 결투)') },
 ];
 
 /** 지금까지 도달한 관문(이번 관문과 '다음에 열린 관문' 중 큰 쪽) */
@@ -42,14 +43,14 @@ export function unlockedBy(stageId: number, prevClearedMax: number): FeatureDef 
 export type TipKey = 'summon' | 'hero' | 'upgrade' | 'mace' | 'weapon' | 'volley' | 'levelup' | 'perfect';
 
 export const TIP_TEXT: Record<TipKey, string> = {
-  summon: '👆 카드를 눌러 아군을 소환하세요!',
-  hero: '👆 전장을 좌우로 밀면 👑영웅이 움직여요\n⭕ 노란 원 안의 아군이 강해져요',
-  upgrade: '🪙 적을 잡아 모은 전투 골드로 유닛 강화!\n⬆ 누를 때마다 체력·공격 +20% (이번 판만)',
-  mace: '👆 영웅 스킬! 철퇴를 던져요 (💧마나 사용)',
-  weapon: '👆 게이지가 찼어요! 특수 무기 발사!',
-  volley: '👆 우리 성을 눌러 성 특수 공격!',
-  levelup: '🃏 카드 1장을 골라 이번 판에서 강해져요!',
-  perfect: '⏱️ 화살표가 초록에 있을 때 소환 = PERFECT 강화!',
+  summon: tr('👆 카드를 눌러 아군을 소환하세요!'),
+  hero: tr('👆 전장을 좌우로 밀면 👑영웅이 움직여요\n⭕ 노란 원 안의 아군이 강해져요'),
+  upgrade: tr('🪙 적을 잡아 모은 전투 골드로 유닛 강화!\n⬆ 누를 때마다 체력·공격 +20% (이번 판만)'),
+  mace: tr('👆 영웅 스킬! 철퇴를 던져요 (💧마나 사용)'),
+  weapon: tr('👆 게이지가 찼어요! 특수 무기 발사!'),
+  volley: tr('👆 우리 성을 눌러 성 특수 공격!'),
+  levelup: tr('🃏 카드 1장을 골라 이번 판에서 강해져요!'),
+  perfect: tr('⏱️ 화살표가 초록에 있을 때 소환 = PERFECT 강화!'),
 };
 
 /** 이 안내가 필요한 기능(없으면 항상) */

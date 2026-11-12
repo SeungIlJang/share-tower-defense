@@ -13,6 +13,7 @@ import { fxReady, loadFx, registerFx } from './fx';
 import { WORLDS } from './worlds';
 import { BOSSES } from './bosses';
 import { castleLook } from './castle';
+import { tr } from './i18n';
 
 const ENEMIES = enemiesData as Record<string, { look?: string; minStage?: number; variantOf?: string }>;
 
@@ -105,7 +106,7 @@ export function preloadNeeded(scene: Phaser.Scene, types: string[], o: { fx?: bo
 }
 
 /** 가운데 작은 진행 막대 */
-export function loadingBar(scene: Phaser.Scene, y = 360, label = '불러오는 중'): { set: (v: number) => void; destroy: () => void } {
+export function loadingBar(scene: Phaser.Scene, y = 360, label = tr('불러오는 중')): { set: (v: number) => void; destroy: () => void } {
   const bg = scene.add.rectangle(640, y, 360, 14, 0x000000, 0.5).setStrokeStyle(1, 0x3a4560).setDepth(1000);
   const fill = scene.add.rectangle(462, y, 0, 10, 0xffd34d).setOrigin(0, 0.5).setDepth(1001);
   const txt = scene.add.text(640, y - 26, `${label}… 0%`, { fontFamily: 'sans-serif', fontSize: '18px', fontStyle: 'bold', color: '#cfd8ea' }).setOrigin(0.5).setDepth(1001);

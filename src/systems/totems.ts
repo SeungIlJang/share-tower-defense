@@ -1,3 +1,4 @@
+import { tr } from './i18n';
 /**
  * 🗿 설치물 카드 — 덱에 넣고 ⚡로 설치. 영웅 앞에 서서 60초 동안 싸우고 사라짐(움직이지 않음). 순수 데이터(Vitest 검증).
  * 그림: public/sprites/totem_* (등장 skill · 대기 idle · 공격 attack · 사라짐 death). 프롬프트: docs/equip-totem-prompts.md
@@ -5,9 +6,9 @@
 export type TotemKind = 'shooter' | 'burn' | 'heal';
 
 export const TOTEMS: Record<string, { kind: TotemKind; desc: string }> = {
-  totem_egg: { kind: 'shooter', desc: '🐔 앞쪽 적에게 알을 쏨' },
-  totem_fire: { kind: 'burn', desc: '🔥 주변 적에게 1초마다 불 피해' },
-  totem_heal: { kind: 'heal', desc: '🌿 주변 아군을 1초마다 회복' },
+  totem_egg: { kind: 'shooter', desc: tr('🐔 앞쪽 적에게 알을 쏨') },
+  totem_fire: { kind: 'burn', desc: tr('🔥 주변 적에게 1초마다 불 피해') },
+  totem_heal: { kind: 'heal', desc: tr('🌿 주변 아군을 1초마다 회복') },
 };
 
 export const TOTEM_LIFE = 60; // 초

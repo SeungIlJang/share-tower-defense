@@ -1,3 +1,4 @@
+import { tr } from './i18n';
 /**
  * 👑 보스 — 골렘 두목·레드 드래곤 + 월드 보스 8종. 순수 데이터·계산(Vitest 검증). 그림: docs/world-boss-prompts.md
  * 월드 3~10: 10번째 관문 = 그 월드 보스, 5번째 관문 = 앞 월드 보스(중간 보스). 월드 1·2 = 골렘(5)·드래곤(10).
@@ -18,17 +19,17 @@ export interface BossDef {
 }
 
 export const BOSSES: Record<string, BossDef> = {
-  ancient_treant: { key: 'ancient_treant', name: '고대 나무 거인', world: 1, skill: 'roots', every: 7, icon: '🌿', color: 0x6ad84a, reach: [220, 40], summon: { type: 'mushroom', n: 2, every: 0 } },
-  ogre: { key: 'ogre', name: '골렘 두목', world: 0, skill: 'slam', every: 6, icon: '💥', color: 0xff8a3a, reach: [120, 120] },
-  dragon: { key: 'dragon', name: '레드 드래곤', world: 2, skill: 'breath', every: 7, icon: '🔥', color: 0xff3b3b, reach: [260, 0], summon: { type: 'bat', n: 2, every: 14 } },
-  frost_giant: { key: 'frost_giant', name: '서리 거인', world: 3, skill: 'frost', every: 7, icon: '❄️', color: 0x7ad8ff, reach: [150, 120] },
-  swamp_hydra: { key: 'swamp_hydra', name: '늪 히드라', world: 4, skill: 'poison', every: 7, icon: '🧪', color: 0x8aff5a, reach: [300, 0] },
-  magma_titan: { key: 'magma_titan', name: '용암 거인', world: 5, skill: 'eruption', every: 7, icon: '🌋', color: 0xff6a2a, reach: [330, 0] },
-  lich_king: { key: 'lich_king', name: '리치 왕', world: 6, skill: 'raise', every: 9, icon: '💀', color: 0x5aff9a, reach: [200, 0], summon: { type: 'skeleton', n: 4, every: 0 } },
-  crystal_golem: { key: 'crystal_golem', name: '수정 골렘', world: 7, skill: 'shards', every: 7, icon: '💎', color: 0xc08aff, reach: [420, 0] },
-  storm_griffin: { key: 'storm_griffin', name: '폭풍 그리폰', world: 8, skill: 'charge', every: 8, icon: '⚡', color: 0xffe14d, reach: [280, 0] },
-  shadow_lord: { key: 'shadow_lord', name: '그림자 군주', world: 9, skill: 'shadow', every: 8, icon: '🌑', color: 0x9a5aff, reach: [320, 40] },
-  demon_king: { key: 'demon_king', name: '마왕', world: 10, skill: 'hellfire', every: 7, icon: '🔥', color: 0xff2a2a, reach: [560, 0], summon: { type: 'orc_warchief', n: 1, every: 18 } },
+  ancient_treant: { key: 'ancient_treant', name: tr('고대 나무 거인'), world: 1, skill: 'roots', every: 7, icon: '🌿', color: 0x6ad84a, reach: [220, 40], summon: { type: 'mushroom', n: 2, every: 0 } },
+  ogre: { key: 'ogre', name: tr('골렘 두목'), world: 0, skill: 'slam', every: 6, icon: '💥', color: 0xff8a3a, reach: [120, 120] },
+  dragon: { key: 'dragon', name: tr('레드 드래곤'), world: 2, skill: 'breath', every: 7, icon: '🔥', color: 0xff3b3b, reach: [260, 0], summon: { type: 'bat', n: 2, every: 14 } },
+  frost_giant: { key: 'frost_giant', name: tr('서리 거인'), world: 3, skill: 'frost', every: 7, icon: '❄️', color: 0x7ad8ff, reach: [150, 120] },
+  swamp_hydra: { key: 'swamp_hydra', name: tr('늪 히드라'), world: 4, skill: 'poison', every: 7, icon: '🧪', color: 0x8aff5a, reach: [300, 0] },
+  magma_titan: { key: 'magma_titan', name: tr('용암 거인'), world: 5, skill: 'eruption', every: 7, icon: '🌋', color: 0xff6a2a, reach: [330, 0] },
+  lich_king: { key: 'lich_king', name: tr('리치 왕'), world: 6, skill: 'raise', every: 9, icon: '💀', color: 0x5aff9a, reach: [200, 0], summon: { type: 'skeleton', n: 4, every: 0 } },
+  crystal_golem: { key: 'crystal_golem', name: tr('수정 골렘'), world: 7, skill: 'shards', every: 7, icon: '💎', color: 0xc08aff, reach: [420, 0] },
+  storm_griffin: { key: 'storm_griffin', name: tr('폭풍 그리폰'), world: 8, skill: 'charge', every: 8, icon: '⚡', color: 0xffe14d, reach: [280, 0] },
+  shadow_lord: { key: 'shadow_lord', name: tr('그림자 군주'), world: 9, skill: 'shadow', every: 8, icon: '🌑', color: 0x9a5aff, reach: [320, 40] },
+  demon_king: { key: 'demon_king', name: tr('마왕'), world: 10, skill: 'hellfire', every: 7, icon: '🔥', color: 0xff2a2a, reach: [560, 0], summon: { type: 'orc_warchief', n: 1, every: 18 } },
 };
 
 export const BOSS_KEYS = new Set(Object.keys(BOSSES));

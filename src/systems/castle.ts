@@ -1,3 +1,4 @@
+import { tr } from './i18n';
 /**
  * 🏰 성 — 공격 · 강화(20레벨) · 단계별 형태 · 적 성 진화. 순수 계산(Vitest 검증). 설계: docs/castle-design.md
  */
@@ -15,20 +16,20 @@ export interface CastleTier {
 
 /** 우리 성 5단계(성 레벨 0·5·10·15·20) */
 export const ALLY_CASTLE_TIERS: CastleTier[] = [
-  { min: 0, name: '돌 망루', shot: 'arrow' },
-  { min: 5, name: '성벽 요새', shot: 'arrow2' },
-  { min: 10, name: '성채', shot: 'cannon' },
-  { min: 15, name: '왕성', shot: 'chain' },
-  { min: 20, name: '천공의 성', shot: 'beam' },
+  { min: 0, name: tr('돌 망루'), shot: 'arrow' },
+  { min: 5, name: tr('성벽 요새'), shot: 'arrow2' },
+  { min: 10, name: tr('성채'), shot: 'cannon' },
+  { min: 15, name: tr('왕성'), shot: 'chain' },
+  { min: 20, name: tr('천공의 성'), shot: 'beam' },
 ];
 
 /** 적 성 5단계(관문 1·11·21·41·71 — 월드 1·2·3~4·5~7·8~10) */
 export const ENEMY_CASTLE_TIERS: CastleTier[] = [
-  { min: 1, name: '오크 가시 망루', shot: 'rock' },
-  { min: 11, name: '해골 요새', shot: 'poison' },
-  { min: 21, name: '용암 요새', shot: 'fire' },
-  { min: 41, name: '암흑 성채', shot: 'dark' },
-  { min: 71, name: '마왕성', shot: 'curse' },
+  { min: 1, name: tr('오크 가시 망루'), shot: 'rock' },
+  { min: 11, name: tr('해골 요새'), shot: 'poison' },
+  { min: 21, name: tr('용암 요새'), shot: 'fire' },
+  { min: 41, name: tr('암흑 성채'), shot: 'dark' },
+  { min: 71, name: tr('마왕성'), shot: 'curse' },
 ];
 
 function tierOf(tiers: CastleTier[], v: number): number {
@@ -93,7 +94,7 @@ export function castleArchers(tier: number): number {
 export const VOLLEY_CD = 20;
 export const VOLLEY_MULT = 2.5;
 export const VOLLEY_MAX = 8;
-export const VOLLEY_NAMES = ['🏹 화살비', '🏹 화살 폭풍', '💣 일제 포격', '⚡ 번개 폭풍', '✨ 성광 기둥'];
+export const VOLLEY_NAMES = [tr('🏹 화살비'), tr('🏹 화살 폭풍'), tr('💣 일제 포격'), tr('⚡ 번개 폭풍'), tr('✨ 성광 기둥')];
 
 /** 강화 비용 */
 export function castleUpCost(kind: 'castle' | 'castleRate', lv: number): number {

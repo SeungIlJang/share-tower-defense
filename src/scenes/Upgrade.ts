@@ -21,6 +21,7 @@ import { UNIT_GROUPS, unitGroup, type UnitGroup } from '../systems/unitGroups';
 import { preloadNeeded } from '../systems/assetLoad';
 import { unitPreloadKeys } from '../systems/evolution';
 import { nextUnitToBuy } from '../systems/pacing';
+import { tr } from '../systems/i18n';
 
 const UNITS = unitsData as Record<string, UnitStats>;
 
@@ -70,7 +71,7 @@ export class UpgradeScene extends Phaser.Scene {
     if (this.fromBattle) this.add.rectangle(640, 360, VIEW_W, 720, 0x0d1018); // 멈춘 전투 화면을 가림
     else bgm(this, 'bgm_menu');
     this.add
-      .text(628, 38, '🔧 강화', { fontFamily: 'sans-serif', fontSize: '34px', fontStyle: 'bold', color: '#ffd34d' })
+      .text(628, 38, tr('🔧 강화'), { fontFamily: 'sans-serif', fontSize: '34px', fontStyle: 'bold', color: '#ffd34d' })
       .setOrigin(1, 0.5);
     this.goldText = this.add
       .text(652, 38, '', { fontFamily: 'sans-serif', fontSize: '24px', fontStyle: 'bold', color: '#ffe14d', stroke: '#000000', strokeThickness: 3 })
@@ -78,10 +79,10 @@ export class UpgradeScene extends Phaser.Scene {
 
     // 탭
     const tabs: [Tab, string, number][] = [
-      ['units', '🛡️ 유닛', 370],
-      ['weapons', '🔥 특수 무기', 545],
-      ['hero', '👑 영웅', 720],
-      ['base', '🏰 기지', 880],
+      ['units', tr('🛡️ 유닛'), 370],
+      ['weapons', tr('🔥 특수 무기'), 545],
+      ['hero', tr('👑 영웅'), 720],
+      ['base', tr('🏰 기지'), 880],
     ];
     for (const [key, label, x] of tabs) {
       const t = this.add
@@ -99,7 +100,7 @@ export class UpgradeScene extends Phaser.Scene {
     this.render();
 
     const back = this.add
-      .text(640, 694, this.fromBattle ? '⚔️ 전투로 돌아가기' : '← 스테이지 선택', {
+      .text(640, 694, this.fromBattle ? tr('⚔️ 전투로 돌아가기') : tr('← 스테이지 선택'), {
         fontFamily: 'sans-serif',
         fontSize: '20px',
         fontStyle: 'bold',
@@ -158,7 +159,7 @@ export class UpgradeScene extends Phaser.Scene {
     this.gridTop = this.tab === 'base' ? GRID_TOP : GRID_TOP + SUB_H; // 기지 탭은 묶음 줄 없음
     this.gridH = this.tab === 'hero' && UpgradeScene.heroGroup === 'hero' ? 372 - SUB_H : this.tab === 'base' ? 380 : GRID_H - SUB_H;
     this.cellMax = 160;
-    this.goldText.setText(`보유 🪙 ${meta.gold}`);
+    this.goldText.setText(tr('보유 🪙 {0}', meta.gold));
     for (const [key, t] of Object.entries(this.tabBtns) as [Tab, Phaser.GameObjects.Text][]) {
       const on = key === this.tab;
       t.setBackgroundColor(on ? '#3a7bff' : '#20304e').setColor(on ? '#fff' : '#8ea0c0');
@@ -278,34 +279,34 @@ export class UpgradeScene extends Phaser.Scene {
       const ms = owned && !evo ? { text: `🎁 Lv${nm.lv} ${nm.text}`, ratio: nm.ratio } : undefined;
       const desc =
         evo && next
-          ? `⭐ ${next.name} 진화! ${tier + 1 === BRANCH_TIER ? '🔀 공격형·방어형 고르기' : perkText(key, tier + 1)}\n${cost?.shards ? `🃏 조각 ${have}/${cost.shards}${have < cost.shards ? ' — 보물 상자에서 모아요' : ' ✅'}` : '골드만 있으면 바로 진화!'}`
-          : `❤️ ${st(u.hp, lv, pk.hp, true)}  ⚔️ ${st(u.atk, lv, pk.atk)}  ▶  ❤️ ${st(u.hp, lv + 1, pk.hp, true)}  ⚔️ ${st(u.atk, lv + 1, pk.atk)}${next ? `   ⭐ Lv${levelCap(tier)}에 ${next.name} 진화` : '   🔥 최고 단계'}`;
+          ? tr('⭐ {0} 진화! {1}\n{2}', next.name, tier + 1 === BRANCH_TIER ? tr('🔀 공격형·방어형 고르기') : perkText(key, tier + 1), cost?.shards ? tr('🃏 조각 {0}/{1}{2}', have, cost.shards, have < cost.shards ? tr(' — 보물 상자에서 모아요') : ' ✅') : tr('골드만 있으면 바로 진화!'))
+          : `❤️ ${st(u.hp, lv, pk.hp, true)}  ⚔️ ${st(u.atk, lv, pk.atk)}  ▶  ❤️ ${st(u.hp, lv + 1, pk.hp, true)}  ⚔️ ${st(u.atk, lv + 1, pk.atk)}${next ? tr('   ⭐ Lv{0}에 {1} 진화', levelCap(tier), next.name) : tr('   🔥 최고 단계')}`;
       this.card(
         i,
         slots,
         icon,
         `${u.name} ${starText(tier)} Lv.${lv}`,
         desc,
-        locked ? '🔒 잠김' : !owned ? `🛒 영입\n🪙${price}` : evo && cost ? `⭐ 진화\n🪙${cost.gold}` : `강화 🪙${meta.nextCost(key)}`,
+        locked ? tr('🔒 잠김') : !owned ? tr('🛒 영입\n🪙{0}', price) : evo && cost ? tr('⭐ 진화\n🪙{0}', cost.gold) : tr('강화 🪙{0}', meta.nextCost(key)),
         locked ? false : !owned ? meta.gold >= price : evo ? meta.canEvolve(key) : meta.canUpgrade(key),
         !owned,
         () => {
           if (locked) {
-            this.toast(`🔒 먼저 ${nextBuy ? UNITS[nextBuy.key].name : '앞 동료'}을(를) 영입해야 해요 — 동료는 차례대로 합류해요`);
+            this.toast(tr('🔒 먼저 {0}을(를) 영입해야 해요 — 동료는 차례대로 합류해요', nextBuy ? UNITS[nextBuy.key].name : tr('앞 동료')));
             return;
           }
           if (!owned) {
             if (meta.buyUnit(key, price)) {
               sfx(this, 'levelup');
               this.render();
-              if (!meta.activeDeck(keys).includes(key)) this.toast(`⚔️ 덱이 가득 찼어요 — 출전 준비 화면에서 ${u.name}을(를) 덱에 넣어요`);
+              if (!meta.activeDeck(keys).includes(key)) this.toast(tr('⚔️ 덱이 가득 찼어요 — 출전 준비 화면에서 {0}을(를) 덱에 넣어요', u.name));
             }
             return;
           }
           if (evo && next && cost) {
             if (!meta.canEvolve(key)) {
-              if (have < cost.shards) this.toast(`🃏 ${u.name} 조각이 ${cost.shards - have}개 더 필요해요 — 보물 상자·광고 상자에서 모아요`);
-              else this.toast(`🪙 골드가 ${cost.gold - meta.gold} 부족해요`);
+              if (have < cost.shards) this.toast(tr('🃏 {0} 조각이 {1}개 더 필요해요 — 보물 상자·광고 상자에서 모아요', u.name, cost.shards - have));
+              else this.toast(tr('🪙 골드가 {0} 부족해요', cost.gold - meta.gold));
               return;
             }
             const done = (b?: Branch): void => {
@@ -325,7 +326,7 @@ export class UpgradeScene extends Phaser.Scene {
             this.render();
             if (milestonesAt(meta.level(key)) > got) {
               sfx(this, 'levelup');
-              this.toast(`🎁 ${u.name} Lv${meta.level(key)} 보상! ${MILESTONE_TEXT[milestoneKind(got, grp)]}`);
+              this.toast(tr('🎁 {0} Lv{1} 보상! {2}', u.name, meta.level(key), MILESTONE_TEXT[milestoneKind(got, grp)]));
             }
           }
         },
@@ -358,11 +359,11 @@ export class UpgradeScene extends Phaser.Scene {
     const shadow = this.add.ellipse(sx, y + stageH / 2 - 16, 96, 16, 0x000000, 0.35);
     const q = this.add.text(sx, y - 4, '?', { fontFamily: 'sans-serif', fontSize: '72px', fontStyle: 'bold', color: '#3a4a72', stroke: '#0a0f1c', strokeThickness: 6 }).setOrigin(0.5);
     this.tweens.add({ targets: q, alpha: 0.45, scale: 0.92, duration: 1100, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
-    const title = this.add.text(x - 130, y - 30, '??? 새 동료', { fontFamily: 'sans-serif', fontSize: '24px', fontStyle: 'bold', color: '#7a88aa', stroke: '#000000', strokeThickness: 3 }).setOrigin(0, 0.5);
-    const sub = this.add.text(x - 130, y + 6, '곧 합류할 동료의 자리예요', { fontFamily: 'sans-serif', fontSize: '16px', fontStyle: 'bold', color: '#5a6888' }).setOrigin(0, 0.5);
-    const hint = this.add.text(x - 130, y + 32, '✨ 업데이트를 기다려 주세요', { fontFamily: 'sans-serif', fontSize: '14px', color: '#4a587a' }).setOrigin(0, 0.5);
+    const title = this.add.text(x - 130, y - 30, tr('??? 새 동료'), { fontFamily: 'sans-serif', fontSize: '24px', fontStyle: 'bold', color: '#7a88aa', stroke: '#000000', strokeThickness: 3 }).setOrigin(0, 0.5);
+    const sub = this.add.text(x - 130, y + 6, tr('곧 합류할 동료의 자리예요'), { fontFamily: 'sans-serif', fontSize: '16px', fontStyle: 'bold', color: '#5a6888' }).setOrigin(0, 0.5);
+    const hint = this.add.text(x - 130, y + 32, tr('✨ 업데이트를 기다려 주세요'), { fontFamily: 'sans-serif', fontSize: '14px', color: '#4a587a' }).setOrigin(0, 0.5);
     const btn = this.add.rectangle(x + 230, y, 110, Math.min(70, h - 40), 0x1e2638).setStrokeStyle(2, 0x2e3a56);
-    const lock = this.add.text(x + 230, y, '🔒\n준비 중', { fontFamily: 'sans-serif', fontSize: '15px', fontStyle: 'bold', color: '#5a6888', align: 'center' }).setOrigin(0.5);
+    const lock = this.add.text(x + 230, y, tr('🔒\n준비 중'), { fontFamily: 'sans-serif', fontSize: '15px', fontStyle: 'bold', color: '#5a6888', align: 'center' }).setOrigin(0.5);
     this.layer.add([box, stage, shadow, q, title, sub, hint, btn, lock]);
   }
 
@@ -373,7 +374,7 @@ export class UpgradeScene extends Phaser.Scene {
     if (owned && tier >= BRANCH_TIER) {
       const b = meta.branchOf(key);
       out.push({
-        label: b ? BRANCH_INFO[b].name : '🔀 갈래 고르기!',
+        label: b ? BRANCH_INFO[b].name : tr('🔀 갈래 고르기!'),
         color: b ? BRANCH_INFO[b].color : 0xe8a000,
         pulse: !b,
         onClick: () =>
@@ -381,7 +382,7 @@ export class UpgradeScene extends Phaser.Scene {
             if (meta.setBranch(key, nb)) {
               sfx(this, 'levelup');
               this.toast(`🔀 ${UNITS[key].name} → ${BRANCH_INFO[nb].name}`);
-            } else if (meta.branchOf(key) !== nb) this.toast(`🪙 갈래 바꾸기는 ${BRANCH_CHANGE_GOLD}골드가 필요해요`);
+            } else if (meta.branchOf(key) !== nb) this.toast(tr('🪙 갈래 바꾸기는 {0}골드가 필요해요', BRANCH_CHANGE_GOLD));
             this.render();
           }),
       });
@@ -398,8 +399,8 @@ export class UpgradeScene extends Phaser.Scene {
     layer.add([dim, g]);
     const cur = meta.branchOf(key);
     const change = !!cur && meta.tier(key) >= BRANCH_TIER;
-    layer.add(this.add.text(640, 196, `🔀 ${UNITS[key].name} 갈래 ${change ? '바꾸기' : '고르기'}`, { fontFamily: 'sans-serif', fontSize: '30px', fontStyle: 'bold', color: '#3a2a6a' }).setOrigin(0.5));
-    layer.add(this.add.text(640, 234, change ? `바꾸기 🪙${BRANCH_CHANGE_GOLD}` : '★4 마스터부터 둘 중 하나 — 나중에 골드로 바꿀 수 있어요', { fontFamily: 'sans-serif', fontSize: '16px', fontStyle: 'bold', color: '#8a7aa8' }).setOrigin(0.5));
+    layer.add(this.add.text(640, 196, tr('🔀 {0} 갈래 {1}', UNITS[key].name, change ? tr('바꾸기') : tr('고르기')), { fontFamily: 'sans-serif', fontSize: '30px', fontStyle: 'bold', color: '#3a2a6a' }).setOrigin(0.5));
+    layer.add(this.add.text(640, 234, change ? tr('바꾸기 🪙{0}', BRANCH_CHANGE_GOLD) : tr('★4 마스터부터 둘 중 하나 — 나중에 골드로 바꿀 수 있어요'), { fontFamily: 'sans-serif', fontSize: '16px', fontStyle: 'bold', color: '#8a7aa8' }).setOrigin(0.5));
     (['atk', 'def'] as Branch[]).forEach((b, i) => {
       const info = BRANCH_INFO[b];
       const x = 480 + i * 320;
@@ -411,7 +412,7 @@ export class UpgradeScene extends Phaser.Scene {
       c.add(bg);
       c.add(this.add.text(0, -70, info.name, { fontFamily: 'sans-serif', fontSize: '28px', fontStyle: 'bold', color: `#${info.color.toString(16).padStart(6, '0')}` }).setOrigin(0.5));
       c.add(this.add.text(0, 0, info.desc.replace(' (', '\n('), { fontFamily: 'sans-serif', fontSize: '16px', fontStyle: 'bold', color: '#3a3a5a', align: 'center', wordWrap: { width: 250 } }).setOrigin(0.5));
-      c.add(this.add.text(0, 80, on ? '✔ 지금 갈래' : '고르기', { fontFamily: 'sans-serif', fontSize: '18px', fontStyle: 'bold', color: '#ffffff', backgroundColor: on ? '#9098a8' : `#${info.color.toString(16).padStart(6, '0')}`, padding: { x: 18, y: 6 } }).setOrigin(0.5));
+      c.add(this.add.text(0, 80, on ? tr('✔ 지금 갈래') : tr('고르기'), { fontFamily: 'sans-serif', fontSize: '18px', fontStyle: 'bold', color: '#ffffff', backgroundColor: on ? '#9098a8' : `#${info.color.toString(16).padStart(6, '0')}`, padding: { x: 18, y: 6 } }).setOrigin(0.5));
       if (!on) {
         const hit = this.add.rectangle(0, 0, 280, 220, 0xffffff, 0.001).setInteractive({ useHandCursor: true });
         hit.on('pointerdown', () => {
@@ -564,15 +565,15 @@ export class UpgradeScene extends Phaser.Scene {
     const need = rankUpCost(r);
     const ready = need !== null && have >= need;
     return {
-      label: need === null ? `🃏 R${RANK_MAX} MAX` : ready ? `🃏 랭크업!` : `🃏 R${r} ${have}/${need}`,
+      label: need === null ? `🃏 R${RANK_MAX} MAX` : ready ? tr('🃏 랭크업!') : `🃏 R${r} ${have}/${need}`,
       color: ready ? 0x2fa25a : r > 0 ? 0x8a5ad8 : 0x4a5578,
       pulse: ready,
       onClick: () => {
         if (meta.rankUp(key)) {
           sfx(this, 'levelup');
           this.render();
-          this.evolveFx(`🃏 ${UNITS[key].name} 랭크 ${meta.rank(key)}! ❤️⚔️ ×${rankMult(meta.rank(key)).toFixed(2)}`, '');
-        } else this.toast(need === null ? '🃏 최고 랭크예요' : `🃏 조각 ${need - have}개 더 필요 — 🎁 상자에서 모아요`);
+          this.evolveFx(tr('🃏 {0} 랭크 {1}! ❤️⚔️ ×{2}', UNITS[key].name, meta.rank(key), rankMult(meta.rank(key)).toFixed(2)), '');
+        } else this.toast(need === null ? tr('🃏 최고 랭크예요') : tr('🃏 조각 {0}개 더 필요 — 🎁 상자에서 모아요', need - have));
       },
     };
   }
@@ -583,7 +584,7 @@ export class UpgradeScene extends Phaser.Scene {
     if (!list.length) return undefined;
     const eq = list.find((sk) => sk.id === meta.equippedSkin(key));
     return {
-      label: eq ? `${eq.grade === 'legend' ? '🟡' : '🔵'} ${eq.name}` : '👗 스킨',
+      label: eq ? `${eq.grade === 'legend' ? '🟡' : '🔵'} ${eq.name}` : tr('👗 스킨'),
       color: eq?.grade === 'legend' ? 0xd8962a : eq ? 0x3a8adf : 0x7a4ad8,
       onClick: () => this.openSkinPicker(key),
     };
@@ -603,21 +604,21 @@ export class UpgradeScene extends Phaser.Scene {
     panel.fillStyle(0xffffff, 0.97).fillRoundedRect(310, 150, 660, 400, 30);
     panel.lineStyle(5, 0xa07aff, 1).strokeRoundedRect(310, 150, 660, 400, 30);
     layer.add([dim, panel]);
-    layer.add(this.add.text(640, 188, `👗 ${UNITS[key].name} 스킨`, { fontFamily: 'sans-serif', fontSize: '28px', fontStyle: 'bold', color: '#6a4ad8' }).setOrigin(0.5));
-    layer.add(this.add.text(640, 222, `보유 🪙 ${meta.gold}`, { fontFamily: 'sans-serif', fontSize: '16px', color: '#a07a20' }).setOrigin(0.5));
+    layer.add(this.add.text(640, 188, tr('👗 {0} 스킨', UNITS[key].name), { fontFamily: 'sans-serif', fontSize: '28px', fontStyle: 'bold', color: '#6a4ad8' }).setOrigin(0.5));
+    layer.add(this.add.text(640, 222, tr('보유 🪙 {0}', meta.gold), { fontFamily: 'sans-serif', fontSize: '16px', color: '#a07a20' }).setOrigin(0.5));
 
     const hasLegend = !!spriteOf(skinType(key, 'legend'));
     const options: { id: string | null; name: string; grade: string; price: number; color: number }[] = [
-      { id: null, name: '기본 복장', grade: '⚪ 기본', price: 0, color: 0x8a92a0 },
+      { id: null, name: tr('기본 복장'), grade: tr('⚪ 기본'), price: 0, color: 0x8a92a0 },
       ...skinsFor(key, hasLegend).map((sk) => ({
         id: sk.id,
         name: sk.name,
-        grade: sk.grade === 'legend' ? '🟡 전설' : '🔵 레어',
+        grade: sk.grade === 'legend' ? tr('🟡 전설') : tr('🔵 레어'),
         price: sk.price,
         color: sk.grade === 'legend' ? 0xe8a000 : 0x3a8adf,
       })),
     ];
-    if (!hasLegend) options.push({ id: '?', name: '준비 중', grade: '🟡 전설', price: 0, color: 0xc8ccd8 });
+    if (!hasLegend) options.push({ id: '?', name: tr('준비 중'), grade: tr('🟡 전설'), price: 0, color: 0xc8ccd8 });
 
     const w = 190;
     const x0 = 640 - ((options.length - 1) * (w + 16)) / 2;
@@ -652,12 +653,12 @@ export class UpgradeScene extends Phaser.Scene {
       const owned = o.id === null || (o.id !== '?' && meta.ownsSkin(key, o.id));
       const [label, col] =
         o.id === '?'
-          ? ['그림 준비 중', '#8a92a0']
+          ? [tr('그림 준비 중'), '#8a92a0']
           : equipped
-            ? ['✓ 착용 중', '#8a92a0']
+            ? [tr('✓ 착용 중'), '#8a92a0']
             : owned
-              ? ['착용하기', '#3a8adf']
-              : [`구매 🪙${o.price}`, meta.gold >= o.price ? '#2fa25a' : '#b0b4c0'];
+              ? [tr('착용하기'), '#3a8adf']
+              : [tr('구매 🪙{0}', o.price), meta.gold >= o.price ? '#2fa25a' : '#b0b4c0'];
       const btn = this.add
         .text(x, y + 84, label, { fontFamily: 'sans-serif', fontSize: '16px', fontStyle: 'bold', color: '#ffffff', backgroundColor: col, padding: { x: 14, y: 7 } })
         .setOrigin(0.5);
@@ -688,16 +689,16 @@ export class UpgradeScene extends Phaser.Scene {
   private skillLabel(key: string, lv: number): string {
     const sk = UNIT_SKILLS[key];
     if (!sk) return '';
-    if (lv <= 0) return `✨${sk.name} (강화 시 해금)`;
-    return `✨${sk.name} · ${skillEvery(lv)}타마다 ×${skillMult(lv).toFixed(1)}`;
+    if (lv <= 0) return tr('✨{0} (강화 시 해금)', sk.name);
+    return tr('✨{0} · {1}타마다 ×{2}', sk.name, skillEvery(lv), skillMult(lv).toFixed(1));
   }
 
   /** 👑 영웅 강화 — 영웅 레벨 · 오라 크기 · 영웅 스킬 해금/위력 */
   private renderHero(): void {
     this.subTabs(
       [
-        { key: 'hero', label: '👑 영웅·장비' },
-        { key: 'skill', label: `✨ 영웅 스킬 ${HERO_SKILLS.length}` },
+        { key: 'hero', label: tr('👑 영웅·장비') },
+        { key: 'skill', label: tr('✨ 영웅 스킬 {0}', HERO_SKILLS.length) },
       ],
       UpgradeScene.heroGroup,
       (k) => (UpgradeScene.heroGroup = k as 'hero' | 'skill')
@@ -718,7 +719,7 @@ export class UpgradeScene extends Phaser.Scene {
       const lv = meta.heroLevel(key);
       const cost = heroUpCost(kind, lv);
       const maxed = lv >= max;
-      this.card(i, count, null, `${title}  Lv.${lv}${maxed ? ' (MAX)' : ''}`, desc, maxed ? 'MAX' : `강화 🪙${cost}`, !maxed && meta.gold >= cost, false, () => up(key, kind, max), '', undefined, undefined, look);
+      this.card(i, count, null, `${title}  Lv.${lv}${maxed ? ' (MAX)' : ''}`, desc, maxed ? 'MAX' : tr('강화 🪙{0}', cost), !maxed && meta.gold >= cost, false, () => up(key, kind, max), '', undefined, undefined, look);
     };
     const hl = meta.heroLevel('hero');
     const nt = nextHeroTier(hl);
@@ -728,10 +729,10 @@ export class UpgradeScene extends Phaser.Scene {
     }
     // 👑 지금 진화 단계 영웅 그림(전신, 대기 동작) — 그림이 아직 없으면 아래 단계 그림
     const heroLook = [HERO_TIERS[heroTier(hl)].look, ...HERO_FALLBACK_LOOKS].find((l) => this.textures.exists(textureKey(l)));
-    row(0, 'hero', 'hero', HERO_MAX_LV, `👑 ${HERO_TIERS[heroTier(hl)].name}`, `❤️·⚔️ ${pct(heroLvMult(hl))} → ${pct(heroLvMult(hl + 1))}${nt ? `  ·  Lv${nt.min} 진화` : ''}`, heroLook);
+    row(0, 'hero', 'hero', HERO_MAX_LV, `👑 ${HERO_TIERS[heroTier(hl)].name}`, `❤️·⚔️ ${pct(heroLvMult(hl))} → ${pct(heroLvMult(hl + 1))}${nt ? tr('  ·  Lv{0} 진화', nt.min) : ''}`, heroLook);
     this.heroEvolution(hl);
     const al = meta.heroLevel('aura');
-    row(1, 'aura', 'aura', AURA_MAX_LV, '⭕ 오라 크기', `오라 반지름 ${AURA_RADIUS + auraBonus(al)}  →  ${AURA_RADIUS + auraBonus(al + 1)}`);
+    row(1, 'aura', 'aura', AURA_MAX_LV, tr('⭕ 오라 크기'), tr('오라 반지름 {0}  →  {1}', AURA_RADIUS + auraBonus(al), AURA_RADIUS + auraBonus(al + 1)));
     this.equipCard(2, count, 'weapon'); // 🛡️ 영웅 장비
     this.equipCard(3, count, 'ring');
   }
@@ -746,7 +747,7 @@ export class UpgradeScene extends Phaser.Scene {
     const pct = (m: number): string => `+${Math.round((m - 1) * 100)}%`;
     {
       if (!meta.ownsHeroSkill(sk.key)) {
-        this.card(i, count, null, `${sk.icon} ${sk.name}  (${sk.hotkey})`, `${sk.desc} · 💧${sk.mana}`, `🛒 해금\n🪙${sk.price}`, meta.gold >= sk.price, true, () => {
+        this.card(i, count, null, `${sk.icon} ${sk.name}  (${sk.hotkey})`, `${sk.desc} · 💧${sk.mana}`, tr('🛒 해금\n🪙{0}', sk.price), meta.gold >= sk.price, true, () => {
           if (meta.buyHeroSkill(sk.key, sk.price)) {
             sfx(this, 'levelup');
             this.render();
@@ -755,7 +756,7 @@ export class UpgradeScene extends Phaser.Scene {
         return;
       }
       const lv = meta.heroLevel(sk.key);
-      row(i, sk.key, 'skill', SKILL_MAX_LV, `${sk.icon} ${sk.name}`, `${sk.desc} · 위력 ${pct(heroSkillPower(lv))} → ${pct(heroSkillPower(lv + 1))}`);
+      row(i, sk.key, 'skill', SKILL_MAX_LV, `${sk.icon} ${sk.name}`, tr('{0} · 위력 {1} → {2}', sk.desc, pct(heroSkillPower(lv)), pct(heroSkillPower(lv + 1))));
     }
   }
 
@@ -772,9 +773,9 @@ export class UpgradeScene extends Phaser.Scene {
       i,
       count,
       icon,
-      def ? `${kind === 'weapon' ? '⚔️' : '💍'} ${def.name} ${'★'.repeat(g)}` : '💍 반지: 비어 있음',
-      def ? `${def.desc(g)} · ${GRADE_NAMES[g - 1]}` : '🎁 보물 상자에서 반지를 얻어요',
-      `${kind === 'weapon' ? '무기' : '반지'} 바꾸기\n(${owned}/${list.length})`,
+      def ? `${kind === 'weapon' ? '⚔️' : '💍'} ${def.name} ${'★'.repeat(g)}` : tr('💍 반지: 비어 있음'),
+      def ? `${def.desc(g)} · ${GRADE_NAMES[g - 1]}` : tr('🎁 보물 상자에서 반지를 얻어요'),
+      tr('{0} 바꾸기\n({1}/{2})', kind === 'weapon' ? tr('무기') : tr('반지'), owned, list.length),
       true,
       false,
       () => this.openEquipPicker(kind)
@@ -794,7 +795,7 @@ export class UpgradeScene extends Phaser.Scene {
     dim.on('pointerdown', close);
     const panel = this.add.rectangle(640, 372, 1000, 600, 0x141c30).setStrokeStyle(3, 0x4a6ad8).setInteractive();
     layer.add([dim, panel]);
-    layer.add(this.add.text(640, 98, kind === 'weapon' ? '⚔️ 영웅 무기 — 🔨 J 스킬이 바뀌어요' : '💍 반지 — 늘 켜져 있는 능력', { fontFamily: 'sans-serif', fontSize: '24px', fontStyle: 'bold', color: '#ffd34d' }).setOrigin(0.5));
+    layer.add(this.add.text(640, 98, kind === 'weapon' ? tr('⚔️ 영웅 무기 — 🔨 J 스킬이 바뀌어요') : tr('💍 반지 — 늘 켜져 있는 능력'), { fontFamily: 'sans-serif', fontSize: '24px', fontStyle: 'bold', color: '#ffd34d' }).setOrigin(0.5));
     const x = this.add.text(1112, 98, '✕', { fontFamily: 'sans-serif', fontSize: '30px', color: '#fff' }).setOrigin(0.5).setInteractive({ useHandCursor: true });
     x.on('pointerdown', close);
     layer.add(x);
@@ -813,7 +814,7 @@ export class UpgradeScene extends Phaser.Scene {
       }
       row.push(
         this.add.text(250, y - 14, have ? `${d.name}  ${'★'.repeat(g)}${'☆'.repeat(EQUIP_MAX - g)}  ${GRADE_NAMES[g - 1]}` : `${d.name}  🔒`, { fontFamily: 'sans-serif', fontSize: '20px', fontStyle: 'bold', color: have ? '#ffffff' : '#7c8698' }).setOrigin(0, 0.5),
-        this.add.text(250, y + 16, have ? d.desc(g) : '🎁 보물 상자에서 얻어요(금·전설 상자일수록 잘 나와요)', { fontFamily: 'sans-serif', fontSize: '15px', fontStyle: 'bold', color: have ? '#d6e2f5' : '#6a7488' }).setOrigin(0, 0.5)
+        this.add.text(250, y + 16, have ? d.desc(g) : tr('🎁 보물 상자에서 얻어요(금·전설 상자일수록 잘 나와요)'), { fontFamily: 'sans-serif', fontSize: '15px', fontStyle: 'bold', color: have ? '#d6e2f5' : '#6a7488' }).setOrigin(0, 0.5)
       );
       const btn = (bx: number, label: string, color: string, ok: boolean, fn: () => void): void => {
         const t = this.add
@@ -824,23 +825,23 @@ export class UpgradeScene extends Phaser.Scene {
       };
       if (have) {
         if (on && kind === 'ring')
-          btn(905, '빼기', '#8a3a3a', true, () => {
+          btn(905, tr('빼기'), '#8a3a3a', true, () => {
             meta.unequipRing();
             layer.destroy();
             this.openEquipPicker(kind);
           });
         else
-          btn(905, on ? '✅ 장착 중' : '장착', '#2f7a4d', !on, () => {
+          btn(905, on ? tr('✅ 장착 중') : tr('장착'), '#2f7a4d', !on, () => {
             meta.equipItem(d.key);
             sfx(this, 'click');
             layer.destroy();
             this.openEquipPicker(kind);
           });
         const cost = equipUpCost(g);
-        btn(1030, cost === null ? 'MAX' : `★ 강화\n🪙${cost}`, '#8a5ad8', cost !== null && meta.gold >= cost, () => {
+        btn(1030, cost === null ? 'MAX' : tr('★ 강화\n🪙{0}', cost), '#8a5ad8', cost !== null && meta.gold >= cost, () => {
           if (meta.upgradeEquip(d.key)) {
             sfx(this, 'levelup');
-            this.goldText.setText(`보유 🪙 ${meta.gold}`);
+            this.goldText.setText(tr('보유 🪙 {0}', meta.gold));
             layer.destroy();
             this.openEquipPicker(kind);
           }
@@ -900,7 +901,7 @@ export class UpgradeScene extends Phaser.Scene {
   }
 
   /** ✨ 진화 연출 */
-  private evolveFx(name: string, head = '✨ 진화!'): void {
+  private evolveFx(name: string, head = tr('✨ 진화!')): void {
     sfx(this, 'evolve');
     const flash = this.add.rectangle(640, 360, VIEW_W, 720, 0xfff6c0, 0.7).setDepth(300);
     this.tweens.add({ targets: flash, alpha: 0, duration: 700, onComplete: () => flash.destroy() });
@@ -928,17 +929,17 @@ export class UpgradeScene extends Phaser.Scene {
         key: 'castle',
         title: `🏰 ${ALLY_CASTLE_TIERS[tier].name}  Lv.${cl}${cl >= CASTLE_MAX_LV ? ' (MAX)' : ''}`,
         desc: `❤️×${castleHpMult(cl).toFixed(1)} ⚔️${g0.dmg} 🎯${g0.range} ▶ ❤️×${castleHpMult(cl + 1).toFixed(1)} ⚔️${g1.dmg} 🎯${g1.range}`,
-        extra: next ? `⭐ Lv${next.min} 진화 → ${next.name}` : '',
+        extra: next ? tr('⭐ Lv{0} 진화 → {1}', next.min, next.name) : '',
       },
       {
         key: 'castleRate',
-        title: `🎯 성 공격 속도  Lv.${rl}${rl >= CASTLE_RATE_MAX_LV ? ' (MAX)' : ''}`,
-        desc: `${g0.interval}초마다 발사  →  ${allyCastleGun(cl, rl + 1).interval}초`,
+        title: tr('🎯 성 공격 속도  Lv.{0}{1}', rl, rl >= CASTLE_RATE_MAX_LV ? ' (MAX)' : ''),
+        desc: tr('{0}초마다 발사  →  {1}초', g0.interval, allyCastleGun(cl, rl + 1).interval),
       },
     ];
     rows.forEach((r, i) => {
       const cost = meta.castleNextCost(r.key);
-      this.card(i, count, null, r.title, r.desc, cost === null ? 'MAX' : `강화 🪙${cost}`, cost !== null && meta.gold >= cost, false, () => {
+      this.card(i, count, null, r.title, r.desc, cost === null ? 'MAX' : tr('강화 🪙{0}', cost), cost !== null && meta.gold >= cost, false, () => {
         const before = allyCastleTier(meta.castleLevel('castle'));
         if (meta.upgradeCastle(r.key)) {
           sfx(this, 'weapon');
@@ -958,7 +959,7 @@ export class UpgradeScene extends Phaser.Scene {
         null,
         `${b.icon} ${b.name}  Lv.${lv}${lv >= BASE_MAX_LV ? ' (MAX)' : ''}`,
         cost === null ? b.effect(lv) : `${b.effect(lv)}  →  ${b.effect(lv + 1)}`,
-        cost === null ? 'MAX' : `강화 🪙${cost}`,
+        cost === null ? 'MAX' : tr('강화 🪙{0}', cost),
         cost !== null && meta.gold >= cost,
         false,
         () => {
@@ -1006,8 +1007,8 @@ export class UpgradeScene extends Phaser.Scene {
     const upOf = (g: string): boolean => WEAPONS.some((w, i) => grp(w.key) === g && meta.gold >= (meta.ownsWeapon(w.key) ? meta.weaponNextCost(w.key) : weaponPrice(i)));
     this.subTabs(
       [
-        { key: 'attack', label: '💥 공격 5', up: upOf('attack') },
-        { key: 'support', label: '✨ 지원 4', up: upOf('support') },
+        { key: 'attack', label: tr('💥 공격 5'), up: upOf('attack') },
+        { key: 'support', label: tr('✨ 지원 4'), up: upOf('support') },
       ],
       UpgradeScene.weaponGroup,
       (k) => (UpgradeScene.weaponGroup = k as 'attack' | 'support')
@@ -1019,8 +1020,8 @@ export class UpgradeScene extends Phaser.Scene {
       const sec = (l: number): string => (w.chargeSec * weaponChargeMult(l)).toFixed(1);
       const pct = (m: number): string => `+${Math.round((m - 1) * 100)}%`;
       const effect = DURATION_WEAPONS.has(w.key)
-        ? `지속 ${pct(weaponDurationMult(lv))} → ${pct(weaponDurationMult(lv + 1))}`
-        : `위력 ${pct(weaponPowerMult(lv))} → ${pct(weaponPowerMult(lv + 1))}`;
+        ? tr('지속 {0} → {1}', pct(weaponDurationMult(lv)), pct(weaponDurationMult(lv + 1)))
+        : tr('위력 {0} → {1}', pct(weaponPowerMult(lv)), pct(weaponPowerMult(lv + 1)));
       const cost = meta.weaponNextCost(w.key);
       const owned = meta.ownsWeapon(w.key);
       const price = weaponPrice(i);
@@ -1029,8 +1030,8 @@ export class UpgradeScene extends Phaser.Scene {
         shown.length,
         icon,
         `${w.name}  Lv.${lv}`,
-        `${effect}  ·  충전 ${sec(lv)}초 → ${sec(lv + 1)}초`,
-        owned ? `강화 🪙${cost}` : `🛒 구매\n🪙${price}`,
+        tr('{0}  ·  충전 {1}초 → {2}초', effect, sec(lv), sec(lv + 1)),
+        owned ? tr('강화 🪙{0}', cost) : tr('🛒 구매\n🪙{0}', price),
         meta.gold >= (owned ? cost : price),
         !owned,
         () => {

@@ -1,5 +1,6 @@
 /** 👑 영웅 + 오라 + 영웅 스킬 — 순수 계산(Vitest 검증). 설계: docs/hero-design.md */
 import type { UnitStats } from '../types';
+import { tr } from './i18n';
 
 export const HERO_TYPE = 'hero';
 /** 👑 영웅 진화 5단계 — 영웅 레벨(강화 화면)에 따라 그림이 바뀜 */
@@ -9,11 +10,11 @@ export interface HeroTier {
   name: string;
 }
 export const HERO_TIERS: HeroTier[] = [
-  { min: 0, look: 'hero_1', name: '견습 기사' },
-  { min: 5, look: 'hero_2', name: '기사' },
-  { min: 10, look: 'hero_3', name: '성기사' },
-  { min: 15, look: 'hero_4', name: '성전사 군주' },
-  { min: 20, look: 'hero_5', name: '천상 기사' },
+  { min: 0, look: 'hero_1', name: tr('견습 기사') },
+  { min: 5, look: 'hero_2', name: tr('기사') },
+  { min: 10, look: 'hero_3', name: tr('성기사') },
+  { min: 15, look: 'hero_4', name: tr('성전사 군주') },
+  { min: 20, look: 'hero_5', name: tr('천상 기사') },
 ];
 /** 그림이 없을 때 대신 쓸 그림 */
 export const HERO_FALLBACK_LOOKS = ['knight@legend', 'knight'];
@@ -41,7 +42,7 @@ export function heroBodyScale(tier: number): number {
 export function heroStats(stageId: number, enemyMult = 1): UnitStats {
   const g = (1 + 0.08 * Math.min(19, Math.max(0, stageId - 1))) * enemyMult; // 21관문부터는 적 배율만큼
   return {
-    name: '영웅',
+    name: tr('영웅'),
     hp: Math.round(1100 * g), // 쓰러지면 패배라 튼튼하게
     atk: Math.round(30 * g),
     def: Math.round(8 * g),
@@ -108,9 +109,9 @@ export interface HeroSkill {
 
 /** 영웅 스킬 3종 — 철퇴는 기본, 나머지는 강화 화면 👑 탭에서 해금 */
 export const HERO_SKILLS: HeroSkill[] = [
-  { key: 'mace', icon: '🔨', name: '철퇴 던지기', desc: '앞쪽 적 2명 관통', mana: 10, cooldown: 1, hotkey: 'J', price: 0 },
-  { key: 'rally', icon: '📯', name: '돌격 함성', desc: '5초간 오라 안 공격 속도 +40%', mana: 35, cooldown: 8, hotkey: 'K', price: 800 },
-  { key: 'holy', icon: '✨', name: '성스러운 빛', desc: '오라 안 아군 체력 35% 회복 + 적 밀쳐내기', mana: 50, cooldown: 15, hotkey: 'L', price: 1500 },
+  { key: 'mace', icon: '🔨', name: tr('철퇴 던지기'), desc: tr('앞쪽 적 2명 관통'), mana: 10, cooldown: 1, hotkey: 'J', price: 0 },
+  { key: 'rally', icon: '📯', name: tr('돌격 함성'), desc: tr('5초간 오라 안 공격 속도 +40%'), mana: 35, cooldown: 8, hotkey: 'K', price: 800 },
+  { key: 'holy', icon: '✨', name: tr('성스러운 빛'), desc: tr('오라 안 아군 체력 35% 회복 + 적 밀쳐내기'), mana: 50, cooldown: 15, hotkey: 'L', price: 1500 },
 ];
 
 /** 📯 돌격 함성 · ✨ 성스러운 빛 수치 */

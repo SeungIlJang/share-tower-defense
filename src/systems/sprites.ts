@@ -1,3 +1,4 @@
+import { tr } from './i18n';
 /**
  * 픽셀아트 스프라이트 매니페스트 (순수 로직 — Vitest 검증)
  *
@@ -62,17 +63,17 @@ export function parseManifest(raw: unknown): { manifest: SpriteManifest; warning
   const manifest: SpriteManifest = {};
   const warnings: string[] = [];
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
-    return { manifest, warnings: raw == null ? [] : ['manifest: 객체가 아님'] };
+    return { manifest, warnings: raw == null ? [] : [tr('manifest: 객체가 아님')] };
   }
   for (const [type, value] of Object.entries(raw as Record<string, unknown>)) {
     if (type.startsWith('_')) continue; // "_comment" 등 메모용 키
     const d = value as Partial<SpriteDef> | null;
     if (!d || typeof d !== 'object' || typeof d.file !== 'string' || !d.file) {
-      warnings.push(`${type}: file 누락`);
+      warnings.push(tr('{0}: file 누락', type));
       continue;
     }
     if (!isPosInt(d.frameWidth) || !isPosInt(d.frameHeight)) {
-      warnings.push(`${type}: frameWidth/frameHeight 는 양의 정수`);
+      warnings.push(tr('{0}: frameWidth/frameHeight 는 양의 정수', type));
       continue;
     }
     const anims: Partial<Record<AnimState, AnimDef>> = {};
@@ -81,10 +82,10 @@ export function parseManifest(raw: unknown): { manifest: SpriteManifest; warning
       if (rawAnims[s] === undefined) continue;
       const a = parseAnim(rawAnims[s]);
       if (a) anims[s] = a;
-      else warnings.push(`${type}.${s}: frames 형식 오류`);
+      else warnings.push(tr('{0}.{1}: frames 형식 오류', type, s));
     }
     if (!anims.idle) {
-      warnings.push(`${type}: idle 애니메이션 필수`);
+      warnings.push(tr('{0}: idle 애니메이션 필수', type));
       continue;
     }
     const scale = typeof d.scale === 'number' && d.scale > 0 ? d.scale : 2;

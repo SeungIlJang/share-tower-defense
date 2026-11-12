@@ -6,17 +6,18 @@
  *   🗿 설치물: ⚡ 소환 비용 −3 → ⏳ 설치 시간 +5초 → ⏱️ 재소환 대기 −5% → ❤️⚔️ +3%
  */
 import type { UnitGroup } from './unitGroups';
+import { tr } from './i18n';
 
 export type MilestoneKind = 'cost' | 'cooldown' | 'skill' | 'stats' | 'hp' | 'range' | 'life';
 
 export const MILESTONE_TEXT: Record<MilestoneKind, string> = {
-  cost: '⚡ 소환 비용 −3',
-  cooldown: '⏱️ 재소환 대기 −5%',
-  skill: '✨ 스킬 위력 +5%',
+  cost: tr('⚡ 소환 비용 −3'),
+  cooldown: tr('⏱️ 재소환 대기 −5%'),
+  skill: tr('✨ 스킬 위력 +5%'),
   stats: '❤️⚔️ +3%',
-  hp: '❤️ 체력 +6%',
-  range: '🎯 사거리 +10',
-  life: '⏳ 설치 시간 +5초',
+  hp: tr('❤️ 체력 +6%'),
+  range: tr('🎯 사거리 +10'),
+  life: tr('⏳ 설치 시간 +5초'),
 };
 const CYCLE: Record<UnitGroup, MilestoneKind[]> = {
   infantry: ['cost', 'hp', 'cooldown', 'stats'], // 근접(보병·정예)은 같은 순서 — 나뉘기 전 보상이 바뀌지 않게

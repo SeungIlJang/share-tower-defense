@@ -4,16 +4,17 @@
  */
 import type { StageData } from '../types';
 import { bossForStage, isBoss } from './bosses';
+import { tr } from './i18n';
 
 export type EnemyKind = 'beast' | 'flying' | 'armored' | 'caster' | 'swarm' | 'giant';
 
 export const KIND_INFO: Record<EnemyKind, { icon: string; name: string }> = {
-  beast: { icon: '🐺', name: '빠른 적' },
-  flying: { icon: '🦇', name: '비행' },
-  armored: { icon: '🛡️', name: '중갑' },
-  caster: { icon: '🏹', name: '원거리' },
-  swarm: { icon: '🟢', name: '무리' },
-  giant: { icon: '👹', name: '거대' },
+  beast: { icon: '🐺', name: tr('빠른 적') },
+  flying: { icon: '🦇', name: tr('비행') },
+  armored: { icon: '🛡️', name: tr('중갑') },
+  caster: { icon: '🏹', name: tr('원거리') },
+  swarm: { icon: '🟢', name: tr('무리') },
+  giant: { icon: '👹', name: tr('거대') },
 };
 
 /** 적 종류(보스는 모두 거대) */

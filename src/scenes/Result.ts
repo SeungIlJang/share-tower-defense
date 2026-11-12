@@ -16,6 +16,7 @@ import { goldMultFor } from '../systems/worlds';
 import { WEEKLY_STEPS } from '../systems/weekly';
 import enemiesData from '../data/enemies.json';
 import { track } from '../systems/analytics';
+import { tr } from '../systems/i18n';
 
 const ENEMY_NAMES = enemiesData as Record<string, { name: string }>;
 
@@ -71,19 +72,19 @@ export class ResultScene extends Phaser.Scene {
     panel.fillStyle(0xffffff, 0.92).fillRoundedRect(340, 90, 600, 470, 36);
     panel.lineStyle(5, win ? 0x5cd88a : 0xff7a8a, 1).strokeRoundedRect(340, 90, 600, 470, 36);
 
-    const title = cuteTitle(this, 640, 150, win ? '🏆 승리!' : '💦 패배…', 60, win ? '#2fa25a' : '#d04a5a');
+    const title = cuteTitle(this, 640, 150, win ? tr('🏆 승리!') : tr('💦 패배…'), 60, win ? '#2fa25a' : '#d04a5a');
     title.setScale(0.3);
     this.tweens.add({ targets: title, scale: 1, duration: 420, ease: 'Back.easeOut' });
     // 관문 · ⏱️ 클리어 시간(+ 최고 기록 / 신기록)
     const { time, timeRec } = this.resultData;
     const best = meta.bestTimes[stageId];
-    const timeTxt = win && time !== undefined ? `   ·   ⏱️ ${formatTime(time)}${timeRec ? '' : `  (최고 ${formatTime(best ?? time)})`}` : '';
+    const timeTxt = win && time !== undefined ? `   ·   ⏱️ ${formatTime(time)}${timeRec ? '' : tr('  (최고 {0})', formatTime(best ?? time))}` : '';
     this.add
-      .text(640, 210, daily ? `📅 오늘의 도전 · ${this.resultData.ruleName ?? ''}` : `관문 ${stageId}${timeTxt}`, { fontFamily: 'sans-serif', fontSize: '20px', fontStyle: 'bold', color: '#5a6a9a' })
+      .text(640, 210, daily ? tr('📅 오늘의 도전 · {0}', this.resultData.ruleName ?? '') : tr('관문 {0}{1}', stageId, timeTxt), { fontFamily: 'sans-serif', fontSize: '20px', fontStyle: 'bold', color: '#5a6a9a' })
       .setOrigin(0.5);
     if (timeRec === 'best') {
       const nb = this.add
-        .text(860, 186, '🏆 신기록!', { fontFamily: 'sans-serif', fontSize: '22px', fontStyle: 'bold', color: '#ff4d6a', stroke: '#ffffff', strokeThickness: 4 })
+        .text(860, 186, tr('🏆 신기록!'), { fontFamily: 'sans-serif', fontSize: '22px', fontStyle: 'bold', color: '#ff4d6a', stroke: '#ffffff', strokeThickness: 4 })
         .setOrigin(0.5)
         .setAngle(8);
       this.tweens.add({ targets: nb, scale: 1.15, duration: 380, yoyo: true, repeat: -1 });
@@ -95,7 +96,7 @@ export class ResultScene extends Phaser.Scene {
       track('first_win_chest', { stage: stageId });
       this.time.delayedCall(1100, () => {
         const tag = this.add
-          .text(640, 40, '🌅 오늘의 첫 승리! 은 상자 선물', { fontFamily: 'sans-serif', fontSize: '26px', fontStyle: 'bold', color: '#fff', stroke: '#c07a00', strokeThickness: 6 })
+          .text(640, 40, tr('🌅 오늘의 첫 승리! 은 상자 선물'), { fontFamily: 'sans-serif', fontSize: '26px', fontStyle: 'bold', color: '#fff', stroke: '#c07a00', strokeThickness: 6 })
           .setOrigin(0.5)
           .setDepth(401)
           .setScale(0.4);
@@ -143,55 +144,55 @@ export class ResultScene extends Phaser.Scene {
     if (daily) {
       const b = this.resultData.dailyBonus ?? 0;
       this.add
-        .text(640, 300, !win ? '내일 규칙이 바뀌기 전에 다시 도전!' : b > 0 ? `🎉 오늘의 첫 승리 보너스 🪙 +${b}` : '오늘 보너스는 이미 받았어요 · 내일 새 도전!', { fontFamily: 'sans-serif', fontSize: '22px', fontStyle: 'bold', color: b > 0 ? '#ff7a2a' : '#7a86a8' })
+        .text(640, 300, !win ? tr('내일 규칙이 바뀌기 전에 다시 도전!') : b > 0 ? tr('🎉 오늘의 첫 승리 보너스 🪙 +{0}', b) : tr('오늘 보너스는 이미 받았어요 · 내일 새 도전!'), { fontFamily: 'sans-serif', fontSize: '22px', fontStyle: 'bold', color: b > 0 ? '#ff7a2a' : '#7a86a8' })
         .setOrigin(0.5);
     } else if (unlock) {
       // 🎓 다음 관문에서 열리는 기능 — "조금만 더" 하게
       const u = this.add
-        .text(640, 350, `🔓 다음 관문에서 ${unlock.name} 해금!`, { fontFamily: 'sans-serif', fontSize: '22px', fontStyle: 'bold', color: '#ff7a2a', stroke: '#ffffff', strokeThickness: 4 })
+        .text(640, 350, tr('🔓 다음 관문에서 {0} 해금!', unlock.name), { fontFamily: 'sans-serif', fontSize: '22px', fontStyle: 'bold', color: '#ff7a2a', stroke: '#ffffff', strokeThickness: 4 })
         .setOrigin(0.5);
       this.tweens.add({ targets: u, scale: 1.08, duration: 500, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
     } else if (win) {
-      const hint = stars >= 3 ? '완벽한 방어! 🎉' : '기지 체력을 더 지키면 별이 늘어요';
+      const hint = stars >= 3 ? tr('완벽한 방어! 🎉') : tr('기지 체력을 더 지키면 별이 늘어요');
       this.add.text(640, 350, hint, { fontFamily: 'sans-serif', fontSize: '16px', color: '#7a86a8' }).setOrigin(0.5);
     }
 
     // 보상 요약
     const goldLine = this.add
-      .text(640, 392, win ? `획득 골드 🪙 ${earned}` : '보상 없음', { fontFamily: 'sans-serif', fontSize: '28px', fontStyle: 'bold', color: '#e8a000' })
+      .text(640, 392, win ? tr('획득 골드 🪙 {0}', earned) : tr('보상 없음'), { fontFamily: 'sans-serif', fontSize: '28px', fontStyle: 'bold', color: '#e8a000' })
       .setOrigin(0.5);
     // 새 별 보너스 · ⏱️ 목표 시간(달성하면 보너스 — 따로 지급됨)
     const { target, targetGold = 0 } = this.resultData;
     const notes: string[] = [];
-    if (starGold > 0) notes.push(`새 별 보너스 +${starGold} 포함`);
-    if (win && !daily && target) notes.push(targetGold > 0 ? `⏱️ 목표 ${formatTime(target)} 달성! +${targetGold}` : `⏱️ 목표 ${formatTime(target)} — 다음엔 더 빨리!`);
+    if (starGold > 0) notes.push(tr('새 별 보너스 +{0} 포함', starGold));
+    if (win && !daily && target) notes.push(targetGold > 0 ? tr('⏱️ 목표 {0} 달성! +{1}', formatTime(target), targetGold) : tr('⏱️ 목표 {0} — 다음엔 더 빨리!', formatTime(target)));
     if (notes.length) {
       this.add
         .text(640, 426, notes.join('   ·   '), { fontFamily: 'sans-serif', fontSize: '15px', fontStyle: targetGold > 0 ? 'bold' : 'normal', color: targetGold > 0 ? '#2fa25a' : '#c08a20' })
         .setOrigin(0.5);
     }
     this.add
-      .text(640, 456, `보유 골드 🪙 ${meta.gold}   ·   총 별 ⭐ ${meta.totalStars}`, { fontFamily: 'sans-serif', fontSize: '17px', color: '#5a6a9a' })
+      .text(640, 456, tr('보유 골드 🪙 {0}   ·   총 별 ⭐ {1}', meta.gold, meta.totalStars), { fontFamily: 'sans-serif', fontSize: '17px', color: '#5a6a9a' })
       .setOrigin(0.5);
 
     // 📺 광고로 골드 2배 (승리 + 획득 골드 있을 때만)
     if (win && earned > 0) {
       let doubled = false;
-      const dbl = cuteButton(this, 640, 510, 300, 50, '📺 광고 보고 골드 2배', 0xa07aff, 0x7a4ad8, '20px', () => {
+      const dbl = cuteButton(this, 640, 510, 300, 50, tr('📺 광고 보고 골드 2배'), 0xa07aff, 0x7a4ad8, '20px', () => {
         if (doubled) return;
         doubled = true;
         dbl.disableInteractive();
-        label.setText('⏳ 광고…');
+        label.setText(tr('⏳ 광고…'));
         void showRewarded('gold_x2').then((ok) => {
           if (ok) {
             meta.addGold(earned); // 추가 지급 = 2배
-            goldLine.setText(`획득 골드 🪙 ${earned * 2} (2배!)`);
-            label.setText('✅ 2배 완료');
+            goldLine.setText(tr('획득 골드 🪙 {0} (2배!)', earned * 2));
+            label.setText(tr('✅ 2배 완료'));
             dbl.setAlpha(0.6);
             this.floatGold(640, 392, earned);
           } else {
             doubled = false;
-            label.setText('📺 광고 보고 골드 2배');
+            label.setText(tr('📺 광고 보고 골드 2배'));
             dbl.setInteractive({ useHandCursor: true });
           }
         });
@@ -199,8 +200,8 @@ export class ResultScene extends Phaser.Scene {
       const label = dbl.list[1] as Phaser.GameObjects.Text;
     }
 
-    cuteButton(this, 480, 640, 220, 60, '🔄 다시', 0x4a8bff, 0x2a5fd0, '24px', () => this.scene.start('Battle', { stageId, mode: daily ? 'daily' : undefined }));
-    cuteButton(this, 800, 640, 260, 60, '🗺️ 스테이지 선택', 0x5cd88a, 0x2fa25a, '22px', () => this.scene.start('StageSelect'));
+    cuteButton(this, 480, 640, 220, 60, tr('🔄 다시'), 0x4a8bff, 0x2a5fd0, '24px', () => this.scene.start('Battle', { stageId, mode: daily ? 'daily' : undefined }));
+    cuteButton(this, 800, 640, 260, 60, tr('🗺️ 스테이지 선택'), 0x5cd88a, 0x2fa25a, '22px', () => this.scene.start('StageSelect'));
   }
 
   /** 🔜 다음에 살 수 있는 유닛 미리보기(오른쪽 카드) → 강화 화면으로 */
@@ -214,7 +215,7 @@ export class ResultScene extends Phaser.Scene {
     const g = this.add.graphics();
     g.fillStyle(0xffffff, 0.92).fillRoundedRect(x - 130, y - 150, 260, 300, 28);
     g.lineStyle(4, 0xffb02e, 1).strokeRoundedRect(x - 130, y - 150, 260, 300, 28);
-    this.add.text(x, y - 120, '🔜 다음 동료', { fontFamily: 'sans-serif', fontSize: '20px', fontStyle: 'bold', color: '#d8862a' }).setOrigin(0.5);
+    this.add.text(x, y - 120, tr('🔜 다음 동료'), { fontFamily: 'sans-serif', fontSize: '20px', fontStyle: 'bold', color: '#d8862a' }).setOrigin(0.5);
     if (this.textures.exists(iconKey(next.key))) {
       const face = this.add.image(x, y - 32, iconKey(next.key)).setDisplaySize(110, 110);
       this.tweens.add({ targets: face, y: y - 40, duration: 700, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
@@ -222,12 +223,12 @@ export class ResultScene extends Phaser.Scene {
     this.add.text(x, y + 44, UNITS[next.key].name, { fontFamily: 'sans-serif', fontSize: '26px', fontStyle: 'bold', color: '#3a3a5a' }).setOrigin(0.5);
     const can = meta.gold >= price;
     this.add
-      .text(x, y + 78, can ? `🪙 ${price} — 지금 살 수 있어요!` : `🪙 ${price} (${price - meta.gold} 부족)`, { fontFamily: 'sans-serif', fontSize: '15px', fontStyle: 'bold', color: can ? '#2fa25a' : '#9a7a40' })
+      .text(x, y + 78, can ? tr('🪙 {0} — 지금 살 수 있어요!', price) : tr('🪙 {0} ({1} 부족)', price, price - meta.gold), { fontFamily: 'sans-serif', fontSize: '15px', fontStyle: 'bold', color: can ? '#2fa25a' : '#9a7a40' })
       .setOrigin(0.5);
     const go = (): void => {
       this.scene.start('Upgrade', { focus: next.key });
     };
-    cuteButton(this, x, y + 118, 200, 42, can ? '🛒 영입하러 가기' : '👀 보러 가기', can ? 0xffb02e : 0xc0c8d0, can ? 0xd8862a : 0x9098a8, '17px', go);
+    cuteButton(this, x, y + 118, 200, 42, can ? tr('🛒 영입하러 가기') : tr('👀 보러 가기'), can ? 0xffb02e : 0xc0c8d0, can ? 0xd8862a : 0x9098a8, '17px', go);
     const hit = this.add.rectangle(x, y - 30, 260, 230, 0xffffff, 0.001).setInteractive({ useHandCursor: true }); // 카드 위쪽(얼굴·이름)도 누르면 이동
     hit.on('pointerdown', go);
   }
@@ -242,12 +243,12 @@ export class ResultScene extends Phaser.Scene {
     panel.fillStyle(0xc03a4e, 0.3).fillRoundedRect(340, 98, 600, 470, 36);
     panel.fillStyle(0xffffff, 0.95).fillRoundedRect(340, 90, 600, 470, 36);
     panel.lineStyle(5, 0xff5a6e, 1).strokeRoundedRect(340, 90, 600, 470, 36);
-    const name = ENEMY_NAMES[w.boss]?.name ?? '보스';
+    const name = ENEMY_NAMES[w.boss]?.name ?? tr('보스');
     const title = cuteTitle(this, 640, 146, `👑 ${name}`, 46, '#c03a4e');
     title.setScale(0.3);
     this.tweens.add({ targets: title, scale: 1, duration: 420, ease: 'Back.easeOut' });
-    this.add.text(640, 204, `이번 판 피해  💥 보스 체력 ×${w.units.toFixed(2)}`, { fontFamily: 'sans-serif', fontSize: '24px', fontStyle: 'bold', color: '#3a2a4a' }).setOrigin(0.5);
-    this.add.text(640, 240, `이번 주 누적  ×${w.before.toFixed(2)} → ×${w.after.toFixed(2)}`, { fontFamily: 'sans-serif', fontSize: '19px', fontStyle: 'bold', color: '#8a5a6a' }).setOrigin(0.5);
+    this.add.text(640, 204, tr('이번 판 피해  💥 보스 체력 ×{0}', w.units.toFixed(2)), { fontFamily: 'sans-serif', fontSize: '24px', fontStyle: 'bold', color: '#3a2a4a' }).setOrigin(0.5);
+    this.add.text(640, 240, tr('이번 주 누적  ×{0} → ×{1}', w.before.toFixed(2), w.after.toFixed(2)), { fontFamily: 'sans-serif', fontSize: '19px', fontStyle: 'bold', color: '#8a5a6a' }).setOrigin(0.5);
     // 단계 5칸
     const done = WEEKLY_STEPS.filter((st) => w.after >= st.need).length;
     WEEKLY_STEPS.forEach((st, i) => {
@@ -265,16 +266,16 @@ export class ResultScene extends Phaser.Scene {
       }
     });
     this.add
-      .text(640, 420, w.steps.length ? `🎉 새 단계 ${w.steps.length}개 달성!` : done >= WEEKLY_STEPS.length ? '✅ 이번 주 모든 단계 달성!' : `다음 단계까지 ×${(WEEKLY_STEPS[done].need - w.after).toFixed(2)} — 다시 도전해 쌓아요`, { fontFamily: 'sans-serif', fontSize: '20px', fontStyle: 'bold', color: w.steps.length ? '#2fa25a' : '#8a6a7a' })
+      .text(640, 420, w.steps.length ? tr('🎉 새 단계 {0}개 달성!', w.steps.length) : done >= WEEKLY_STEPS.length ? tr('✅ 이번 주 모든 단계 달성!') : tr('다음 단계까지 ×{0} — 다시 도전해 쌓아요', (WEEKLY_STEPS[done].need - w.after).toFixed(2)), { fontFamily: 'sans-serif', fontSize: '20px', fontStyle: 'bold', color: w.steps.length ? '#2fa25a' : '#8a6a7a' })
       .setOrigin(0.5);
-    this.add.text(640, 466, `획득 골드 🪙 ${earned}`, { fontFamily: 'sans-serif', fontSize: '26px', fontStyle: 'bold', color: '#e8a000' }).setOrigin(0.5);
-    this.add.text(640, 502, `보유 골드 🪙 ${meta.gold}   ·   보스는 매주 월요일에 바뀌어요`, { fontFamily: 'sans-serif', fontSize: '15px', color: '#5a6a9a' }).setOrigin(0.5);
+    this.add.text(640, 466, tr('획득 골드 🪙 {0}', earned), { fontFamily: 'sans-serif', fontSize: '26px', fontStyle: 'bold', color: '#e8a000' }).setOrigin(0.5);
+    this.add.text(640, 502, tr('보유 골드 🪙 {0}   ·   보스는 매주 월요일에 바뀌어요', meta.gold), { fontFamily: 'sans-serif', fontSize: '15px', color: '#5a6a9a' }).setOrigin(0.5);
     if (this.resultData.chest) {
       chestCard(this, 170, 330, this.resultData.chest, (k) => UNITS[k]?.name ?? k);
       this.adChest(this.resultData.chest.tier, goldMultFor(this.resultData.stageId));
     }
-    cuteButton(this, 480, 640, 220, 60, '🔄 다시', 0xff5a6e, 0xc03a4e, '24px', () => this.scene.start('Battle', { stageId: 0, mode: 'weekly' }));
-    cuteButton(this, 800, 640, 260, 60, '🗺️ 스테이지 선택', 0x5cd88a, 0x2fa25a, '22px', () => this.scene.start('StageSelect'));
+    cuteButton(this, 480, 640, 220, 60, tr('🔄 다시'), 0xff5a6e, 0xc03a4e, '24px', () => this.scene.start('Battle', { stageId: 0, mode: 'weekly' }));
+    cuteButton(this, 800, 640, 260, 60, tr('🗺️ 스테이지 선택'), 0x5cd88a, 0x2fa25a, '22px', () => this.scene.start('StageSelect'));
   }
 
   private endlessResult(): void {
@@ -285,26 +286,26 @@ export class ResultScene extends Phaser.Scene {
     panel.fillStyle(0xffffff, 0.94).fillRoundedRect(340, 90, 600, 470, 36);
     panel.lineStyle(5, 0xa07aff, 1).strokeRoundedRect(340, 90, 600, 470, 36);
 
-    const title = cuteTitle(this, 640, 150, `🌊 웨이브 ${wave} 도달!`, 50, '#6a4ad8');
+    const title = cuteTitle(this, 640, 150, tr('🌊 웨이브 {0} 도달!', wave), 50, '#6a4ad8');
     title.setScale(0.3);
     this.tweens.add({ targets: title, scale: 1, duration: 420, ease: 'Back.easeOut' });
     if (newBest) {
       const nb = this.add
-        .text(640, 208, '🎉 신기록! 🎉', { fontFamily: 'sans-serif', fontSize: '26px', fontStyle: 'bold', color: '#ff4d8a' })
+        .text(640, 208, tr('🎉 신기록! 🎉'), { fontFamily: 'sans-serif', fontSize: '26px', fontStyle: 'bold', color: '#ff4d8a' })
         .setOrigin(0.5);
       this.tweens.add({ targets: nb, scale: 1.12, duration: 380, yoyo: true, repeat: -1 });
     } else {
-      this.add.text(640, 208, `최고 기록 🌊 ${meta.endlessBest}`, { fontFamily: 'sans-serif', fontSize: '20px', fontStyle: 'bold', color: '#7a6aa8' }).setOrigin(0.5);
+      this.add.text(640, 208, tr('최고 기록 🌊 {0}', meta.endlessBest), { fontFamily: 'sans-serif', fontSize: '20px', fontStyle: 'bold', color: '#7a6aa8' }).setOrigin(0.5);
     }
 
     // 🏆 명예의 전당
-    this.add.text(640, 254, '🏆 명예의 전당', { fontFamily: 'sans-serif', fontSize: '20px', fontStyle: 'bold', color: '#6a4ad8' }).setOrigin(0.5);
+    this.add.text(640, 254, tr('🏆 명예의 전당'), { fontFamily: 'sans-serif', fontSize: '20px', fontStyle: 'bold', color: '#6a4ad8' }).setOrigin(0.5);
     const medal = ['🥇', '🥈', '🥉', '4', '5'];
     meta.endlessTop.forEach((r, i) => {
       const d = new Date(r.date);
       const isThis = newBest && i === 0 && r.wave === wave;
       this.add
-        .text(640, 290 + i * 30, `${medal[i]}   웨이브 ${r.wave}   ·   ${d.getMonth() + 1}/${d.getDate()}`, {
+        .text(640, 290 + i * 30, tr('{0}   웨이브 {1}   ·   {2}/{3}', medal[i], r.wave, d.getMonth() + 1, d.getDate()), {
           fontFamily: 'sans-serif',
           fontSize: '17px',
           fontStyle: isThis ? 'bold' : 'normal',
@@ -313,33 +314,33 @@ export class ResultScene extends Phaser.Scene {
         .setOrigin(0.5);
     });
 
-    this.add.text(640, 460, `획득 골드 🪙 ${earned}`, { fontFamily: 'sans-serif', fontSize: '26px', fontStyle: 'bold', color: '#e8a000' }).setOrigin(0.5);
-    this.add.text(640, 496, `보유 골드 🪙 ${meta.gold}`, { fontFamily: 'sans-serif', fontSize: '16px', color: '#5a6a9a' }).setOrigin(0.5);
+    this.add.text(640, 460, tr('획득 골드 🪙 {0}', earned), { fontFamily: 'sans-serif', fontSize: '26px', fontStyle: 'bold', color: '#e8a000' }).setOrigin(0.5);
+    this.add.text(640, 496, tr('보유 골드 🪙 {0}', meta.gold), { fontFamily: 'sans-serif', fontSize: '16px', color: '#5a6a9a' }).setOrigin(0.5);
 
     if (this.resultData.chest) {
       chestCard(this, 170, 330, this.resultData.chest, (k) => UNITS[k]?.name ?? k);
       this.adChest(this.resultData.chest.tier, 1);
     }
-    cuteButton(this, 480, 640, 220, 60, '🔄 다시', 0xa07aff, 0x7a4ad8, '24px', () => this.scene.start('Battle', { stageId: 0, mode: 'endless' }));
-    cuteButton(this, 800, 640, 260, 60, '🗺️ 스테이지 선택', 0x5cd88a, 0x2fa25a, '22px', () => this.scene.start('StageSelect'));
+    cuteButton(this, 480, 640, 220, 60, tr('🔄 다시'), 0xa07aff, 0x7a4ad8, '24px', () => this.scene.start('Battle', { stageId: 0, mode: 'endless' }));
+    cuteButton(this, 800, 640, 260, 60, tr('🗺️ 스테이지 선택'), 0x5cd88a, 0x2fa25a, '22px', () => this.scene.start('StageSelect'));
   }
 
   /** 📺 광고 보고 같은 등급 상자 하나 더(결과 화면마다 1번) */
   private adChest(tier: ChestLoot['tier'], goldMult: number): void {
     let busy = false;
-    const b = cuteButton(this, 170, 514, 250, 44, '📺 광고 보고 상자 하나 더', 0xffb02e, 0xd8862a, '17px', () => {
+    const b = cuteButton(this, 170, 514, 250, 44, tr('📺 광고 보고 상자 하나 더'), 0xffb02e, 0xd8862a, '17px', () => {
       if (busy) return;
       busy = true;
       b.disableInteractive();
-      label.setText('⏳ 광고…');
+      label.setText(tr('⏳ 광고…'));
       void showRewarded('chest_more').then((ok) => {
         if (!ok) {
           busy = false;
-          label.setText('📺 광고 보고 상자 하나 더');
+          label.setText(tr('📺 광고 보고 상자 하나 더'));
           b.setInteractive({ useHandCursor: true });
           return;
         }
-        label.setText('✅ 받았어요');
+        label.setText(tr('✅ 받았어요'));
         b.setAlpha(0.6);
         chestPopup(this, grantNewChest(tier, goldMult), (k) => UNITS[k]?.name ?? k);
       });

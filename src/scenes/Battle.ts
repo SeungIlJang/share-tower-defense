@@ -122,6 +122,7 @@ import {
   weaponChargeMult,
   weaponDurationMult,
 } from '../systems/weapons';
+import { tr } from '../systems/i18n';
 
 // 원거리 유닛: 투사체 모양 · 명중 시 범위 피해 배율(없으면 단일)
 const ORB_UNITS = new Set(['mage', 'earthmage', 'darkmage', 'cannon', 'goblin_shaman', 'necromancer', 'banshee', 'baby_dragon']);
@@ -471,7 +472,7 @@ export class BattleScene extends Phaser.Scene {
     const tough = this.sRule === 'hold' || this.sRule === 'breach' || !!this.weekly; // 수성·돌파·주간 보스는 적 성을 부술 필요 없음
     this.enemyBase = new Base(this, W - 105, LANE_Y - 10, this.endless || tough ? 1e9 : Math.round(this.stage.baseHp * enemyPower(this.stage.id, false)), 0xc0392b, [castleLook('enemy', this.enemyTier), 'base_enemy'], 1 + 0.04 * this.enemyTier); // 💪 적 성 체력도 난이도 배수
     this.playerBase.setLevelLabel(`🏰 Lv${meta.castleLevel('castle')}`); // 성 강화 레벨(강화 화면 기지 탭과 같은 숫자)
-    this.enemyBase.setLevelLabel(`☠️ ${this.enemyTier + 1}단계`, '#ffb0a0'); // 적 성 단계(관문으로 정해짐)
+    this.enemyBase.setLevelLabel(tr('☠️ {0}단계', this.enemyTier + 1), '#ffb0a0'); // 적 성 단계(관문으로 정해짐)
     this.allyGunT = 1;
     this.enemyGunT = 2.5;
     this.archers = { ally: [], enemy: [] };
@@ -624,8 +625,8 @@ export class BattleScene extends Phaser.Scene {
       sfx(this, 'click');
       this.applySpeed();
     });
-    topBtn(1068 + VIEW_OFF, '🛒 상점', '#ffd34d').on('pointerdown', () => this.openShop());
-    topBtn(1170 + VIEW_OFF, '⏸ 정지', '#cfe0ff').on('pointerdown', () => this.openPause());
+    topBtn(1068 + VIEW_OFF, tr('🛒 상점'), '#ffd34d').on('pointerdown', () => this.openShop());
+    topBtn(1170 + VIEW_OFF, tr('⏸ 정지'), '#cfe0ff').on('pointerdown', () => this.openPause());
     this.slowmo = 1;
     this.applySpeed();
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => (this.anims.globalTimeScale = 1));
@@ -679,7 +680,7 @@ export class BattleScene extends Phaser.Scene {
     this.pauseLayer = layer;
     const dim = this.add.rectangle(640, 360, VIEW_W, 720, 0x000000, 0.65).setInteractive();
     const panel = this.add.rectangle(640, 360, 480, 520, 0x182238).setStrokeStyle(3, 0x3a7bff);
-    const title = this.add.text(640, 145, '⏸️ 일시정지', { fontFamily: 'sans-serif', fontSize: '36px', fontStyle: 'bold', color: '#fff' }).setOrigin(0.5);
+    const title = this.add.text(640, 145, tr('⏸️ 일시정지'), { fontFamily: 'sans-serif', fontSize: '36px', fontStyle: 'bold', color: '#fff' }).setOrigin(0.5);
     layer.add([dim, panel, title]);
     const close = (): void => {
       layer.destroy();
@@ -697,30 +698,30 @@ export class BattleScene extends Phaser.Scene {
       layer.add(t);
       return t;
     };
-    item(225, '▶ 계속하기', '#2eae5a', () => {
+    item(225, tr('▶ 계속하기'), '#2eae5a', () => {
       close();
       this.paused = false;
     });
-    item(300, '🛒 상점(강화)', '#d8962a', () => {
+    item(300, tr('🛒 상점(강화)'), '#d8962a', () => {
       close();
       this.paused = false;
       this.openShop();
     });
-    item(375, '🔄 다시 시작', '#3a7bff', () => {
+    item(375, tr('🔄 다시 시작'), '#3a7bff', () => {
       close();
       this.paused = false;
       this.commitRun();
       this.scene.restart({ stageId: this.endless ? 0 : this.stage.id, mode: this.endless ? 'endless' : this.rule ? 'daily' : this.weekly ? 'weekly' : undefined });
     });
-    const mute = item(450, this.sound.mute ? '🔇 소리 꺼짐' : '🔊 소리 켜짐', '#20304e', () => {
+    const mute = item(450, this.sound.mute ? tr('🔇 소리 꺼짐') : tr('🔊 소리 켜짐'), '#20304e', () => {
       setMute(this, !this.sound.mute);
-      mute.setText(this.sound.mute ? '🔇 소리 꺼짐' : '🔊 소리 켜짐');
+      mute.setText(this.sound.mute ? tr('🔇 소리 꺼짐') : tr('🔊 소리 켜짐'));
     }, 22);
     let armed = false;
-    const quit = item(530, '🏳️ 그만하기', '#5a3040', () => {
+    const quit = item(530, tr('🏳️ 그만하기'), '#5a3040', () => {
       if (!armed) {
         armed = true; // 실수 방지 — 한 번 더
-        quit.setText('정말 그만할까요? (한 번 더)').setBackgroundColor('#c0303a');
+        quit.setText(tr('정말 그만할까요? (한 번 더)')).setBackgroundColor('#c0303a');
         return;
       }
       close();
@@ -892,7 +893,7 @@ export class BattleScene extends Phaser.Scene {
     this.tweens.add({ targets: glow, scale: 1.15, alpha: 0.25, duration: 600, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
     const bg = this.add.circle(x, y, HERO_BTN_R, 0x1a3324, 0.92).setStrokeStyle(4, 0x5cff9e).setDepth(120).setInteractive({ useHandCursor: true });
     this.add.text(x, y - 6, '📣', { fontSize: '30px', padding: { top: 12, bottom: 4 } }).setOrigin(0.5).setDepth(122);
-    this.add.text(x, y + 27, '지원군', { fontFamily: 'sans-serif', fontSize: '14px', fontStyle: 'bold', color: '#d8ffe0', stroke: '#000000', strokeThickness: 4 }).setOrigin(0.5).setDepth(122);
+    this.add.text(x, y + 27, tr('지원군'), { fontFamily: 'sans-serif', fontSize: '14px', fontStyle: 'bold', color: '#d8ffe0', stroke: '#000000', strokeThickness: 4 }).setOrigin(0.5).setDepth(122);
     const badge = this.add
       .text(x + HERO_BTN_R - 6, y - HERO_BTN_R + 4, '', { fontFamily: 'sans-serif', fontSize: '14px', fontStyle: 'bold', color: '#10301a', backgroundColor: '#7affa0', padding: { x: 4, y: 0 } })
       .setOrigin(0.5)
@@ -924,11 +925,11 @@ export class BattleScene extends Phaser.Scene {
       this.tweens.add({ targets: t, alpha: 0, delay: 1400, duration: 400, onComplete: () => t.destroy() });
     };
     if (list.length === 0) {
-      say(`🔒 유닛을 ${DECK_SIZE + 1}명 이상 모으면 열려요 — 덱 밖 유닛이 지원군으로 와요`);
+      say(tr('🔒 유닛을 {0}명 이상 모으면 열려요 — 덱 밖 유닛이 지원군으로 와요', DECK_SIZE + 1));
       return;
     }
     if (this.reinforceFree + this.reinforceAd <= 0) {
-      say('이번 판 지원군은 다 불렀어요');
+      say(tr('이번 판 지원군은 다 불렀어요'));
       return;
     }
     const byAd = this.reinforceFree <= 0;
@@ -946,9 +947,9 @@ export class BattleScene extends Phaser.Scene {
     layer.add([
       this.add.rectangle(640, 360, VIEW_W, 720, 0x000000, 0.65).setInteractive(),
       this.add.rectangle(640, 330, pw, 360, 0x15241c).setStrokeStyle(4, 0x5cff9e),
-      this.add.text(640, 190, '📣 지원군 부르기', { fontFamily: 'sans-serif', fontSize: '32px', fontStyle: 'bold', color: '#ffffff' }).setOrigin(0.5),
+      this.add.text(640, 190, tr('📣 지원군 부르기'), { fontFamily: 'sans-serif', fontSize: '32px', fontStyle: 'bold', color: '#ffffff' }).setOrigin(0.5),
       this.add
-        .text(640, 228, byAd ? `📺 광고를 보면 고른 유닛 ${REINFORCE_AD_COUNT}마리가 바로 와요 (마지막 1번)` : `덱에 없는 유닛 중 하나가 ${reinforceCount(false)}마리 와요 (무료) · 다음엔 📺 광고로 ${REINFORCE_AD_COUNT}마리`, { fontFamily: 'sans-serif', fontSize: '17px', fontStyle: 'bold', color: byAd ? '#ffd34d' : '#a8f0c0' })
+        .text(640, 228, byAd ? tr('📺 광고를 보면 고른 유닛 {0}마리가 바로 와요 (마지막 1번)', REINFORCE_AD_COUNT) : tr('덱에 없는 유닛 중 하나가 {0}마리 와요 (무료) · 다음엔 📺 광고로 {1}마리', reinforceCount(false), REINFORCE_AD_COUNT), { fontFamily: 'sans-serif', fontSize: '17px', fontStyle: 'bold', color: byAd ? '#ffd34d' : '#a8f0c0' })
         .setOrigin(0.5),
     ]);
     list.forEach((k, i) => {
@@ -979,7 +980,7 @@ export class BattleScene extends Phaser.Scene {
       layer.add(parts);
     });
     const cancel = this.add
-      .text(640, 470, '닫기', { fontFamily: 'sans-serif', fontSize: '20px', fontStyle: 'bold', color: '#cfd6e6', backgroundColor: '#2a3a48', padding: { x: 22, y: 8 } })
+      .text(640, 470, tr('닫기'), { fontFamily: 'sans-serif', fontSize: '20px', fontStyle: 'bold', color: '#cfd6e6', backgroundColor: '#2a3a48', padding: { x: 22, y: 8 } })
       .setOrigin(0.5)
       .setInteractive({ useHandCursor: true });
     cancel.on('pointerdown', close);
@@ -994,7 +995,7 @@ export class BattleScene extends Phaser.Scene {
     track('reinforce', { type, ad, stage: this.stage.id });
     sfx(this, 'levelup');
     const t = this.add
-      .text(this.playerBase.x + 120, LANE_Y - 150, `📣 지원군 도착! ${UNITS[type].name} ×${n}`, { fontFamily: 'sans-serif', fontSize: '24px', fontStyle: 'bold', color: '#7affa0', stroke: '#000000', strokeThickness: 5 })
+      .text(this.playerBase.x + 120, LANE_Y - 150, tr('📣 지원군 도착! {0} ×{1}', UNITS[type].name, n), { fontFamily: 'sans-serif', fontSize: '24px', fontStyle: 'bold', color: '#7affa0', stroke: '#000000', strokeThickness: 5 })
       .setOrigin(0.5)
       .setDepth(70);
     this.tweens.add({ targets: t, y: t.y - 40, alpha: 0, delay: 900, duration: 700, onComplete: () => t.destroy() });
@@ -1037,11 +1038,11 @@ export class BattleScene extends Phaser.Scene {
     const bonus: string[] = [];
     if (r.free) {
       this.freeSummons++;
-      bonus.push('🎁 다음 소환 무료!');
+      bonus.push(tr('🎁 다음 소환 무료!'));
     }
     if (r.volley && this.feat.volley) {
       this.volleyT = Math.max(0, this.volleyT - VOLLEY_CD * CHAIN_VOLLEY_PCT);
-      bonus.push('🏰 성 공격 +20%!');
+      bonus.push(tr('🏰 성 공격 +20%!'));
     }
     if (bonus.length) {
       sfx(this, 'coin');
@@ -1061,8 +1062,8 @@ export class BattleScene extends Phaser.Scene {
     const kinds = [...new Set(w.groups.map((g) => enemyKind(g.type)).filter((k): k is EnemyKind => !!k))];
     const good = this.deck.find((u) => kinds.includes(UNIT_COUNTER[u] as EnemyKind));
     const boss = w.groups.some((g) => isBoss(g.type));
-    const head = boss ? '👑 보스 등장' : secs <= 1 ? '지금' : `${secs}초 뒤`;
-    const tip = good ? `  →  🎯 ${UNITS[good].name} 유리` : kinds.length ? `  (${kinds.map((k) => KIND_INFO[k].icon + KIND_INFO[k].name).join(' ')})` : '';
+    const head = boss ? tr('👑 보스 등장') : secs <= 1 ? tr('지금') : tr('{0}초 뒤', secs);
+    const tip = good ? tr('  →  🎯 {0} 유리', UNITS[good].name) : kinds.length ? `  (${kinds.map((k) => KIND_INFO[k].icon + KIND_INFO[k].name).join(' ')})` : '';
     this.waveBanner?.destroy();
     const c = this.add.container(560, 64).setDepth(106); // 상단 바 바로 아래, 📣 지원군·영웅 체력 바 왼쪽
     const txt = this.add.text(0, 0, `⚠️ ${head}: ${names}${tip}`, { fontFamily: 'sans-serif', fontSize: '19px', fontStyle: 'bold', color: boss ? '#ffb0b0' : '#ffe680', stroke: '#000000', strokeThickness: 4 }).setOrigin(0.5);
@@ -1090,15 +1091,15 @@ export class BattleScene extends Phaser.Scene {
     const before = new Set(this.children.list);
     this.add.rectangle(640, 360, VIEW_W, 720, 0x000000, 0.5).setDepth(200).setInteractive();
     this.add.rectangle(640, 250, 600, 280, 0x2a1418).setStrokeStyle(4, 0xff5a4a).setDepth(200);
-    this.add.text(640, 140, '⚔️ 적장이 일기토를 신청했다!', { fontFamily: 'sans-serif', fontSize: '30px', fontStyle: 'bold', color: '#ffe680', stroke: '#000000', strokeThickness: 6 }).setOrigin(0.5).setDepth(201);
+    this.add.text(640, 140, tr('⚔️ 적장이 일기토를 신청했다!'), { fontFamily: 'sans-serif', fontSize: '30px', fontStyle: 'bold', color: '#ffe680', stroke: '#000000', strokeThickness: 6 }).setOrigin(0.5).setDepth(201);
     enemyPortrait(this, foeType, 560, 245, 120, 110)?.setDepth(201);
     this.add.text(640, 205, `👺 ${ENEMIES[foeType]?.name ?? foeType}`, { fontFamily: 'sans-serif', fontSize: '24px', fontStyle: 'bold', color: '#ffffff' }).setOrigin(0, 0.5).setDepth(201);
     this.add
-      .text(640, 250, `이기면 남은 적 공격력 −${Math.round((1 - WIN_MORALE) * 100)}% · 🪙 보너스\n지면 적이 ${LOSE_RAGE_SEC}초 동안 강해져요`, { fontFamily: 'sans-serif', fontSize: '16px', fontStyle: 'bold', color: '#d6dbe8', lineSpacing: 6 })
+      .text(640, 250, tr('이기면 남은 적 공격력 −{0}% · 🪙 보너스\n지면 적이 {1}초 동안 강해져요', Math.round((1 - WIN_MORALE) * 100), LOSE_RAGE_SEC), { fontFamily: 'sans-serif', fontSize: '16px', fontStyle: 'bold', color: '#d6dbe8', lineSpacing: 6 })
       .setOrigin(0, 0.5)
       .setDepth(201);
-    cuteButton(this, 560, 345, 230, 56, '⚔️ 받아들이기', 0xff7a4a, 0xd8502a, '22px', () => this.openDuelPicker()).setDepth(202);
-    cuteButton(this, 780, 345, 160, 56, '거절', 0x8a9ab8, 0x5a6a88, '20px', () => this.endDuel(null)).setDepth(202);
+    cuteButton(this, 560, 345, 230, 56, tr('⚔️ 받아들이기'), 0xff7a4a, 0xd8502a, '22px', () => this.openDuelPicker()).setDepth(202);
+    cuteButton(this, 780, 345, 160, 56, tr('거절'), 0x8a9ab8, 0x5a6a88, '20px', () => this.endDuel(null)).setDepth(202);
     this.duel.ui = this.children.list.filter((o) => !before.has(o));
   }
 
@@ -1116,8 +1117,8 @@ export class BattleScene extends Phaser.Scene {
     const gap = 10;
     const pw = Math.max(560, list.length * (cw + gap) + 40);
     this.add.rectangle(640, 260, pw, 300, 0x1a1f30).setStrokeStyle(4, 0xffd34d).setDepth(200);
-    this.add.text(640, 135, `⚔️ 누가 나갈까? — 상대 👺 ${ENEMIES[d.foeType]?.name ?? d.foeType}`, { fontFamily: 'sans-serif', fontSize: '24px', fontStyle: 'bold', color: '#ffffff' }).setOrigin(0.5).setDepth(201);
-    this.add.text(640, 168, '🎯 유리한 유닛은 피해 ×1.5 · 초록 박자에 ⚔️ 필살!', { fontFamily: 'sans-serif', fontSize: '16px', fontStyle: 'bold', color: '#ffe680' }).setOrigin(0.5).setDepth(201);
+    this.add.text(640, 135, tr('⚔️ 누가 나갈까? — 상대 👺 {0}', ENEMIES[d.foeType]?.name ?? d.foeType), { fontFamily: 'sans-serif', fontSize: '24px', fontStyle: 'bold', color: '#ffffff' }).setOrigin(0.5).setDepth(201);
+    this.add.text(640, 168, tr('🎯 유리한 유닛은 피해 ×1.5 · 초록 박자에 ⚔️ 필살!'), { fontFamily: 'sans-serif', fontSize: '16px', fontStyle: 'bold', color: '#ffe680' }).setOrigin(0.5).setDepth(201);
     list.forEach((k, i) => {
       const x = 640 - ((list.length - 1) * (cw + gap)) / 2 + i * (cw + gap);
       const y = 262;
@@ -1126,10 +1127,10 @@ export class BattleScene extends Phaser.Scene {
       const face = this.textures.exists(iconKey(this.looks[k] ?? k)) ? iconKey(this.looks[k] ?? k) : iconKey(k);
       if (this.textures.exists(face)) this.add.image(x, y - 22, face).setDisplaySize(78, 78).setDepth(202);
       this.add.text(x, y + 32, UNITS[k].name, { fontFamily: 'sans-serif', fontSize: UNITS[k].name.length >= 5 ? '14px' : '17px', fontStyle: 'bold', color: '#ffffff' }).setOrigin(0.5).setDepth(202);
-      this.add.text(x, y + 54, good ? '🎯 유리!' : `Lv${meta.level(k)}`, { fontFamily: 'sans-serif', fontSize: '15px', fontStyle: 'bold', color: good ? '#7cff9a' : '#a8b4c8' }).setOrigin(0.5).setDepth(202);
+      this.add.text(x, y + 54, good ? tr('🎯 유리!') : `Lv${meta.level(k)}`, { fontFamily: 'sans-serif', fontSize: '15px', fontStyle: 'bold', color: good ? '#7cff9a' : '#a8b4c8' }).setOrigin(0.5).setDepth(202);
       card.on('pointerdown', () => this.startDuelFight(k));
     });
-    if (!d.forced) cuteButton(this, 640, 440, 160, 48, '거절', 0x8a9ab8, 0x5a6a88, '18px', () => this.endDuel(null)).setDepth(202);
+    if (!d.forced) cuteButton(this, 640, 440, 160, 48, tr('거절'), 0x8a9ab8, 0x5a6a88, '18px', () => this.endDuel(null)).setDepth(202);
     d.ui = this.children.list.filter((o) => !before.has(o));
   }
 
@@ -1200,12 +1201,12 @@ export class BattleScene extends Phaser.Scene {
     const bottom = this.add.rectangle(640, 720 + 170, VIEW_W, 340, 0x05070d, 0.97).setDepth(150);
     this.tweens.add({ targets: top, y: 28, duration: 400, ease: 'Quad.easeOut' });
     this.tweens.add({ targets: bottom, y: 720 - 160, duration: 400, ease: 'Quad.easeOut' });
-    this.add.text(640, 30, '⚔️  일 기 토  ⚔️', { fontFamily: 'sans-serif', fontSize: '30px', fontStyle: 'bold', color: '#ffd34d', stroke: '#3a2000', strokeThickness: 6 }).setOrigin(0.5).setDepth(151);
+    this.add.text(640, 30, tr('⚔️  일 기 토  ⚔️'), { fontFamily: 'sans-serif', fontSize: '30px', fontStyle: 'bold', color: '#ffd34d', stroke: '#3a2000', strokeThickness: 6 }).setOrigin(0.5).setDepth(151);
     // 큰 체력 막대 — 왼쪽 내 유닛, 오른쪽 적장
     const barW = 380;
     const by = 452;
     this.add.text(640 - 40 - barW, by - 26, `🗡️ ${UNITS[type].name}`, { fontFamily: 'sans-serif', fontSize: '22px', fontStyle: 'bold', color: '#cfe8ff' }).setOrigin(0, 0.5).setDepth(152);
-    this.add.text(640 + 40 + barW, by - 26, `👺 적장 ${ENEMIES[d.foeType]?.name ?? ''}`, { fontFamily: 'sans-serif', fontSize: '22px', fontStyle: 'bold', color: '#ffb0a0' }).setOrigin(1, 0.5).setDepth(152);
+    this.add.text(640 + 40 + barW, by - 26, tr('👺 적장 {0}', ENEMIES[d.foeType]?.name ?? ''), { fontFamily: 'sans-serif', fontSize: '22px', fontStyle: 'bold', color: '#ffb0a0' }).setOrigin(1, 0.5).setDepth(152);
     this.add.rectangle(640 - 40 - barW / 2, by, barW + 6, 22, 0x000000).setStrokeStyle(2, 0x4a6aa8).setDepth(151);
     this.add.rectangle(640 + 40 + barW / 2, by, barW + 6, 22, 0x000000).setStrokeStyle(2, 0xa84a4a).setDepth(151);
     d.hpA = this.add.rectangle(640 - 40, by, barW, 16, 0x5cc8ff).setOrigin(1, 0.5).setDepth(152); // 가운데에서 바깥으로 줄어듦
@@ -1218,10 +1219,10 @@ export class BattleScene extends Phaser.Scene {
     this.add.rectangle(640, 520, bw * BattleScene.PERFECT_WIN * 2 * 1.5, 16, 0x3fd06a).setDepth(152);
     d.mark = this.add.rectangle(640, 520, 8, 34, 0xffffff).setDepth(153);
     d.btn = this.add.circle(640, 612, 62, 0xd8502a).setStrokeStyle(6, 0xffe680).setDepth(152).setInteractive({ useHandCursor: true });
-    this.add.text(640, 612, '⚔️\n필살', { fontFamily: 'sans-serif', fontSize: '24px', fontStyle: 'bold', color: '#ffffff', align: 'center', stroke: '#5a2000', strokeThickness: 4 }).setOrigin(0.5).setDepth(153);
-    this.add.text(640, 690, '초록 칸에 하얀 막대가 올 때 누르세요!', { fontFamily: 'sans-serif', fontSize: '16px', fontStyle: 'bold', color: '#8a96b8' }).setOrigin(0.5).setDepth(152);
+    this.add.text(640, 612, tr('⚔️\n필살'), { fontFamily: 'sans-serif', fontSize: '24px', fontStyle: 'bold', color: '#ffffff', align: 'center', stroke: '#5a2000', strokeThickness: 4 }).setOrigin(0.5).setDepth(153);
+    this.add.text(640, 690, tr('초록 칸에 하얀 막대가 올 때 누르세요!'), { fontFamily: 'sans-serif', fontSize: '16px', fontStyle: 'bold', color: '#8a96b8' }).setOrigin(0.5).setDepth(152);
     d.btn.on('pointerdown', () => this.duelSpecial());
-    d.tag = this.add.text(f.x, LANE_Y - 125, `👺 적장`, { fontFamily: 'sans-serif', fontSize: '15px', fontStyle: 'bold', color: '#ffb0a0', stroke: '#000000', strokeThickness: 4 }).setOrigin(0.5).setDepth(80);
+    d.tag = this.add.text(f.x, LANE_Y - 125, tr('👺 적장'), { fontFamily: 'sans-serif', fontSize: '15px', fontStyle: 'bold', color: '#ffb0a0', stroke: '#000000', strokeThickness: 4 }).setOrigin(0.5).setDepth(80);
     // VS 카드 — 양옆에서 미끄러져 들어와 부딪힘 → FIGHT!
     const vsDim = this.add.rectangle(640, 300, VIEW_W, 300, 0x000000, 0.55).setDepth(165);
     const lp = this.add.rectangle(-300, 260, 420, 170, 0x173a7a, 0.95).setStrokeStyle(4, 0x7ab8ff).setDepth(166);
@@ -1303,7 +1304,7 @@ export class BattleScene extends Phaser.Scene {
     this.cameras.main.zoomTo(DUEL_ZOOM * 1.18, 300, 'Sine.easeOut');
     this.cameras.main.flash(180, 255, 255, 255);
     sfx(this, win ? 'levelup' : 'boss');
-    const ko = this.add.text(640, 230, win ? 'K.O.!' : '패배…', { fontFamily: 'sans-serif', fontSize: win ? '96px' : '64px', fontStyle: 'bold', color: win ? '#ffd34d' : '#ff8a8a', stroke: win ? '#5a2000' : '#3a0000', strokeThickness: 12 }).setOrigin(0.5).setDepth(168).setScale(2.5).setAlpha(0);
+    const ko = this.add.text(640, 230, win ? 'K.O.!' : tr('패배…'), { fontFamily: 'sans-serif', fontSize: win ? '96px' : '64px', fontStyle: 'bold', color: win ? '#ffd34d' : '#ff8a8a', stroke: win ? '#5a2000' : '#3a0000', strokeThickness: 12 }).setOrigin(0.5).setDepth(168).setScale(2.5).setAlpha(0);
     this.tweens.add({ targets: ko, scale: 1, alpha: 1, duration: 160, ease: 'Back.easeOut' });
     d.ui.push(ko);
   }
@@ -1317,7 +1318,7 @@ export class BattleScene extends Phaser.Scene {
     const f = d.foe;
     const perfect = Math.abs(this.beat - 0.5) <= BattleScene.PERFECT_WIN * 1.5;
     if (!perfect) {
-      const t = this.add.text(a.x, LANE_Y - 110, '빗나감…', { fontFamily: 'sans-serif', fontSize: '22px', fontStyle: 'bold', color: '#a8b4c8', stroke: '#000000', strokeThickness: 4 }).setOrigin(0.5).setDepth(90);
+      const t = this.add.text(a.x, LANE_Y - 110, tr('빗나감…'), { fontFamily: 'sans-serif', fontSize: '22px', fontStyle: 'bold', color: '#a8b4c8', stroke: '#000000', strokeThickness: 4 }).setOrigin(0.5).setDepth(90);
       this.tweens.add({ targets: t, y: t.y - 26, alpha: 0, duration: 600, onComplete: () => t.destroy() });
       return;
     }
@@ -1330,7 +1331,7 @@ export class BattleScene extends Phaser.Scene {
     playFx(this, 'slash', f.x - 10, LANE_Y - 50, { scale: 1.6, volume: 0.6 });
     this.cameras.main.shake(260, 0.016);
     this.cameras.main.flash(120, 255, 240, 200);
-    const t = this.add.text(640, 200, '⚔️ 필살!', { fontFamily: 'sans-serif', fontSize: '58px', fontStyle: 'bold', color: '#ffe14d', stroke: '#5a2000', strokeThickness: 9 }).setOrigin(0.5).setDepth(160).setScale(1.8);
+    const t = this.add.text(640, 200, tr('⚔️ 필살!'), { fontFamily: 'sans-serif', fontSize: '58px', fontStyle: 'bold', color: '#ffe14d', stroke: '#5a2000', strokeThickness: 9 }).setOrigin(0.5).setDepth(160).setScale(1.8);
     this.tweens.add({ targets: t, scale: 1, duration: 140, ease: 'Back.easeOut' });
     this.tweens.add({ targets: t, alpha: 0, y: 170, delay: 420, duration: 380, onComplete: () => t.destroy() });
   }
@@ -1353,12 +1354,12 @@ export class BattleScene extends Phaser.Scene {
     this.hero?.setDim(false);
     this.lookT = 0.6;
     if (win === null) {
-      this.banner('일기토를 거절했어요', 0xa8b4c8);
+      this.banner(tr('일기토를 거절했어요'), 0xa8b4c8);
       return;
     }
     track('duel_end', { stage: this.stage.id, win, forced: d.forced, unit: d.ally?.type ?? '', sec: Math.round(d.t) });
     if (d.forced) {
-      this.banner(win ? '⚔️ 일기토 승리!' : '⚔️ 일기토 패배…', win ? 0x7cff9a : 0xff7a8a);
+      this.banner(win ? tr('⚔️ 일기토 승리!') : tr('⚔️ 일기토 패배…'), win ? 0x7cff9a : 0xff7a8a);
       this.time.delayedCall(900, () => !this.over && this.end(win));
       return;
     }
@@ -1367,7 +1368,7 @@ export class BattleScene extends Phaser.Scene {
       const bonus = 20 + this.stage.id * 2;
       this.runGold += bonus;
       sfx(this, 'levelup');
-      this.banner(`⚔️ 일기토 승리! 적 공격력 −${Math.round((1 - WIN_MORALE) * 100)}% · 🪙+${bonus}`, 0x7cff9a);
+      this.banner(tr('⚔️ 일기토 승리! 적 공격력 −{0}% · 🪙+{1}', Math.round((1 - WIN_MORALE) * 100), bonus), 0x7cff9a);
     } else {
       this.enemyRageUntil = this.clock + LOSE_RAGE_SEC;
       if (d.foe?.active) {
@@ -1375,7 +1376,7 @@ export class BattleScene extends Phaser.Scene {
         this.enemyPool.release(d.foe);
         this.enemies = this.enemies.filter((e) => e.active);
       }
-      this.banner(`⚔️ 일기토 패배… 적이 ${LOSE_RAGE_SEC}초 동안 강해져요`, 0xff7a8a);
+      this.banner(tr('⚔️ 일기토 패배… 적이 {0}초 동안 강해져요', LOSE_RAGE_SEC), 0xff7a8a);
     }
   }
 
@@ -1408,7 +1409,7 @@ export class BattleScene extends Phaser.Scene {
       }
     }
     const t = this.add
-      .text(this.playerBase.x + 60, LANE_Y - 70, `🛠️ ${UNITS[type]?.name ?? ''} 강화! +20%`, { fontFamily: 'sans-serif', fontSize: '20px', fontStyle: 'bold', color: '#8affb0', stroke: '#000000', strokeThickness: 4 })
+      .text(this.playerBase.x + 60, LANE_Y - 70, tr('🛠️ {0} 강화! +20%', UNITS[type]?.name ?? ''), { fontFamily: 'sans-serif', fontSize: '20px', fontStyle: 'bold', color: '#8affb0', stroke: '#000000', strokeThickness: 4 })
       .setOrigin(0.5)
       .setDepth(70);
     this.tweens.add({ targets: t, y: LANE_Y - 110, alpha: 0, duration: 650, onComplete: () => t.destroy() });
@@ -1474,7 +1475,7 @@ export class BattleScene extends Phaser.Scene {
         this.cardHintShown = true;
         const at = FEATURES.find((f) => f.key === 'levelup')?.stage ?? 5;
         const t = this.add
-          .text(640, 128, `🔒 ${at - 1}관문을 깨면 레벨업 때 🃏 카드를 고를 수 있어요`, { fontFamily: 'sans-serif', fontSize: '18px', fontStyle: 'bold', color: '#ffe680', backgroundColor: '#0d1424cc', padding: { x: 12, y: 6 } })
+          .text(640, 128, tr('🔒 {0}관문을 깨면 레벨업 때 🃏 카드를 고를 수 있어요', at - 1), { fontFamily: 'sans-serif', fontSize: '18px', fontStyle: 'bold', color: '#ffe680', backgroundColor: '#0d1424cc', padding: { x: 12, y: 6 } })
           .setOrigin(0.5)
           .setDepth(110);
         this.tweens.add({ targets: t, alpha: 0, delay: 2600, duration: 500, onComplete: () => t.destroy() });
@@ -1500,7 +1501,7 @@ export class BattleScene extends Phaser.Scene {
       // 📖 처음 만나는 적 — 잡으면 도감에 등록
       this.metNew.add(type);
       const t = this.add
-        .text(this.enemyBase.x - 160, LANE_Y - 150, `📖 새 몬스터! ${stats.name}`, { fontFamily: 'sans-serif', fontSize: '20px', fontStyle: 'bold', color: '#ffe14d', backgroundColor: '#0d1424cc', padding: { x: 10, y: 5 } })
+        .text(this.enemyBase.x - 160, LANE_Y - 150, tr('📖 새 몬스터! {0}', stats.name), { fontFamily: 'sans-serif', fontSize: '20px', fontStyle: 'bold', color: '#ffe14d', backgroundColor: '#0d1424cc', padding: { x: 10, y: 5 } })
         .setOrigin(0.5)
         .setDepth(95);
       this.tweens.add({ targets: t, y: t.y - 24, alpha: 0, delay: 1400, duration: 500, onComplete: () => t.destroy() });
@@ -1538,7 +1539,7 @@ export class BattleScene extends Phaser.Scene {
       this.cameras.main.shake(300, 0.012);
       sfx(this, 'boss'); // 👑 보스 등장 전용 소리
       const t = this.add
-        .text(640, 210, `👑 ${BOSSES[type]?.name ?? '보스'} 등장!`, { fontFamily: 'sans-serif', fontSize: '44px', fontStyle: 'bold', color: '#ff5a6e' })
+        .text(640, 210, tr('👑 {0} 등장!', BOSSES[type]?.name ?? tr('보스')), { fontFamily: 'sans-serif', fontSize: '44px', fontStyle: 'bold', color: '#ff5a6e' })
         .setOrigin(0.5)
         .setDepth(110);
       this.tweens.add({ targets: t, y: 170, alpha: 0, duration: 1600, onComplete: () => t.destroy() });
@@ -1554,7 +1555,7 @@ export class BattleScene extends Phaser.Scene {
       const prev = st > 0 ? WEEKLY_STEPS[st - 1].need : 0;
       this.bossBarBg.setVisible(true);
       this.bossFill.setVisible(true).setSize(404 * (next ? Math.min(1, (total - prev) / (next.need - prev)) : 1), 14);
-      this.bossText.setVisible(true).setText(`👑 ${boss.stats.name}  💥 ×${total.toFixed(2)}${next ? `  → ${st + 1}단계 ×${next.need}` : '  ✅ 모든 단계!'}`);
+      this.bossText.setVisible(true).setText(`👑 ${boss.stats.name}  💥 ×${total.toFixed(2)}${next ? tr('  → {0}단계 ×{1}', st + 1, next.need) : tr('  ✅ 모든 단계!')}`);
       return;
     }
     if (boss) {
@@ -1648,17 +1649,17 @@ export class BattleScene extends Phaser.Scene {
       const w = endlessWaveAt(this.clock);
       if (w !== this.waveNo) {
         this.waveNo = w;
-        this.waveText?.setText(`🌊 웨이브 ${w}   (최고 ${meta.endlessBest})`);
+        this.waveText?.setText(tr('🌊 웨이브 {0}   (최고 {1})', w, meta.endlessBest));
         const et = enemyCastleTier(true, 0, w);
         if (et > this.enemyTier) {
           this.enemyTier = et; // 🏰 무한 모드: 적 성 진화
           this.enemyBase.setLook([castleLook('enemy', et), 'base_enemy'], 1 + 0.04 * et);
-          this.enemyBase.setLevelLabel(`☠️ ${et + 1}단계`, '#ffb0a0');
+          this.enemyBase.setLevelLabel(tr('☠️ {0}단계', et + 1), '#ffb0a0');
           this.placeArchers('enemy');
           this.cameras.main.shake(400, 0.01);
-          this.time.delayedCall(900, () => this.banner(`🏰 적 성이 강해졌다! ${ENEMY_CASTLE_TIERS[et].name}`, 0xff5a4a));
+          this.time.delayedCall(900, () => this.banner(tr('🏰 적 성이 강해졌다! {0}', ENEMY_CASTLE_TIERS[et].name), 0xff5a4a));
         }
-        this.banner(w % 5 === 0 ? `🌊 웨이브 ${w} — 👑 보스!` : `🌊 웨이브 ${w}`, 0xd8b0ff);
+        this.banner(w % 5 === 0 ? tr('🌊 웨이브 {0} — 👑 보스!', w) : tr('🌊 웨이브 {0}', w), 0xd8b0ff);
       }
     }
     this.updateEvents(dt);
@@ -1865,7 +1866,7 @@ export class BattleScene extends Phaser.Scene {
       dmg = Math.round(dmg * COUNTER_MULT); // ⚔️ 상성
       if (this.clock - this.counterFxT > 0.7) {
         this.counterFxT = this.clock;
-        const t = this.add.text(def.x, LANE_Y - 92, '🎯 효과적!', { fontFamily: 'sans-serif', fontSize: '17px', fontStyle: 'bold', color: '#ffe14d', stroke: '#000000', strokeThickness: 4 }).setOrigin(0.5).setDepth(72);
+        const t = this.add.text(def.x, LANE_Y - 92, tr('🎯 효과적!'), { fontFamily: 'sans-serif', fontSize: '17px', fontStyle: 'bold', color: '#ffe14d', stroke: '#000000', strokeThickness: 4 }).setOrigin(0.5).setDepth(72);
         this.tweens.add({ targets: t, y: t.y - 30, alpha: 0, duration: 650, onComplete: () => t.destroy() });
       }
     }
@@ -2004,7 +2005,7 @@ export class BattleScene extends Phaser.Scene {
     const charge = this.weapons[i];
     if (!charge) return;
     if (!charge.ready) {
-      this.hud.weaponDeny(i, `⏳ 충전 중 ${Math.floor(charge.ratio * 100)}%`); // 왜 안 나가는지 알려 줌
+      this.hud.weaponDeny(i, tr('⏳ 충전 중 {0}%', Math.floor(charge.ratio * 100))); // 왜 안 나가는지 알려 줌
       return;
     }
     const def = WEAPONS[i];
@@ -2012,7 +2013,7 @@ export class BattleScene extends Phaser.Scene {
     // 대상이 필요한 무기는 적이 없으면 게이지를 쓰지 않음
     const needsEnemy = ['meteor', 'arrows', 'lightning', 'shockwave', 'snipe'].includes(def.key);
     if (needsEnemy && live.length === 0) {
-      this.hud.weaponDeny(i, '🎯 적이 없어요');
+      this.hud.weaponDeny(i, tr('🎯 적이 없어요'));
       return;
     }
     charge.fire();
@@ -2257,14 +2258,14 @@ export class BattleScene extends Phaser.Scene {
     this.lastBaseHp = this.playerBase.hp;
     this.baseHitAt = -99;
     const style = { fontFamily: 'sans-serif', fontSize: '18px', fontStyle: 'bold', color: '#ffffff', padding: { x: 10, y: 6 } };
-    this.homeBtn = this.add.text(1218 + VIEW_OFF, 96, '📍 영웅', { ...style, backgroundColor: '#2a5fd0ee' }).setOrigin(0.5).setDepth(106).setVisible(false).setInteractive({ useHandCursor: true });
+    this.homeBtn = this.add.text(1218 + VIEW_OFF, 96, tr('📍 영웅'), { ...style, backgroundColor: '#2a5fd0ee' }).setOrigin(0.5).setDepth(106).setVisible(false).setInteractive({ useHandCursor: true });
     this.homeBtn.on('pointerdown', () => {
       this.lookX = null;
       sfx(this, 'click');
     });
-    this.alertL = this.add.text(VIEW_L + 8, 190, '◀ 🏰 성이 공격받아요!', { ...style, backgroundColor: '#c0392bee' }).setOrigin(0, 0.5).setDepth(106).setVisible(false).setInteractive({ useHandCursor: true });
+    this.alertL = this.add.text(VIEW_L + 8, 190, tr('◀ 🏰 성이 공격받아요!'), { ...style, backgroundColor: '#c0392bee' }).setOrigin(0, 0.5).setDepth(106).setVisible(false).setInteractive({ useHandCursor: true });
     this.alertL.on('pointerdown', () => this.lookAt(this.playerBase.x + 400));
-    this.alertR = this.add.text(VIEW_R - 8, 190, '👑 보스 ▶', { ...style, backgroundColor: '#8a2a8aee' }).setOrigin(1, 0.5).setDepth(106).setVisible(false).setInteractive({ useHandCursor: true });
+    this.alertR = this.add.text(VIEW_R - 8, 190, tr('👑 보스 ▶'), { ...style, backgroundColor: '#8a2a8aee' }).setOrigin(1, 0.5).setDepth(106).setVisible(false).setInteractive({ useHandCursor: true });
     this.alertR.on('pointerdown', () => {
       const b = this.enemies.find((e) => e.active && BOSS.has(e.type));
       if (b) this.lookAt(b.x);
@@ -2325,7 +2326,7 @@ ${info.desc}`, { fontFamily: 'sans-serif', fontSize: '24px', fontStyle: 'bold', 
     if (this.sRule === 'escort') {
       const w = new Unit(this);
       const hp = wagonHp(this.stage.baseHp, this.stage.enemyMult ?? 1);
-      w.spawn(this.playerBase.x + BASE_FRONT + 10, LANE_Y, { name: '짐마차', hp, atk: 0, def: 4, atkSpeed: 1, range: 0, speed: WAGON_SPEED }, 'wagon', 'ally');
+      w.spawn(this.playerBase.x + BASE_FRONT + 10, LANE_Y, { name: tr('짐마차'), hp, atk: 0, def: 4, atkSpeed: 1, range: 0, speed: WAGON_SPEED }, 'wagon', 'ally');
       const g = this.add.graphics();
       g.fillStyle(0xf4e6c0, 1).fillEllipse(0, -6, 58, 34); // 천 덮개
       g.lineStyle(2, 0x8a6a3a, 1).strokeEllipse(0, -6, 58, 34);
@@ -2347,20 +2348,20 @@ ${info.desc}`, { fontFamily: 'sans-serif', fontSize: '24px', fontStyle: 'bold', 
       if (blocked || w.stunned) w.idle();
       else w.moveBy(WAGON_SPEED * this.walkK * dt);
       const left = Math.max(0, Math.round((this.enemyBase.x - BASE_FRONT - 20 - w.x) / 10));
-      this.objText.setText(`🛒 마차 호위 — 남은 거리 ${left}m · ❤️ ${Math.ceil((w.hp / w.maxHp) * 100)}%${blocked ? ' · ⛔ 길이 막혔어요!' : ''}`);
+      this.objText.setText(tr('🛒 마차 호위 — 남은 거리 {0}m · ❤️ {1}%{2}', left, Math.ceil((w.hp / w.maxHp) * 100), blocked ? tr(' · ⛔ 길이 막혔어요!') : ''));
     } else if (this.sRule === 'hold') {
       this.holdLeft = Math.max(0, this.holdLeft - dt);
       const s = Math.ceil(this.holdLeft);
-      this.objText.setText(`🏰 수성 — 남은 시간 ${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`).setColor(s <= 10 ? '#7cff9a' : '#ffe680');
+      this.objText.setText(tr('🏰 수성 — 남은 시간 {0}:{1}', Math.floor(s / 60), String(s % 60).padStart(2, '0'))).setColor(s <= 10 ? '#7cff9a' : '#ffe680');
     } else if (this.sRule === 'breach') {
-      this.objText.setText(`🏃 돌파 — 🏁 ${this.goals} / ${this.goalNeed}`);
+      this.objText.setText(tr('🏃 돌파 — 🏁 {0} / {1}', this.goals, this.goalNeed));
     }
   }
 
   /** 🏃 돌파 — 결승선에 닿은 아군은 골인(사라짐) */
   private goalIn(u: Unit): void {
     this.goals++;
-    const t = this.add.text(u.x, LANE_Y - 80, '🏁 골인!', { fontFamily: 'sans-serif', fontSize: '20px', fontStyle: 'bold', color: '#7cff9a', stroke: '#000000', strokeThickness: 4 }).setOrigin(0.5).setDepth(80);
+    const t = this.add.text(u.x, LANE_Y - 80, tr('🏁 골인!'), { fontFamily: 'sans-serif', fontSize: '20px', fontStyle: 'bold', color: '#7cff9a', stroke: '#000000', strokeThickness: 4 }).setOrigin(0.5).setDepth(80);
     this.tweens.add({ targets: t, y: t.y - 40, alpha: 0, duration: 800, onComplete: () => t.destroy() });
     sfx(this, 'coin', 1.2);
     u.deactivate();
@@ -2399,9 +2400,9 @@ ${info.desc}`, { fontFamily: 'sans-serif', fontSize: '24px', fontStyle: 'bold', 
     };
     this.add.text(12, 96, '🛠️ DEV', { fontFamily: 'sans-serif', fontSize: '15px', fontStyle: 'bold', color: '#ffd34d', backgroundColor: '#3a2a10cc', padding: { x: 8, y: 5 } }).setOrigin(0, 0.5).setDepth(120);
     if (!devFlags.battleButtons) return;
-    mk(96, '🏆 승리', '#2f7a4dee', () => (this.endless ? this.end(false) : this.end(true)));
-    mk(178, '⬆️ 레벨업', '#2f5a8aee', () => this.gainXp(Math.max(1, this.xpNext - this.xp)));
-    mk(280, '💀 적 전멸', '#8a3a3aee', () => {
+    mk(96, tr('🏆 승리'), '#2f7a4dee', () => (this.endless ? this.end(false) : this.end(true)));
+    mk(178, tr('⬆️ 레벨업'), '#2f5a8aee', () => this.gainXp(Math.max(1, this.xpNext - this.xp)));
+    mk(280, tr('💀 적 전멸'), '#8a3a3aee', () => {
       for (const e of this.enemies) if (e.active) e.hp = 0;
     });
   }
@@ -2610,7 +2611,7 @@ ${info.desc}`, { fontFamily: 'sans-serif', fontSize: '24px', fontStyle: 'bold', 
     if (this.time.now - this.lastVolleyTap < 250) return;
     this.lastVolleyTap = this.time.now;
     if (this.volleyT > 0) {
-      this.volleyDeny(`⏳ ${Math.ceil(this.volleyT)}초 후`);
+      this.volleyDeny(tr('⏳ {0}초 후', Math.ceil(this.volleyT)));
       return;
     }
     const lv = meta.castleLevel('castle');
@@ -2621,7 +2622,7 @@ ${info.desc}`, { fontFamily: 'sans-serif', fontSize: '24px', fontStyle: 'bold', 
       .sort((a, b) => a.x - b.x)
       .slice(0, VOLLEY_MAX);
     if (!targets.length) {
-      this.volleyDeny('🎯 사거리 안에 적이 없어요');
+      this.volleyDeny(tr('🎯 사거리 안에 적이 없어요'));
       return;
     }
     this.volleyT = VOLLEY_CD;
@@ -2749,17 +2750,17 @@ ${info.desc}`, { fontFamily: 'sans-serif', fontSize: '24px', fontStyle: 'bold', 
   private castHeroSkill(i: number): void {
     if (this.over || this.picking || this.paused || this.reviving || this.duel || !this.hero?.active || !this.feat.heroSkill) return;
     if (this.hero.stunned) {
-      this.hud.heroDeny('💫 기절 중!');
+      this.hud.heroDeny(tr('💫 기절 중!'));
       return;
     }
     const sk = HERO_SKILLS[i];
     if (!sk || (this.heroCd[i] ?? 0) > 0) return;
     if (!meta.ownsHeroSkill(sk.key)) {
-      this.hud.heroDeny('🔒 강화 화면에서 해금!');
+      this.hud.heroDeny(tr('🔒 강화 화면에서 해금!'));
       return;
     }
     if (!this.mana.spend(sk.mana)) {
-      this.hud.heroDeny('💧 마나 부족!');
+      this.hud.heroDeny(tr('💧 마나 부족!'));
       return;
     }
     this.heroCd[i] = sk.cooldown;
@@ -2769,7 +2770,7 @@ ${info.desc}`, { fontFamily: 'sans-serif', fontSize: '24px', fontStyle: 'bold', 
     if (sk.key === 'mace') this.throwMace(pw);
     else if (sk.key === 'rally') this.rally(pw);
     else if (sk.key === 'holy') {
-      this.cutIn('✨ 성스러운 빛!', 0xffd34d); // L 필살기 컷인
+      this.cutIn(tr('✨ 성스러운 빛!'), 0xffd34d); // L 필살기 컷인
       this.holyLight(pw);
     }
   }
@@ -2777,7 +2778,7 @@ ${info.desc}`, { fontFamily: 'sans-serif', fontSize: '24px', fontStyle: 'bold', 
   /** 📯 돌격 함성 — 오라 안 유닛 공격 속도 증가(지속 = 5초 × 위력) */
   private rally(pw: number): void {
     this.rallyUntil = this.clock + RALLY_SEC * pw;
-    this.banner('📯 돌격!', 0xffb02e);
+    this.banner(tr('📯 돌격!'), 0xffb02e);
     sfx(this, 'weapon');
     const ring = this.add.ellipse(this.hero.x, LANE_Y + 34, this.auraR() * 2, 46).setStrokeStyle(8, 0xffb02e).setDepth(85);
     this.tweens.add({ targets: ring, scaleX: 1.5, scaleY: 2.2, alpha: 0, duration: 600, onComplete: () => ring.destroy() });
@@ -2792,7 +2793,7 @@ ${info.desc}`, { fontFamily: 'sans-serif', fontSize: '24px', fontStyle: 'bold', 
       if (!e.active || BOSS.has(e.type) || !this.inHeroAura(e.x)) continue;
       e.moveBy(Math.min(HOLY_PUSH, Math.max(0, this.enemyBase.x - BASE_FRONT - e.x)));
     }
-    this.banner('✨ 성스러운 빛!', 0xfff0a0);
+    this.banner(tr('✨ 성스러운 빛!'), 0xfff0a0);
     if (!playFx(this, 'heal', h.x, LANE_Y + 6, { scale: 1.1 })) sfx(this, 'heal');
     const r = this.auraR();
     const pillar = this.add.rectangle(h.x, LANE_Y - 140, r * 2, 300, 0xfff6c0, 0.45).setDepth(84);
@@ -2970,7 +2971,7 @@ ${info.desc}`, { fontFamily: 'sans-serif', fontSize: '24px', fontStyle: 'bold', 
     if (def.awaken && this.skills[key] >= def.max) {
       if (key === 'recharge') this.energy.raiseCap(50); // 🔋 마력 폭주
       sfx(this, 'levelup');
-      this.banner(`✨ 각성! ${def.awaken.name}`, 0xffe14d);
+      this.banner(tr('✨ 각성! {0}', def.awaken.name), 0xffe14d);
     }
   }
 
@@ -3006,7 +3007,7 @@ ${info.desc}`, { fontFamily: 'sans-serif', fontSize: '24px', fontStyle: 'bold', 
     const glow = this.add.ellipse(0, 6, 360, 150, 0xffd34d, 0.22);
     const head = this.add.text(0, -34, 'LEVEL UP!', { fontFamily: 'sans-serif', fontSize: '34px', fontStyle: 'bold', color: '#fff4c8', stroke: '#7a4a00', strokeThickness: 7 }).setOrigin(0.5);
     const big = this.add.text(0, 22, `LV ${this.level}`, { fontFamily: 'sans-serif', fontSize: '64px', fontStyle: 'bold', color: '#ffd34d', stroke: '#5a3000', strokeThickness: 9 }).setOrigin(0.5);
-    const gift = this.add.text(0, 74, '⚡ +30  ·  ❤️ 아군 20% 회복', { fontFamily: 'sans-serif', fontSize: '18px', fontStyle: 'bold', color: '#ffffff', stroke: '#000000', strokeThickness: 4 }).setOrigin(0.5);
+    const gift = this.add.text(0, 74, tr('⚡ +30  ·  ❤️ 아군 20% 회복'), { fontFamily: 'sans-serif', fontSize: '18px', fontStyle: 'bold', color: '#ffffff', stroke: '#000000', strokeThickness: 4 }).setOrigin(0.5);
     pop.add([glow, head, big, gift]).setScale(0.3).setAlpha(0);
     this.tweens.add({ targets: pop, scale: 1, alpha: 1, duration: 280, ease: 'Back.easeOut' });
     this.tweens.add({ targets: big, scale: 1.12, duration: 180, delay: 280, yoyo: true, ease: 'Sine.easeOut' });
@@ -3113,13 +3114,13 @@ ${info.desc}`, { fontFamily: 'sans-serif', fontSize: '24px', fontStyle: 'bold', 
   /** 🌊 웨이브 표시 — '웨이브 2/4' · 휴식 중 '다음 웨이브 5초' · 웨이브 시작 배너 · 마지막 웨이브에 정해진 특수 이벤트 */
   private updateWaveHud(wi: WaveInfo): void {
     if (this.waveText) {
-      const txt = wi.phase === 'rest' ? `🌊 ${wi.index}/${wi.total} · ${Math.ceil(wi.nextIn)}초 뒤` : wi.phase === 'wave' ? `🌊 웨이브 ${wi.index}/${wi.total}` : '🏰 적 성을 부숴라!';
+      const txt = wi.phase === 'rest' ? tr('🌊 {0}/{1} · {2}초 뒤', wi.index, wi.total, Math.ceil(wi.nextIn)) : wi.phase === 'wave' ? tr('🌊 웨이브 {0}/{1}', wi.index, wi.total) : tr('🏰 적 성을 부숴라!');
       if (this.waveText.text !== txt) this.waveText.setText(txt).setColor(wi.phase === 'rest' ? '#a8ffb0' : wi.phase === 'wave' ? '#9ad8ff' : '#ffd34d');
     }
     if (wi.phase !== 'wave' || wi.index === this.waveShown) return;
     this.waveShown = wi.index;
     const last = wi.index === wi.total;
-    this.banner(last ? `🌊 마지막 웨이브! (${wi.index}/${wi.total})` : `🌊 웨이브 ${wi.index}/${wi.total}`, last ? 0xff9a6a : 0x9ad8ff);
+    this.banner(last ? tr('🌊 마지막 웨이브! ({0}/{1})', wi.index, wi.total) : tr('🌊 웨이브 {0}/{1}', wi.index, wi.total), last ? 0xff9a6a : 0x9ad8ff);
     const ev = last && !this.stageEventDone && !this.weekly ? stageEvent(this.stage.id) : null;
     if (ev) {
       this.stageEventDone = true;
@@ -3153,7 +3154,7 @@ ${info.desc}`, { fontFamily: 'sans-serif', fontSize: '24px', fontStyle: 'bold', 
       e.raged = true;
       e.stats = { ...e.stats, atk: Math.round(e.stats.atk * 1.8), speed: Math.round(e.stats.speed * 1.3) };
       e.setVariant(0xff3a2a, (d.scale ?? 1) * 1.15);
-      const t = this.add.text(e.x, LANE_Y - 90, '😡 분노!', { fontFamily: 'sans-serif', fontSize: '18px', fontStyle: 'bold', color: '#ff5a4a', stroke: '#000', strokeThickness: 3 }).setOrigin(0.5).setDepth(70);
+      const t = this.add.text(e.x, LANE_Y - 90, tr('😡 분노!'), { fontFamily: 'sans-serif', fontSize: '18px', fontStyle: 'bold', color: '#ff5a4a', stroke: '#000', strokeThickness: 3 }).setOrigin(0.5).setDepth(70);
       this.tweens.add({ targets: t, y: t.y - 30, alpha: 0, duration: 800, onComplete: () => t.destroy() });
     }
   }
@@ -3358,7 +3359,7 @@ ${info.desc}`, { fontFamily: 'sans-serif', fontSize: '24px', fontStyle: 'bold', 
       .text(640, 92, '', { fontFamily: 'sans-serif', fontSize: '20px', fontStyle: 'bold', color: '#ffe680', backgroundColor: '#0d1424cc', padding: { x: 12, y: 5 } })
       .setOrigin(0.5)
       .setDepth(101);
-    this.banner(`👑 주간 보스 · ${WEEKLY_SEC}초 동안 피해를 쌓아라!`, 0xff8a9a);
+    this.banner(tr('👑 주간 보스 · {0}초 동안 피해를 쌓아라!', WEEKLY_SEC), 0xff8a9a);
     this.time.delayedCall(2000, () => {
       if (this.over || !this.weekly) return;
       this.spawnEnemy(w.boss);
@@ -3383,9 +3384,9 @@ ${info.desc}`, { fontFamily: 'sans-serif', fontSize: '24px', fontStyle: 'bold', 
     if (!w || this.over || this.finishing) return;
     w.left = Math.max(0, w.left - dt);
     const sec = Math.ceil(w.left);
-    w.text?.setText(`⏱️ ${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}   💥 이번 판 ×${this.weeklyUnits().toFixed(2)}`).setColor(w.left <= 10 ? '#ff7a8a' : '#ffe680');
+    w.text?.setText(tr('⏱️ {0}:{1}   💥 이번 판 ×{2}', Math.floor(sec / 60), String(sec % 60).padStart(2, '0'), this.weeklyUnits().toFixed(2))).setColor(w.left <= 10 ? '#ff7a8a' : '#ffe680');
     if (w.left <= 0) {
-      this.banner('⏱️ 시간 종료!', 0xffe14d);
+      this.banner(tr('⏱️ 시간 종료!'), 0xffe14d);
       this.end(true);
     }
   }
@@ -3415,7 +3416,7 @@ ${info.desc}`, { fontFamily: 'sans-serif', fontSize: '24px', fontStyle: 'bold', 
     }
     for (const e of this.enemies) if (e.active && !BOSS.has(e.type)) e.moveBy(40); // 남은 적은 움찔 물러남
     const t = this.add
-      .text(640, 210, '🏰 함락!', { fontFamily: 'sans-serif', fontSize: '64px', fontStyle: 'bold', color: '#ffe14d', stroke: '#7a3a00', strokeThickness: 10 })
+      .text(640, 210, tr('🏰 함락!'), { fontFamily: 'sans-serif', fontSize: '64px', fontStyle: 'bold', color: '#ffe14d', stroke: '#7a3a00', strokeThickness: 10 })
       .setOrigin(0.5)
       .setDepth(110)
       .setScale(0.3);
@@ -3542,20 +3543,20 @@ ${info.desc}`, { fontFamily: 'sans-serif', fontSize: '24px', fontStyle: 'bold', 
       if (this.wagon.hp <= 0) {
         this.puff(this.wagon.x, 0x9a6a3a);
         this.wagon.deactivate();
-        this.banner('🛒 마차가 부서졌어요…', 0xff7a8a);
+        this.banner(tr('🛒 마차가 부서졌어요…'), 0xff7a8a);
         return this.end(false);
       }
       if (this.wagon.x >= this.enemyBase.x - BASE_FRONT - 20) {
-        this.banner('🛒 마차 도착!', 0x7cff9a);
+        this.banner(tr('🛒 마차 도착!'), 0x7cff9a);
         return this.end(true);
       }
     }
     if (this.sRule === 'hold' && this.holdLeft <= 0) {
-      this.banner('🏰 성을 지켜냈다!', 0x7cff9a);
+      this.banner(tr('🏰 성을 지켜냈다!'), 0x7cff9a);
       return this.end(true);
     }
     if (this.sRule === 'breach' && this.goals >= this.goalNeed) {
-      this.banner('🏁 돌파 성공!', 0x7cff9a);
+      this.banner(tr('🏁 돌파 성공!'), 0x7cff9a);
       return this.end(true);
     }
     if (this.hero && this.hero.hp <= 0 && this.hero.active) {
@@ -3564,7 +3565,7 @@ ${info.desc}`, { fontFamily: 'sans-serif', fontSize: '24px', fontStyle: 'bold', 
       this.puff(this.hero.x, 0xffd34d);
       this.hero.deactivate();
       this.aura.setVisible(false);
-      this.banner('👑 영웅이 쓰러졌어요…', 0xff7a8a);
+      this.banner(tr('👑 영웅이 쓰러졌어요…'), 0xff7a8a);
       return this.end(false);
     }
     if (this.playerBase.destroyed) {
@@ -3583,16 +3584,16 @@ ${info.desc}`, { fontFamily: 'sans-serif', fontSize: '24px', fontStyle: 'bold', 
     const layer = this.add.container(0, 0).setDepth(200);
     const dim = this.add.rectangle(640, 360, VIEW_W, 720, 0x000000, 0.7).setInteractive();
     const panel = this.add.rectangle(640, 360, 480, 340, 0x241824).setStrokeStyle(3, 0xff5a6e);
-    const title = this.add.text(640, 250, '💔 기지 파괴!', { fontFamily: 'sans-serif', fontSize: '40px', color: '#ff5a6e' }).setOrigin(0.5);
-    const sub = this.add.text(640, 310, '광고를 보고 기지를 부활시킬까요?', { fontFamily: 'sans-serif', fontSize: '20px', color: '#cfd6e6' }).setOrigin(0.5);
+    const title = this.add.text(640, 250, tr('💔 기지 파괴!'), { fontFamily: 'sans-serif', fontSize: '40px', color: '#ff5a6e' }).setOrigin(0.5);
+    const sub = this.add.text(640, 310, tr('광고를 보고 기지를 부활시킬까요?'), { fontFamily: 'sans-serif', fontSize: '20px', color: '#cfd6e6' }).setOrigin(0.5);
     layer.add([dim, panel, title, sub]);
 
     const watch = this.add
-      .text(640, 380, '📺 광고 보고 부활', { fontFamily: 'sans-serif', fontSize: '26px', color: '#fff', backgroundColor: '#2eae5a', padding: { x: 24, y: 12 } })
+      .text(640, 380, tr('📺 광고 보고 부활'), { fontFamily: 'sans-serif', fontSize: '26px', color: '#fff', backgroundColor: '#2eae5a', padding: { x: 24, y: 12 } })
       .setOrigin(0.5)
       .setInteractive({ useHandCursor: true });
     watch.on('pointerdown', () => {
-      watch.disableInteractive().setText('⏳ 광고…');
+      watch.disableInteractive().setText(tr('⏳ 광고…'));
       void showRewarded('revive').then((ok) => {
         layer.destroy();
         if (ok) this.doRevive();
@@ -3604,7 +3605,7 @@ ${info.desc}`, { fontFamily: 'sans-serif', fontSize: '24px', fontStyle: 'bold', 
     });
 
     const give = this.add
-      .text(640, 450, '포기', { fontFamily: 'sans-serif', fontSize: '20px', color: '#8892b0' })
+      .text(640, 450, tr('포기'), { fontFamily: 'sans-serif', fontSize: '20px', color: '#8892b0' })
       .setOrigin(0.5)
       .setInteractive({ useHandCursor: true });
     give.on('pointerdown', () => {
@@ -3626,7 +3627,7 @@ ${info.desc}`, { fontFamily: 'sans-serif', fontSize: '24px', fontStyle: 'bold', 
     }
     this.energy.add(60);
     const t = this.add
-      .text(640, 300, '✨ 부활! ✨', { fontFamily: 'sans-serif', fontSize: '48px', fontStyle: 'bold', color: '#ffe14d' })
+      .text(640, 300, tr('✨ 부활! ✨'), { fontFamily: 'sans-serif', fontSize: '48px', fontStyle: 'bold', color: '#ffe14d' })
       .setOrigin(0.5)
       .setDepth(120);
     this.tweens.add({ targets: t, y: 240, alpha: 0, duration: 1200, onComplete: () => t.destroy() });

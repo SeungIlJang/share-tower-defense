@@ -1,3 +1,4 @@
+import { tr } from './i18n';
 /** 특수 무기(게이지가 차면 발사) — 순수 로직, Vitest 검증 */
 
 export type WeaponKey =
@@ -33,15 +34,15 @@ export function weaponSlots(loadout: string[], owns: (key: string) => boolean): 
 }
 
 export const WEAPONS: WeaponDef[] = [
-  { key: 'meteor', name: '메테오', icon: '🔥', desc: '앞쪽 적 무리 범위 피해', chargeSec: 20, color: 0xff7a3c },
-  { key: 'arrows', name: '화살비', icon: '🏹', desc: '모든 적에게 피해', chargeSec: 22, color: 0xc8e06a },
-  { key: 'lightning', name: '번개', icon: '⚡', desc: '가까운 적 5마리 큰 피해', chargeSec: 25, color: 0xffe14d },
-  { key: 'heal', name: '치유', icon: '💚', desc: '아군 HP 50%·기지 15% 회복', chargeSec: 25, color: 0x5cff9e },
-  { key: 'shockwave', name: '충격파', icon: '💣', desc: '앞쪽 적을 밀어내고 피해', chargeSec: 28, color: 0xffa94d },
-  { key: 'freeze', name: '빙결', icon: '❄️', desc: '모든 적 정지', chargeSec: 30, color: 0x7cd8ff },
-  { key: 'guard', name: '수호', icon: '🛡️', desc: '아군 무적', chargeSec: 35, color: 0x9ab4ff },
-  { key: 'berserk', name: '광폭', icon: '⚔️', desc: '아군 공격력·공격속도 증가', chargeSec: 35, color: 0xff5a6e },
-  { key: 'snipe', name: '저격', icon: '🎯', desc: 'HP가 가장 많은 적 1명 큰 피해', chargeSec: 40, color: 0xd58cff },
+  { key: 'meteor', name: tr('메테오'), icon: '🔥', desc: tr('앞쪽 적 무리 범위 피해'), chargeSec: 20, color: 0xff7a3c },
+  { key: 'arrows', name: tr('화살비'), icon: '🏹', desc: tr('모든 적에게 피해'), chargeSec: 22, color: 0xc8e06a },
+  { key: 'lightning', name: tr('번개'), icon: '⚡', desc: tr('가까운 적 5마리 큰 피해'), chargeSec: 25, color: 0xffe14d },
+  { key: 'heal', name: tr('치유'), icon: '💚', desc: tr('아군 HP 50%·기지 15% 회복'), chargeSec: 25, color: 0x5cff9e },
+  { key: 'shockwave', name: tr('충격파'), icon: '💣', desc: tr('앞쪽 적을 밀어내고 피해'), chargeSec: 28, color: 0xffa94d },
+  { key: 'freeze', name: tr('빙결'), icon: '❄️', desc: tr('모든 적 정지'), chargeSec: 30, color: 0x7cd8ff },
+  { key: 'guard', name: tr('수호'), icon: '🛡️', desc: tr('아군 무적'), chargeSec: 35, color: 0x9ab4ff },
+  { key: 'berserk', name: tr('광폭'), icon: '⚔️', desc: tr('아군 공격력·공격속도 증가'), chargeSec: 35, color: 0xff5a6e },
+  { key: 'snipe', name: tr('저격'), icon: '🎯', desc: tr('HP가 가장 많은 적 1명 큰 피해'), chargeSec: 40, color: 0xd58cff },
 ];
 
 /** 무기별 수치 */

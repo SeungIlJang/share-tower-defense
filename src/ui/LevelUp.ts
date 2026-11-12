@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { GRADES, type SkillDef } from '../systems/skills';
 import { VIEW_W } from '../systems/view';
+import { tr } from '../systems/i18n';
 
 /** 레벨업 → 무작위 3장 중 택1 오버레이 (등급 색 · 지금→다음 수치 · 각성 예고 · 다시 뽑기) */
 export class LevelUpOverlay {
@@ -34,10 +35,10 @@ export class LevelUpOverlay {
       // 수치: 지금 → 다음 / 즉시 효과
       c.add(s.add.rectangle(cx, cy + 92, W - 30, 70, 0x000000, 0.3));
       if (def.value) {
-        c.add(s.add.text(cx, cy + 74, `지금: ${def.value(lv)}`, { fontFamily: 'sans-serif', fontSize: '16px', color: '#c8d0e0' }).setOrigin(0.5));
+        c.add(s.add.text(cx, cy + 74, tr('지금: {0}', def.value(lv)), { fontFamily: 'sans-serif', fontSize: '16px', color: '#c8d0e0' }).setOrigin(0.5));
         c.add(s.add.text(cx, cy + 106, `▶ ${def.value(lv + 1)}`, { fontFamily: 'sans-serif', fontSize: '21px', fontStyle: 'bold', color: '#7cff9a' }).setOrigin(0.5));
       } else {
-        c.add(s.add.text(cx, cy + 92, '⚡ 고르면 바로 효과!', { fontFamily: 'sans-serif', fontSize: '21px', fontStyle: 'bold', color: '#7cff9a' }).setOrigin(0.5));
+        c.add(s.add.text(cx, cy + 92, tr('⚡ 고르면 바로 효과!'), { fontFamily: 'sans-serif', fontSize: '21px', fontStyle: 'bold', color: '#7cff9a' }).setOrigin(0.5));
       }
       // 레벨 · 각성 예고
       const lvLabel = def.instant ? '' : Number.isFinite(def.max) ? `LV ${lv} → ${lv + 1} / ${def.max}` : `LV ${lv} → ${lv + 1}`;
@@ -45,7 +46,7 @@ export class LevelUpOverlay {
       if (def.awaken) {
         const now = lv + 1 >= def.max;
         const t = s.add
-          .text(cx, cy + 182, now ? `✨ 각성! ${def.awaken.name}: ${def.awaken.desc}` : `MAX 때 각성: ${def.awaken.name}`, {
+          .text(cx, cy + 182, now ? tr('✨ 각성! {0}: {1}', def.awaken.name, def.awaken.desc) : tr('MAX 때 각성: {0}', def.awaken.name), {
             fontFamily: 'sans-serif',
             fontSize: now ? '15px' : '14px',
             fontStyle: 'bold',
@@ -67,7 +68,7 @@ export class LevelUpOverlay {
 
     // 🎲 다시 뽑기(한 판에 1회)
     const rb = s.add
-      .text(640, 640, rerolls > 0 ? `🎲 다시 뽑기 (${rerolls}회 남음)` : '🎲 다시 뽑기 (다 썼어요)', {
+      .text(640, 640, rerolls > 0 ? tr('🎲 다시 뽑기 ({0}회 남음)', rerolls) : tr('🎲 다시 뽑기 (다 썼어요)'), {
         fontFamily: 'sans-serif',
         fontSize: '24px',
         fontStyle: 'bold',
@@ -81,7 +82,7 @@ export class LevelUpOverlay {
       rb.setInteractive({ useHandCursor: true });
       rb.on('pointerdown', () => onReroll());
     }
-    c.add(s.add.text(640, 690, '👆 하나를 골라 주세요!', { fontFamily: 'sans-serif', fontSize: '20px', fontStyle: 'bold', color: '#ff9a3c' }).setOrigin(0.5));
+    c.add(s.add.text(640, 690, tr('👆 하나를 골라 주세요!'), { fontFamily: 'sans-serif', fontSize: '20px', fontStyle: 'bold', color: '#ff9a3c' }).setOrigin(0.5));
     this.layer = c;
   }
 

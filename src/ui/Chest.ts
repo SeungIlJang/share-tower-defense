@@ -4,6 +4,7 @@ import { iconKey, textureKey } from '../systems/sprites';
 import { equipDef } from '../systems/equipment';
 import { sfx } from '../systems/sound';
 import { meta } from '../systems/upgrades';
+import { tr } from '../systems/i18n';
 
 /** 상자 그림(몸통·뚜껑·띠·자물쇠) — 뚜껑은 따로 돌려서 열 수 있게 */
 function drawChest(s: Phaser.Scene, tier: number): { box: Phaser.GameObjects.Container; lid: Phaser.GameObjects.Container } {
@@ -50,7 +51,7 @@ export function chestCard(s: Phaser.Scene, x: number, y: number, loot: ChestLoot
   box.setDepth(1);
   s.tweens.add({ targets: glow, scale: 1.2, alpha: 0.08, duration: 700, yoyo: true, repeat: -1 });
   s.tweens.add({ targets: box, y: y - 18, duration: 600, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
-  const hint = s.add.text(x, y + 100, '👆 눌러서 열기!', { fontFamily: 'sans-serif', fontSize: '20px', fontStyle: 'bold', color: '#ff7a2a' }).setOrigin(0.5);
+  const hint = s.add.text(x, y + 100, tr('👆 눌러서 열기!'), { fontFamily: 'sans-serif', fontSize: '20px', fontStyle: 'bold', color: '#ff7a2a' }).setOrigin(0.5);
   s.tweens.add({ targets: hint, scale: 1.1, duration: 400, yoyo: true, repeat: -1 });
   const hit = s.add.rectangle(x, y, 260, 300, 0xffffff, 0.001).setInteractive({ useHandCursor: true });
   let opened = false;
@@ -96,11 +97,11 @@ export function chestCard(s: Phaser.Scene, x: number, y: number, loot: ChestLoot
     if (ed) {
       // 🛡️ 영웅 장비 — 새로 얻음 / 등급 업 / 최고 등급이라 골드
       const g = meta.equipGrade(ed.key);
-      rows.push({ icon: 'equip', sheet: [textureKey(ed.kind === 'weapon' ? 'equip_weapon_icons' : 'equip_ring_icons'), ed.frame], text: `${ed.name} ${'★'.repeat(g)}`, sub: loot.equipGold ? `최고 등급! 🪙 +${loot.equipGold}` : g === 1 ? '새 장비! 강화 → 👑 영웅 탭' : '등급 업!' });
+      rows.push({ icon: 'equip', sheet: [textureKey(ed.kind === 'weapon' ? 'equip_weapon_icons' : 'equip_ring_icons'), ed.frame], text: `${ed.name} ${'★'.repeat(g)}`, sub: loot.equipGold ? tr('최고 등급! 🪙 +{0}', loot.equipGold) : g === 1 ? tr('새 장비! 강화 → 👑 영웅 탭') : tr('등급 업!') });
     }
     for (const [k, n] of Object.entries(loot.shards)) {
       const need = rankUpCost(meta.rank(k));
-      rows.push({ icon: k, text: `🃏 ${unitName(k)} +${n}`, sub: need === null ? 'MAX' : `${meta.shards[k] ?? 0}/${need}${(meta.shards[k] ?? 0) >= need ? ' 랭크업 가능!' : ''}` });
+      rows.push({ icon: k, text: `🃏 ${unitName(k)} +${n}`, sub: need === null ? 'MAX' : `${meta.shards[k] ?? 0}/${need}${(meta.shards[k] ?? 0) >= need ? tr(' 랭크업 가능!') : ''}` });
     }
     rows.forEach((r, i) => {
       const ry = y - 32 + i * (rows.length > 4 ? 36 : 46); // 보상 줄은 위에서부터
@@ -108,7 +109,7 @@ export function chestCard(s: Phaser.Scene, x: number, y: number, loot: ChestLoot
       if (r.sheet && s.textures.exists(r.sheet[0])) parts.push(s.add.image(-96, 0, r.sheet[0], r.sheet[1]).setDisplaySize(40, 40));
       else if (r.icon && s.textures.exists(iconKey(r.icon))) parts.push(s.add.image(-96, 0, iconKey(r.icon)).setDisplaySize(40, 40));
       parts.push(s.add.text(r.icon ? -70 : 0, r.sub ? -10 : 0, r.text, { fontFamily: 'sans-serif', fontSize: r.icon ? '19px' : '30px', fontStyle: 'bold', color: r.icon ? '#2a2a4a' : '#e8a000', stroke: r.icon ? '#ffffff' : '#ffffff', strokeThickness: r.icon ? 0 : 4 }).setOrigin(r.icon ? 0 : 0.5, 0.5));
-      if (r.sub) parts.push(s.add.text(-70, 12, r.sub, { fontFamily: 'sans-serif', fontSize: '14px', fontStyle: 'bold', color: r.sub.includes('가능') || r.sub.includes('!') ? '#1f8a48' : '#5a6688' }).setOrigin(0, 0.5));
+      if (r.sub) parts.push(s.add.text(-70, 12, r.sub, { fontFamily: 'sans-serif', fontSize: '14px', fontStyle: 'bold', color: r.sub.includes(tr('가능')) || r.sub.includes('!') ? '#1f8a48' : '#5a6688' }).setOrigin(0, 0.5));
       const row = s.add.container(x, ry, parts).setScale(0).setDepth(5);
       s.tweens.add({ targets: row, scale: 1, delay: 350 + i * 220, duration: 260, ease: 'Back.easeOut', onStart: () => sfx(s, 'coin', 1 + i * 0.1) });
     });
@@ -122,7 +123,7 @@ export function chestPopup(s: Phaser.Scene, loot: ChestLoot, unitName: (k: strin
   const dim = s.add.rectangle(640, 360, 4000, 720, 0x000000, 0.6).setDepth(Z).setInteractive();
   chestCard(s, 640, 340, loot, unitName, Z + 1);
   const close = s.add
-    .text(640, 528, '닫기', { fontFamily: 'sans-serif', fontSize: '22px', fontStyle: 'bold', color: '#ffffff', backgroundColor: '#4a8bff', padding: { x: 26, y: 8 } })
+    .text(640, 528, tr('닫기'), { fontFamily: 'sans-serif', fontSize: '22px', fontStyle: 'bold', color: '#ffffff', backgroundColor: '#4a8bff', padding: { x: 26, y: 8 } })
     .setOrigin(0.5)
     .setDepth(Z + 20)
     .setInteractive({ useHandCursor: true });

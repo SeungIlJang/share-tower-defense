@@ -4,6 +4,7 @@
  */
 import type { StageData } from '../types';
 import { isBoss, worldBoss } from './bosses';
+import { tr } from './i18n';
 
 export const WEEKLY_SEC = 90; // 한 판 제한 시간
 export const WEEKLY_UNLOCK = 10; // 10관문(첫 월드 보스)을 깨면 열림
@@ -36,7 +37,7 @@ export function weeklyStageId(clearedMax: number): number {
 /** 관문 데이터 — 원래 보스는 빼고(주간 보스가 따로 나옴), 일반 적 웨이브만 */
 export function weeklyStage(base: StageData): StageData {
   const waves = base.waves.map((w) => ({ ...w, enemies: w.enemies.filter((e) => !isBoss(e.type)) })).filter((w) => w.enemies.length);
-  return { ...base, name: '👑 주간 보스', waves };
+  return { ...base, name: tr('👑 주간 보스'), waves };
 }
 
 /** 지금까지 달성한 단계 수 */

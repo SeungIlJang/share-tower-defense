@@ -1,3 +1,4 @@
+import { tr } from './i18n';
 /**
  * 🎁 보물 상자 + 🃏 유닛 카드 조각 — 순수 로직(Vitest 검증). 계획: docs/hit-plan.md C
  * 관문을 깨면 상자(별·보스·첫 클리어로 등급 결정). 열면 골드 + 이번 판에 많이 쓴 유닛의 카드 조각.
@@ -17,10 +18,10 @@ export interface ChestDef {
 }
 
 export const CHESTS: ChestDef[] = [
-  { name: '나무 상자', icon: '🪵', color: 0x9a6a3a, band: 0x5a3a1a, gold: 40, shards: 4, stacks: 1 },
-  { name: '은 상자', icon: '🥈', color: 0xb8c4d8, band: 0x6a7a98, gold: 100, shards: 8, stacks: 2 },
-  { name: '금 상자', icon: '🥇', color: 0xffc93a, band: 0xc07a00, gold: 220, shards: 14, stacks: 2 },
-  { name: '전설 상자', icon: '💜', color: 0xb07aff, band: 0x5a2ad8, gold: 500, shards: 24, stacks: 3 },
+  { name: tr('나무 상자'), icon: '🪵', color: 0x9a6a3a, band: 0x5a3a1a, gold: 40, shards: 4, stacks: 1 },
+  { name: tr('은 상자'), icon: '🥈', color: 0xb8c4d8, band: 0x6a7a98, gold: 100, shards: 8, stacks: 2 },
+  { name: tr('금 상자'), icon: '🥇', color: 0xffc93a, band: 0xc07a00, gold: 220, shards: 14, stacks: 2 },
+  { name: tr('전설 상자'), icon: '💜', color: 0xb07aff, band: 0x5a2ad8, gold: 500, shards: 24, stacks: 3 },
 ];
 
 /** 관문 클리어 상자 등급 — 별 수(1~3 → 나무·은·금), 처음 깬 보스 관문 +1(월드 보스 = 전설), 다시 하기 = 나무 */

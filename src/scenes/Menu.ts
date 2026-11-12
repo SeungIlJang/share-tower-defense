@@ -14,6 +14,7 @@ import { goldMultFor } from '../systems/worlds';
 import { chestPopup } from '../ui/Chest';
 import unitsData from '../data/units.json';
 import { PARADE_ALLY, PARADE_ENEMY } from '../systems/assetLoad';
+import { LANG, LANGS, setLang, tr } from '../systems/i18n';
 
 /** 메인 화면 행진에 나오는 아군(오른쪽으로) / 적(왼쪽으로) */
 
@@ -31,23 +32,24 @@ export class MenuScene extends Phaser.Scene {
     this.drawTitle();
 
     // 버튼
-    cuteButton(this, 640, 420, 260, 78, '▶  시작', 0x4a8bff, 0x2a5fd0, '34px', () => this.scene.start('StageSelect'));
+    cuteButton(this, 640, 420, 260, 78, tr('▶  시작'), 0x4a8bff, 0x2a5fd0, '34px', () => this.scene.start('StageSelect'));
     if (meta.canFirstWin()) {
       // 🌅 오늘 첫 승리 상자 — 아직 안 받았으면 시작 버튼 아래에서 살랑살랑
       const fw = this.add
-        .text(640, 474, '🌅 오늘 첫 승리하면 🎁 은 상자!', { fontFamily: 'sans-serif', fontSize: '18px', fontStyle: 'bold', color: '#3a2a10', backgroundColor: '#fff4c8', padding: { x: 12, y: 5 } })
+        .text(640, 474, tr('🌅 오늘 첫 승리하면 🎁 은 상자!'), { fontFamily: 'sans-serif', fontSize: '18px', fontStyle: 'bold', color: '#3a2a10', backgroundColor: '#fff4c8', padding: { x: 12, y: 5 } })
         .setOrigin(0.5)
         .setDepth(2);
       this.tweens.add({ targets: fw, y: 470, duration: 700, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
     }
-    cuteButton(this, 310, 520, 200, 58, '🔧 강화', 0xffc94a, 0xd8962a, '24px', () => this.scene.start('Upgrade', {}));
-    const reward = cuteButton(this, 530, 520, 200, 58, '🎁 보상', 0x5cd88a, 0x2fa25a, '24px', () => this.openRewards());
-    const mission = cuteButton(this, 750, 520, 200, 58, '📋 미션', 0xff8ab0, 0xd85a88, '24px', () => this.openMissions('daily'));
-    const codex = cuteButton(this, 970, 520, 200, 58, '📖 도감', 0x7a9aff, 0x4a6ad8, '24px', () => this.scene.start('Codex'));
+    cuteButton(this, 310, 520, 200, 58, tr('🔧 강화'), 0xffc94a, 0xd8962a, '24px', () => this.scene.start('Upgrade', {}));
+    const reward = cuteButton(this, 530, 520, 200, 58, tr('🎁 보상'), 0x5cd88a, 0x2fa25a, '24px', () => this.openRewards());
+    const mission = cuteButton(this, 750, 520, 200, 58, tr('📋 미션'), 0xff8ab0, 0xd85a88, '24px', () => this.openMissions('daily'));
+    const codex = cuteButton(this, 970, 520, 200, 58, tr('📖 도감'), 0x7a9aff, 0x4a6ad8, '24px', () => this.scene.start('Codex'));
     if (meta.hasCodexClaim()) this.badge(codex);
 
     // 받을 게 있으면 뱃지(+ 보상은 자동 오픈)
     this.titleChip();
+    this.langButton();
     void showMenuBanner(); // 🪧 메인 화면 하단 배너(다른 화면으로 가면 치움)
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => void hideBanner());
     if (meta.canClaimDaily() || meta.pendingIdle() > 0 || meta.canFreeChest()) this.badge(reward);
@@ -59,12 +61,12 @@ export class MenuScene extends Phaser.Scene {
 
   /** 🛠️ 개발자 모드 비밀번호(숫자 키패드) */
   private askDevPin(): void {
-    const kp = openKeypad(this, { title: '🛠️ 개발자 모드', mask: true, maxLen: DEV_PIN_LEN, hint: '비밀번호를 입력하세요' }, (pin) => {
+    const kp = openKeypad(this, { title: tr('🛠️ 개발자 모드'), mask: true, maxLen: DEV_PIN_LEN, hint: tr('비밀번호를 입력하세요') }, (pin) => {
       void checkDevPin(pin).then((ok) => {
         if (ok) {
           kp.close();
           this.scene.start('Dev');
-        } else kp.shake('비밀번호가 틀렸어요');
+        } else kp.shake(tr('비밀번호가 틀렸어요'));
       });
     });
   }
@@ -89,15 +91,15 @@ export class MenuScene extends Phaser.Scene {
     g.fillStyle(0xffffff, 0.97).fillRoundedRect(330, 58, 620, 600, 34);
     g.lineStyle(5, 0xff8ab0, 1).strokeRoundedRect(330, 58, 620, 600, 34);
     layer.add([dim, g]);
-    layer.add(this.add.text(640, 100, '📋 미션', { fontFamily: 'sans-serif', fontSize: '32px', fontStyle: 'bold', color: '#d85a88' }).setOrigin(0.5));
-    const goldLbl = this.add.text(640, 136, `보유 🪙 ${meta.gold}`, { fontFamily: 'sans-serif', fontSize: '17px', color: '#a07a20' }).setOrigin(0.5);
+    layer.add(this.add.text(640, 100, tr('📋 미션'), { fontFamily: 'sans-serif', fontSize: '32px', fontStyle: 'bold', color: '#d85a88' }).setOrigin(0.5));
+    const goldLbl = this.add.text(640, 136, tr('보유 🪙 {0}', meta.gold), { fontFamily: 'sans-serif', fontSize: '17px', color: '#a07a20' }).setOrigin(0.5);
     layer.add(goldLbl);
 
     // 탭
     (
       [
-        ['daily', '☀️ 오늘의 미션', 530],
-        ['ach', '🏅 업적', 750],
+        ['daily', tr('☀️ 오늘의 미션'), 530],
+        ['ach', tr('🏅 업적'), 750],
       ] as const
     ).forEach(([key, label, x]) => {
       const on = key === tab;
@@ -158,7 +160,7 @@ export class MenuScene extends Phaser.Scene {
           .text(372 + bw + 10, y + (tab === 'daily' ? 15 : 11), `${p} / ${m.goal}`, { fontFamily: 'sans-serif', fontSize: '13px', color: '#8a7a90' })
           .setOrigin(0, 0.5)
       );
-      const label = claimed ? '✅ 완료' : done ? `받기 🪙${m.reward}` : `🪙${m.reward}`;
+      const label = claimed ? tr('✅ 완료') : done ? tr('받기 🪙{0}', m.reward) : `🪙${m.reward}`;
       const btn = this.add
         .text(860, y, label, {
           fontFamily: 'sans-serif',
@@ -185,7 +187,7 @@ export class MenuScene extends Phaser.Scene {
       layer.add(btn);
     });
     if (tab === 'daily') {
-      layer.add(this.add.text(640, 560, '매일 자정에 새 미션으로 바뀌어요', { fontFamily: 'sans-serif', fontSize: '14px', color: '#a090a0' }).setOrigin(0.5));
+      layer.add(this.add.text(640, 560, tr('매일 자정에 새 미션으로 바뀌어요'), { fontFamily: 'sans-serif', fontSize: '14px', color: '#a090a0' }).setOrigin(0.5));
     }
 
     const close = this.add.text(918, 92, '✕', { fontFamily: 'sans-serif', fontSize: '30px', color: '#d85a88' }).setOrigin(0.5).setInteractive({ useHandCursor: true });
@@ -241,7 +243,7 @@ export class MenuScene extends Phaser.Scene {
   /** 통통 튀는 제목 + 부제 */
   private drawTitle(): void {
     const title = this.add
-      .text(640, 190, '모두의 타워디펜스', {
+      .text(640, 190, tr('모두의 타워디펜스'), {
         fontFamily: 'sans-serif',
         fontSize: '72px',
         fontStyle: 'bold',
@@ -254,7 +256,7 @@ export class MenuScene extends Phaser.Scene {
     this.tweens.add({ targets: title, y: 180, scaleX: 1.03, scaleY: 1.03, duration: 1100, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
 
     const sub = this.add
-      .text(640, 278, '⚔️  12명의 영웅과 함께 마을을 지켜요!  🛡️', {
+      .text(640, 278, tr('⚔️  12명의 영웅과 함께 마을을 지켜요!  🛡️'), {
         fontFamily: 'sans-serif',
         fontSize: '22px',
         fontStyle: 'bold',
@@ -264,6 +266,27 @@ export class MenuScene extends Phaser.Scene {
       })
       .setOrigin(0.5);
     this.tweens.add({ targets: sub, angle: { from: -1.2, to: 1.2 }, duration: 1600, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
+  }
+
+  /** 🌐 언어 — 오른쪽 위, 누르면 한국어·English·日本語 고르기(고르면 새로고침) */
+  private langButton(): void {
+    const cur = LANGS.find((l) => l.key === LANG)?.label ?? 'English';
+    const btn = cuteButton(this, 1150, 40, 190, 46, `🌐 ${cur}`, 0xffffff, 0xc8d0e0, '20px', () => {
+      const layer = this.add.container(0, 0).setDepth(100);
+      const dim = this.add.rectangle(640, 360, VIEW_W, 720, 0x000000, 0.45).setInteractive();
+      dim.on('pointerdown', () => layer.destroy());
+      const box = this.add.graphics();
+      box.fillStyle(0xffffff, 1).fillRoundedRect(440, 170, 400, 380, 28);
+      box.lineStyle(6, 0x7a9aff, 1).strokeRoundedRect(440, 170, 400, 380, 28);
+      layer.add([dim, box, this.add.text(640, 220, '🌐 Language', { fontFamily: 'sans-serif', fontSize: '30px', fontStyle: 'bold', color: '#4a6ad8' }).setOrigin(0.5)]);
+      LANGS.forEach((l, i) => {
+        const on = l.key === LANG;
+        const b = cuteButton(this, 640, 300 + i * 82, 300, 62, on ? `✔ ${l.label}` : l.label, on ? 0x7a9aff : 0xeef2ff, on ? 0x4a6ad8 : 0xc8d0e0, '26px', () => (on ? layer.destroy() : setLang(l.key)));
+        if (!on) (b.list[1] as Phaser.GameObjects.Text).setColor('#3a4a7a');
+        layer.add(b);
+      });
+    });
+    (btn.list[1] as Phaser.GameObjects.Text).setColor('#4a3a8a');
   }
 
   /** 🏷️ 칭호 — 왼쪽 위 이름표(새 칭호면 빨간 점), 누르면 고르기 */
@@ -276,7 +299,7 @@ export class MenuScene extends Phaser.Scene {
     this.chipDot = null;
     const name = titleName(meta.title);
     const has = meta.titles.length > 0;
-    const chip = cuteButton(this, 150, 40, 250, 46, name ?? (has ? '🏷️ 칭호 달기' : '🏷️ 칭호'), 0xffffff, 0xc8d0e0, name ? '19px' : '20px', () => this.openTitles());
+    const chip = cuteButton(this, 150, 40, 250, 46, name ?? (has ? tr('🏷️ 칭호 달기') : tr('🏷️ 칭호')), 0xffffff, 0xc8d0e0, name ? '19px' : '20px', () => this.openTitles());
     (chip.list[1] as Phaser.GameObjects.Text).setColor('#4a3a8a');
     if (meta.newTitles.length) this.chipDot = this.badge(chip);
     this.chip = chip;
@@ -289,8 +312,8 @@ export class MenuScene extends Phaser.Scene {
     const g = this.add.graphics();
     g.fillStyle(0xffffff, 0.97).fillRoundedRect(140, 30, 1000, 660, 36);
     g.lineStyle(6, 0xa07aff, 1).strokeRoundedRect(140, 30, 1000, 660, 36);
-    layer.add([dim, g, this.add.text(640, 76, '🏷️ 칭호', { fontFamily: 'sans-serif', fontSize: '40px', fontStyle: 'bold', color: '#7a4ad8' }).setOrigin(0.5)]);
-    layer.add(this.add.text(640, 116, `${meta.titles.length} / ${TITLES.length}  ·  얻은 칭호를 눌러 달아요`, { fontFamily: 'sans-serif', fontSize: '18px', fontStyle: 'bold', color: '#8a7aa8' }).setOrigin(0.5));
+    layer.add([dim, g, this.add.text(640, 76, tr('🏷️ 칭호'), { fontFamily: 'sans-serif', fontSize: '40px', fontStyle: 'bold', color: '#7a4ad8' }).setOrigin(0.5)]);
+    layer.add(this.add.text(640, 116, tr('{0} / {1}  ·  얻은 칭호를 눌러 달아요', meta.titles.length, TITLES.length), { fontFamily: 'sans-serif', fontSize: '18px', fontStyle: 'bold', color: '#8a7aa8' }).setOrigin(0.5));
     const earned = new Set(meta.titles);
     TITLES.forEach((t, i) => {
       const col = i % 3;
@@ -305,7 +328,7 @@ export class MenuScene extends Phaser.Scene {
       bg.lineStyle(3, cur ? 0xe8a000 : on ? 0xa07aff : 0xd0d4dc, 1).strokeRoundedRect(-148, -38, 296, 76, 18);
       c.add(bg);
       c.add(this.add.text(0, -12, on ? t.name : `🔒 ${t.name.replace(/^\S+\s/, '')}`, { fontFamily: 'sans-serif', fontSize: '21px', fontStyle: 'bold', color: on ? '#3a2a6a' : '#9aa0b0' }).setOrigin(0.5));
-      c.add(this.add.text(0, 18, cur ? '✔ 달고 있어요' : t.how, { fontFamily: 'sans-serif', fontSize: '14px', fontStyle: 'bold', color: cur ? '#8a5a00' : '#8a92a8' }).setOrigin(0.5));
+      c.add(this.add.text(0, 18, cur ? tr('✔ 달고 있어요') : t.how, { fontFamily: 'sans-serif', fontSize: '14px', fontStyle: 'bold', color: cur ? '#8a5a00' : '#8a92a8' }).setOrigin(0.5));
       if (on) {
         const hit = this.add.rectangle(0, 0, 296, 76, 0xffffff, 0.001).setInteractive({ useHandCursor: true });
         hit.on('pointerdown', () => {
@@ -338,8 +361,8 @@ export class MenuScene extends Phaser.Scene {
     g.fillStyle(0xffffff, 0.97).fillRoundedRect(160, 22, 960, 672, 40);
     g.lineStyle(6, 0x5cd88a, 1).strokeRoundedRect(160, 22, 960, 672, 40);
     layer.add([dim, g]);
-    const title = this.add.text(640, 70, '🎁 보상', { fontFamily: 'sans-serif', fontSize: '46px', fontStyle: 'bold', color: '#2fa25a' }).setOrigin(0.5);
-    const goldLbl = this.add.text(640, 118, `보유 🪙 ${meta.gold}`, { fontFamily: 'sans-serif', fontSize: '26px', fontStyle: 'bold', color: '#c08a20' }).setOrigin(0.5);
+    const title = this.add.text(640, 70, tr('🎁 보상'), { fontFamily: 'sans-serif', fontSize: '46px', fontStyle: 'bold', color: '#2fa25a' }).setOrigin(0.5);
+    const goldLbl = this.add.text(640, 118, tr('보유 🪙 {0}', meta.gold), { fontFamily: 'sans-serif', fontSize: '26px', fontStyle: 'bold', color: '#c08a20' }).setOrigin(0.5);
     layer.add([title, goldLbl]);
     this.tweens.add({ targets: title, y: 64, duration: 900, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
 
@@ -370,22 +393,22 @@ export class MenuScene extends Phaser.Scene {
         c.add(bg);
         c.add(this.add.text(0, -12, done ? '✔' : '🪙', { fontSize: done ? '36px' : '30px', color: '#ffffff' }).setOrigin(0.5));
         c.add(this.add.text(0, 22, `${dailyAmount(i)}`, { fontFamily: 'sans-serif', fontSize: '20px', fontStyle: 'bold', color: done ? '#ffffff' : '#8a6a20' }).setOrigin(0.5));
-        c.add(this.add.text(0, 68, `${i + 1}일`, { fontFamily: 'sans-serif', fontSize: '22px', fontStyle: 'bold', color: '#5a7a6a' }).setOrigin(0.5));
+        c.add(this.add.text(0, 68, tr('{0}일', i + 1), { fontFamily: 'sans-serif', fontSize: '22px', fontStyle: 'bold', color: '#5a7a6a' }).setOrigin(0.5));
         if (isToday) this.tweens.add({ targets: c, scale: 1.1, duration: 450, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
         layer.add(c);
         dayDots.push(c);
       }
-      dailyTitle.setText(`📅 일일 출석  ·  연속 ${meta.dailyDayNumber()}일째`);
+      dailyTitle.setText(tr('📅 일일 출석  ·  연속 {0}일째', meta.dailyDayNumber()));
     };
     drawDays();
-    const dailyBtn = cuteButton(this, 455, 396, 320, 66, canDaily ? '오늘 출석 받기!' : '내일 또 만나요 ⏰', canDaily ? 0x5cd88a : 0xc0c8d0, canDaily ? 0x2fa25a : 0x9098a8, '28px', () => {
+    const dailyBtn = cuteButton(this, 455, 396, 320, 66, canDaily ? tr('오늘 출석 받기!') : tr('내일 또 만나요 ⏰'), canDaily ? 0x5cd88a : 0xc0c8d0, canDaily ? 0x2fa25a : 0x9098a8, '28px', () => {
       const got = meta.claimDaily();
       if (got <= 0) return;
       sfx(this, 'coin', 2);
       this.floatGold(640, 230, got);
-      goldLbl.setText(`보유 🪙 ${meta.gold}`);
+      goldLbl.setText(tr('보유 🪙 {0}', meta.gold));
       drawDays();
-      (dailyBtn.list[1] as Phaser.GameObjects.Text).setText('내일 또 만나요 ⏰');
+      (dailyBtn.list[1] as Phaser.GameObjects.Text).setText(tr('내일 또 만나요 ⏰'));
       dailyBtn.disableInteractive().setAlpha(0.7);
     });
     dailyBtn.setDepth(101);
@@ -393,21 +416,21 @@ export class MenuScene extends Phaser.Scene {
     layer.add(dailyBtn);
     // 📺 오늘의 무료 상자 — 하루 1번, 광고 보고 은 상자
     const freeOk = meta.canFreeChest();
-    const freeBtn = cuteButton(this, 825, 396, 330, 66, freeOk ? '📺 무료 은 상자 받기' : '무료 상자 내일 또 ⏰', freeOk ? 0xa07aff : 0xc0c8d0, freeOk ? 0x7a4ad8 : 0x9098a8, '24px', () => {
+    const freeBtn = cuteButton(this, 825, 396, 330, 66, freeOk ? tr('📺 무료 은 상자 받기') : tr('무료 상자 내일 또 ⏰'), freeOk ? 0xa07aff : 0xc0c8d0, freeOk ? 0x7a4ad8 : 0x9098a8, '24px', () => {
       if (!meta.canFreeChest()) return;
       freeBtn.disableInteractive();
-      (freeBtn.list[1] as Phaser.GameObjects.Text).setText('⏳ 광고…');
+      (freeBtn.list[1] as Phaser.GameObjects.Text).setText(tr('⏳ 광고…'));
       void showRewarded('free_chest').then((ok) => {
         if (!ok) {
-          (freeBtn.list[1] as Phaser.GameObjects.Text).setText('📺 무료 은 상자 받기');
+          (freeBtn.list[1] as Phaser.GameObjects.Text).setText(tr('📺 무료 은 상자 받기'));
           freeBtn.setInteractive({ useHandCursor: true });
           return;
         }
         meta.markFreeChest();
-        (freeBtn.list[1] as Phaser.GameObjects.Text).setText('무료 상자 내일 또 ⏰');
+        (freeBtn.list[1] as Phaser.GameObjects.Text).setText(tr('무료 상자 내일 또 ⏰'));
         freeBtn.setAlpha(0.7);
         const loot = grantNewChest(1, goldMultFor(Math.max(1, meta.clearedMax)));
-        chestPopup(this, loot, (k) => (unitsData as Record<string, { name: string }>)[k]?.name ?? k, () => goldLbl.setText(`보유 🪙 ${meta.gold}`));
+        chestPopup(this, loot, (k) => (unitsData as Record<string, { name: string }>)[k]?.name ?? k, () => goldLbl.setText(tr('보유 🪙 {0}', meta.gold)));
       });
     });
     freeBtn.setDepth(101);
@@ -417,7 +440,7 @@ export class MenuScene extends Phaser.Scene {
     // 💤 방치 보상 — 쌓인 시간 막대
     card(462, 210, 0xfff6e0);
     const IDLE_CAP_MS = 8 * 3600_000;
-    const idleTitle = this.add.text(220, 500, '💤 방치 보상  (최대 8시간)', { fontFamily: 'sans-serif', fontSize: '28px', fontStyle: 'bold', color: '#8a5a10' }).setOrigin(0, 0.5);
+    const idleTitle = this.add.text(220, 500, tr('💤 방치 보상  (최대 8시간)'), { fontFamily: 'sans-serif', fontSize: '28px', fontStyle: 'bold', color: '#8a5a10' }).setOrigin(0, 0.5);
     const bar = this.add.graphics();
     const idleDesc = this.add.text(220, 620, '', { fontFamily: 'sans-serif', fontSize: '25px', fontStyle: 'bold', color: '#9a7a40' }).setOrigin(0, 0.5);
     layer.add([idleTitle, bar, idleDesc]);
@@ -427,18 +450,18 @@ export class MenuScene extends Phaser.Scene {
       bar.fillStyle(0xf3e2b8, 1).fillRoundedRect(220, 548, 580, 30, 15);
       bar.fillStyle(0xffb02e, 1).fillRoundedRect(220, 548, Math.max(30, 580 * ratio), 30, 15);
       const pend = meta.pendingIdle();
-      idleDesc.setText(pend > 0 ? `그동안 모은 골드 🪙 ${pend}` : '조금 더 기다리면 쌓여요 😴');
+      idleDesc.setText(pend > 0 ? tr('그동안 모은 골드 🪙 {0}', pend) : tr('조금 더 기다리면 쌓여요 😴'));
     };
     drawIdle();
     const idleOk = meta.pendingIdle() > 0;
-    const idleBtn = cuteButton(this, 945, 584, 230, 70, idleOk ? '받기!' : '쌓는 중…', idleOk ? 0xffb02e : 0xc0c8d0, idleOk ? 0xd8862a : 0x9098a8, '28px', () => {
+    const idleBtn = cuteButton(this, 945, 584, 230, 70, idleOk ? tr('받기!') : tr('쌓는 중…'), idleOk ? 0xffb02e : 0xc0c8d0, idleOk ? 0xd8862a : 0x9098a8, '28px', () => {
       const got = meta.claimIdle();
       if (got <= 0) return;
       sfx(this, 'coin', 2);
       this.floatGold(945, 540, got);
-      goldLbl.setText(`보유 🪙 ${meta.gold}`);
+      goldLbl.setText(tr('보유 🪙 {0}', meta.gold));
       drawIdle();
-      (idleBtn.list[1] as Phaser.GameObjects.Text).setText('쌓는 중…');
+      (idleBtn.list[1] as Phaser.GameObjects.Text).setText(tr('쌓는 중…'));
       idleBtn.disableInteractive().setAlpha(0.7);
     });
     idleBtn.setDepth(101);

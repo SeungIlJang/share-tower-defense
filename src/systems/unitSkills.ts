@@ -1,3 +1,4 @@
+import { tr } from './i18n';
 /**
  * 유닛 고유 스킬(영구 강화 Lv1부터) — 순수 로직, Vitest 검증.
  * 일반 공격 N번마다 자동 발동. 레벨이 오르면 더 자주, 더 세게.
@@ -22,18 +23,18 @@ export interface UnitSkill {
 }
 
 export const UNIT_SKILLS: Record<string, UnitSkill> = {
-  soldier: { name: '회전 베기', kind: 'aoe', radius: 70, color: 0x6ab8ff },
-  archer: { name: '관통 화살', kind: 'pierce', radius: 220, color: 0x9aff5a },
-  knight: { name: '철벽의 의지', kind: 'guard', radius: 55, color: 0x9ab4ff },
-  mage: { name: '마력 폭발', kind: 'aoe', radius: 110, color: 0xd58cff },
-  rogue: { name: '그림자 베기', kind: 'single', radius: 0, color: 0x9a5aff },
-  cleric: { name: '치유의 빛', kind: 'heal', radius: 150, color: 0x5cff9e },
-  earthmage: { name: '대지 가시', kind: 'slow', radius: 95, color: 0xd8903a },
-  darkmage: { name: '블랙홀', kind: 'pull', radius: 105, color: 0x6a2aff },
-  spear: { name: '연속 찌르기', kind: 'pierce', radius: 120, color: 0x4ad0e0 },
-  shield: { name: '방패 강타', kind: 'push', radius: 50, color: 0xd8b04a },
-  cavalry: { name: '돌진', kind: 'dash', radius: 140, color: 0xff6a4a },
-  cannon: { name: '포격', kind: 'aoe', radius: 150, color: 0xffa94d },
+  soldier: { name: tr('회전 베기'), kind: 'aoe', radius: 70, color: 0x6ab8ff },
+  archer: { name: tr('관통 화살'), kind: 'pierce', radius: 220, color: 0x9aff5a },
+  knight: { name: tr('철벽의 의지'), kind: 'guard', radius: 55, color: 0x9ab4ff },
+  mage: { name: tr('마력 폭발'), kind: 'aoe', radius: 110, color: 0xd58cff },
+  rogue: { name: tr('그림자 베기'), kind: 'single', radius: 0, color: 0x9a5aff },
+  cleric: { name: tr('치유의 빛'), kind: 'heal', radius: 150, color: 0x5cff9e },
+  earthmage: { name: tr('대지 가시'), kind: 'slow', radius: 95, color: 0xd8903a },
+  darkmage: { name: tr('블랙홀'), kind: 'pull', radius: 105, color: 0x6a2aff },
+  spear: { name: tr('연속 찌르기'), kind: 'pierce', radius: 120, color: 0x4ad0e0 },
+  shield: { name: tr('방패 강타'), kind: 'push', radius: 50, color: 0xd8b04a },
+  cavalry: { name: tr('돌진'), kind: 'dash', radius: 140, color: 0xff6a4a },
+  cannon: { name: tr('포격'), kind: 'aoe', radius: 150, color: 0xffa94d },
 };
 
 /** 스킬 단일 피해 추가 배율(그림자 베기처럼 한 명만 노리는 스킬) */

@@ -9,15 +9,16 @@ import { PARADE_ALLY, deferredType, loadingBar, stageEnemyTypes } from '../syste
 import { STAGES } from '../systems/worlds';
 import unitsData from '../data/units.json';
 import { allyCastleTier, castleLook } from '../systems/castle';
+import { tr } from '../systems/i18n';
 
 /** 기다리는 동안 보여 줄 팁 */
 const TIPS = [
-  '💡 초록 칸에 맞춰 소환하면 PERFECT — 더 세게 나와요',
-  '💡 같은 유닛을 강화하면 Lv5·10·20에 진화해요',
-  '💡 성을 누르면 성 특수 공격!',
-  '💡 상성이 맞으면 피해 ×1.5 — "유리!" 표시를 보세요',
-  '💡 매주 월요일 새 주간 보스가 나타나요',
-  '💡 보물 상자 조각으로 진화하고 랭크를 올려요',
+  tr('💡 초록 칸에 맞춰 소환하면 PERFECT — 더 세게 나와요'),
+  tr('💡 같은 유닛을 강화하면 Lv5·10·20에 진화해요'),
+  tr('💡 성을 누르면 성 특수 공격!'),
+  tr('💡 상성이 맞으면 피해 ×1.5 — "유리!" 표시를 보세요'),
+  tr('💡 매주 월요일 새 주간 보스가 나타나요'),
+  tr('💡 보물 상자 조각으로 진화하고 랭크를 올려요'),
 ];
 
 /**
@@ -33,13 +34,13 @@ export class PreloadScene extends Phaser.Scene {
   private bar!: { set: (v: number) => void; destroy: () => void };
 
   preload(): void {
-    this.add.text(640, 250, '모두의 타워디펜스', { fontFamily: 'sans-serif', fontSize: '40px', fontStyle: 'bold', color: '#ffd34d', stroke: '#3a2a00', strokeThickness: 6 }).setOrigin(0.5);
+    this.add.text(640, 250, tr('모두의 타워디펜스'), { fontFamily: 'sans-serif', fontSize: '40px', fontStyle: 'bold', color: '#ffd34d', stroke: '#3a2a00', strokeThickness: 6 }).setOrigin(0.5);
     this.add.text(640, 430, TIPS[Math.floor(Math.random() * TIPS.length)], { fontFamily: 'sans-serif', fontSize: '18px', color: '#8892b0' }).setOrigin(0.5);
     this.bar = loadingBar(this, 360);
     // 1단계(매니페스트·소리) 0~25% → 2단계(그림) 25~100%
     this.load.on(Phaser.Loader.Events.PROGRESS, (v: number) => this.bar.set(v * 0.25));
     this.load.on(Phaser.Loader.Events.FILE_LOAD_ERROR, (file: Phaser.Loader.File) => {
-      console.warn(`[sprites] 로드 실패: ${file.src}`);
+      console.warn(tr('[sprites] 로드 실패: {0}', file.src));
     });
     this.load.json('spriteManifest', MANIFEST_URL);
     loadAudio(this); // 🔊 효과음(압축본)·메뉴 배경음

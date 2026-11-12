@@ -45,6 +45,27 @@
     <div class="s">모두의 타워디펜스는 가로 화면 게임이에요.<br/>폰을 옆으로 돌리면 꽉 찬 화면으로 즐길 수 있어요.<br/>(설치한 앱은 자동으로 가로가 돼요)</div>
   </div>
   <script>
+    // 🌐 가로 안내 문구 — 게임과 같은 규칙(저장한 언어 → 휴대폰 언어, ko·ja 외엔 영어)
+    (function () {
+      var l = null;
+      try { l = localStorage.getItem('ld_lang'); } catch (e) {}
+      if (l !== 'ko' && l !== 'en' && l !== 'ja') {
+        var p = ((navigator.languages && navigator.languages[0]) || navigator.language || 'en').slice(0, 2).toLowerCase();
+        l = p === 'ko' || p === 'ja' ? p : 'en';
+      }
+      var T = {
+        en: ['Please rotate your phone', "Everyone's Tower Defense is a landscape game.<br/>Turn your phone sideways for full screen.<br/>(The installed app turns landscape automatically)", "Everyone's Tower Defense"],
+        ja: ['横向きにしてください', 'みんなのタワーディフェンスは横画面のゲームです。<br/>スマホを横にすると全画面で遊べます。<br/>(インストールしたアプリは自動で横向きになります)', 'みんなのタワーディフェンス']
+      }[l];
+      if (!T) return;
+      document.documentElement.lang = l;
+      document.title = T[2];
+      var r = document.getElementById('rotate');
+      r.querySelector('.t').textContent = T[0];
+      r.querySelector('.s').innerHTML = T[1];
+    })();
+  </script>
+  <script>
     // 웹에서 첫 터치 시 전체화면 + 가로 잠금 시도(안드 크롬 지원, iOS 사파리는 미지원 → 안내로 대체)
     (function () {
       var tried = false;

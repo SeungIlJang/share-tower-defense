@@ -14,6 +14,7 @@ import { worldBoss } from '../systems/bosses';
 import { WEEKLY_STEPS, WEEKLY_UNLOCK, weekIndex, weeklyBoss, weeklyStepOf } from '../systems/weekly';
 import enemiesData from '../data/enemies.json';
 import { preloadNeeded } from '../systems/assetLoad';
+import { tr } from '../systems/i18n';
 
 const stages = STAGES;
 // 🗺️ 월드 10개 · 관문 100개 — src/systems/worlds.ts
@@ -43,7 +44,7 @@ export class StageSelectScene extends Phaser.Scene {
     drawSky(this, { stars: 10, theme: W.theme as SkyTheme });
     bgm(this, 'bgm_menu');
 
-    const title = cuteTitle(this, 640, 62, '스테이지 선택', 52);
+    const title = cuteTitle(this, 640, 62, tr('스테이지 선택'), 52);
     this.tweens.add({ targets: title, y: 56, duration: 1200, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
     // 월드 리본
     const ribbon = this.add.graphics();
@@ -54,7 +55,7 @@ export class StageSelectScene extends Phaser.Scene {
     const recLo = recommendedLevel(list[0].id, list[0].enemyMult ?? 1);
     const recHi = recommendedLevel(list[list.length - 1].id, list[list.length - 1].enemyMult ?? 1);
     this.add
-      .text(640, 156, `🎯 권장 유닛 강화 Lv ${recLo}~${recHi}  ·  💰 골드 ×${goldMultFor(list[0].id)}`, { fontFamily: 'sans-serif', fontSize: '15px', fontStyle: 'bold', color: '#ffffff', stroke: '#000000', strokeThickness: 3 })
+      .text(640, 156, tr('🎯 권장 유닛 강화 Lv {0}~{1}  ·  💰 골드 ×{2}', recLo, recHi, goldMultFor(list[0].id)), { fontFamily: 'sans-serif', fontSize: '15px', fontStyle: 'bold', color: '#ffffff', stroke: '#000000', strokeThickness: 3 })
       .setOrigin(0.5);
     // 월드 넘기기 ◀ ▶ — 다음 월드는 앞 월드 마지막 스테이지를 깨야 열림
     const arrow = (x: number, to: number, label: string): void => {
@@ -81,49 +82,49 @@ export class StageSelectScene extends Phaser.Scene {
       sg.fillStyle(0x8a5a2a, 1).fillRect(-4, 0, 8, 46);
       sg.fillStyle(0xc8925a, 1).fillRoundedRect(-62, -30, 124, 40, 10);
       sg.lineStyle(3, 0x6a4020, 1).strokeRoundedRect(-62, -30, 124, 40, 10);
-      sign.add([sg, this.add.text(0, -10, '🏆 최종 관문\n100을 넘어라!', { fontFamily: 'sans-serif', fontSize: '13px', fontStyle: 'bold', color: '#4a2a10', align: 'center' }).setOrigin(0.5)]);
+      sign.add([sg, this.add.text(0, -10, tr('🏆 최종 관문\n100을 넘어라!'), { fontFamily: 'sans-serif', fontSize: '13px', fontStyle: 'bold', color: '#4a2a10', align: 'center' }).setOrigin(0.5)]);
     }
 
     // ♾️ 무한 모드 — 언제든 도전
-    cuteButton(this, 640, 668, 260, 54, '♾️ 무한 모드', 0xa07aff, 0x7a4ad8, '22px', () => this.scene.start('Battle', { stageId: 0, mode: 'endless' }));
+    cuteButton(this, 640, 668, 260, 54, tr('♾️ 무한 모드'), 0xa07aff, 0x7a4ad8, '22px', () => this.scene.start('Battle', { stageId: 0, mode: 'endless' }));
     this.add
-      .text(640, 618, meta.endlessBest > 0 ? `최고 기록 🌊 웨이브 ${meta.endlessBest}` : '끝없는 웨이브에 도전!', { fontFamily: 'sans-serif', fontSize: '15px', fontStyle: 'bold', color: '#5a3aa8', backgroundColor: '#f0e8ffd0', padding: { x: 10, y: 4 } })
+      .text(640, 618, meta.endlessBest > 0 ? tr('최고 기록 🌊 웨이브 {0}', meta.endlessBest) : tr('끝없는 웨이브에 도전!'), { fontFamily: 'sans-serif', fontSize: '15px', fontStyle: 'bold', color: '#5a3aa8', backgroundColor: '#f0e8ffd0', padding: { x: 10, y: 4 } })
       .setOrigin(0.5);
 
     // 📅 오늘의 도전 — 날마다 바뀌는 규칙(3관문을 깨면 열림)
     const open = meta.clearedMax >= DAILY_UNLOCK;
     const rule = dailyRule(meta.today());
     const done = meta.dailyWon === meta.today();
-    const daily = cuteButton(this, 905, 668, 230, 54, open ? '📅 오늘의 도전' : '🔒 오늘의 도전', open ? 0xff9a4a : 0xb0b8c8, open ? 0xd8662a : 0x8890a0, '21px', () => {
+    const daily = cuteButton(this, 905, 668, 230, 54, open ? tr('📅 오늘의 도전') : tr('🔒 오늘의 도전'), open ? 0xff9a4a : 0xb0b8c8, open ? 0xd8662a : 0x8890a0, '21px', () => {
       if (open) this.scene.start('Battle', { stageId: 0, mode: 'daily' });
     });
     this.add
-      .text(905, 618, open ? `${rule.icon} ${rule.name} · 관문 ${dailyStageId(meta.today(), meta.clearedMax)}${done ? ' ✅' : ''}` : `${DAILY_UNLOCK}관문을 깨면 열려요`, { fontFamily: 'sans-serif', fontSize: '15px', fontStyle: 'bold', color: '#a8461a', backgroundColor: '#fff0e0d0', padding: { x: 10, y: 4 } })
+      .text(905, 618, open ? tr('{0} {1} · 관문 {2}{3}', rule.icon, rule.name, dailyStageId(meta.today(), meta.clearedMax), done ? ' ✅' : '') : tr('{0}관문을 깨면 열려요', DAILY_UNLOCK), { fontFamily: 'sans-serif', fontSize: '15px', fontStyle: 'bold', color: '#a8461a', backgroundColor: '#fff0e0d0', padding: { x: 10, y: 4 } })
       .setOrigin(0.5);
     if (open && !done) this.tweens.add({ targets: daily, scale: 1.05, duration: 600, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
 
     // 🗺️ 월드 지도 — 10개 월드 한눈에(별·진행·보스), 눌러서 이동
-    cuteButton(this, 150, 62, 180, 50, '🗺️ 월드 지도', 0x5cd88a, 0x2fa25a, '20px', () => this.openMap());
+    cuteButton(this, 150, 62, 180, 50, tr('🗺️ 월드 지도'), 0x5cd88a, 0x2fa25a, '20px', () => this.openMap());
 
     // 👑 주간 보스 — 일주일 동안 같은 보스, 90초씩 피해를 쌓아 단계 보상(10관문을 깨면 열림)
     const wOpen = meta.clearedMax >= WEEKLY_UNLOCK;
     const wb = weeklyBoss(weekIndex(meta.today()));
     const step = weeklyStepOf(meta.weeklyTotal());
-    const weekly = cuteButton(this, 392, 668, 220, 54, wOpen ? '👑 주간 보스' : '🔒 주간 보스', wOpen ? 0xff5a6e : 0xb0b8c8, wOpen ? 0xc03a4e : 0x8890a0, '21px', () => {
+    const weekly = cuteButton(this, 392, 668, 220, 54, wOpen ? tr('👑 주간 보스') : tr('🔒 주간 보스'), wOpen ? 0xff5a6e : 0xb0b8c8, wOpen ? 0xc03a4e : 0x8890a0, '21px', () => {
       if (wOpen) this.scene.start('Battle', { stageId: 0, mode: 'weekly' });
     });
-    const bossName = (enemiesData as Record<string, { name: string }>)[wb]?.name ?? '보스';
+    const bossName = (enemiesData as Record<string, { name: string }>)[wb]?.name ?? tr('보스');
     this.add
-      .text(392, 618, wOpen ? `${bossName} · ${step}/${WEEKLY_STEPS.length}단계${step >= WEEKLY_STEPS.length ? ' ✅' : ''}` : `${WEEKLY_UNLOCK}관문을 깨면 열려요`, { fontFamily: 'sans-serif', fontSize: '15px', fontStyle: 'bold', color: '#a01a3a', backgroundColor: '#ffe8ecd0', padding: { x: 10, y: 4 } })
+      .text(392, 618, wOpen ? tr('{0} · {1}/{2}단계{3}', bossName, step, WEEKLY_STEPS.length, step >= WEEKLY_STEPS.length ? ' ✅' : '') : tr('{0}관문을 깨면 열려요', WEEKLY_UNLOCK), { fontFamily: 'sans-serif', fontSize: '15px', fontStyle: 'bold', color: '#a01a3a', backgroundColor: '#ffe8ecd0', padding: { x: 10, y: 4 } })
       .setOrigin(0.5);
     if (wOpen && step < WEEKLY_STEPS.length) this.tweens.add({ targets: weekly, scale: 1.05, duration: 700, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
 
     // 하단 버튼
-    cuteButton(this, 150, 668, 180, 54, '🏠 홈', 0x4a8bff, 0x2a5fd0, '22px', () => this.scene.start('Menu'));
+    cuteButton(this, 150, 668, 180, 54, tr('🏠 홈'), 0x4a8bff, 0x2a5fd0, '22px', () => this.scene.start('Menu'));
     this.add
-      .text(1130, 610, `총 ⭐ ${meta.totalStars} / ${stages.length * 3}`, { fontFamily: 'sans-serif', fontSize: '18px', fontStyle: 'bold', color: '#7a5a00', backgroundColor: '#fff3c8', padding: { x: 12, y: 5 } })
+      .text(1130, 610, tr('총 ⭐ {0} / {1}', meta.totalStars, stages.length * 3), { fontFamily: 'sans-serif', fontSize: '18px', fontStyle: 'bold', color: '#7a5a00', backgroundColor: '#fff3c8', padding: { x: 12, y: 5 } })
       .setOrigin(0.5);
-    cuteButton(this, 1130, 668, 180, 54, '🔧 강화', 0xffc94a, 0xd8962a, '22px', () => this.scene.start('Upgrade', {}));
+    cuteButton(this, 1130, 668, 180, 54, tr('🔧 강화'), 0xffc94a, 0xd8962a, '22px', () => this.scene.start('Upgrade', {}));
   }
 
   /** 🗺️ 월드 지도 — 월드 카드 10장(별 · 깬 관문 · 보스 얼굴), 열린 월드는 눌러서 이동 */
@@ -131,9 +132,9 @@ export class StageSelectScene extends Phaser.Scene {
     const layer = this.add.container(0, 0).setDepth(200);
     const dim = this.add.rectangle(640, 360, 4000, 720, 0x0d1424, 0.82).setInteractive();
     layer.add(dim);
-    layer.add(this.add.text(640, 52, '🗺️ 월드 지도', { fontFamily: 'sans-serif', fontSize: '40px', fontStyle: 'bold', color: '#ffffff', stroke: '#2a3a6a', strokeThickness: 6 }).setOrigin(0.5));
+    layer.add(this.add.text(640, 52, tr('🗺️ 월드 지도'), { fontFamily: 'sans-serif', fontSize: '40px', fontStyle: 'bold', color: '#ffffff', stroke: '#2a3a6a', strokeThickness: 6 }).setOrigin(0.5));
     const total = stages.length * 3;
-    layer.add(this.add.text(640, 94, `총 ⭐ ${meta.totalStars} / ${total}   ·   깬 관문 ${meta.clearedMax} / ${stages.length}`, { fontFamily: 'sans-serif', fontSize: '18px', fontStyle: 'bold', color: '#cfe0ff' }).setOrigin(0.5));
+    layer.add(this.add.text(640, 94, tr('총 ⭐ {0} / {1}   ·   깬 관문 {2} / {3}', meta.totalStars, total, meta.clearedMax, stages.length), { fontFamily: 'sans-serif', fontSize: '18px', fontStyle: 'bold', color: '#cfe0ff' }).setOrigin(0.5));
     WORLDS.forEach((W, i) => {
       const col = i % 5;
       const row = Math.floor(i / 5);
@@ -156,7 +157,7 @@ export class StageSelectScene extends Phaser.Scene {
         if (pic) c.add(pic);
       } else c.add(this.add.text(0, -30, '🔒', { fontSize: '54px', padding: { top: 14, bottom: 4 } }).setOrigin(0.5));
       c.add(this.add.text(0, -92, W.name, { fontFamily: 'sans-serif', fontSize: '19px', fontStyle: 'bold', color: '#ffffff', stroke: '#000000', strokeThickness: 4 }).setOrigin(0.5));
-      c.add(this.add.text(0, 60, cleared >= 10 ? '👑 정복!' : `관문 ${cleared} / 10`, { fontFamily: 'sans-serif', fontSize: '17px', fontStyle: 'bold', color: cleared >= 10 ? '#ffe14d' : '#ffffff' }).setOrigin(0.5));
+      c.add(this.add.text(0, 60, cleared >= 10 ? tr('👑 정복!') : tr('관문 {0} / 10', cleared), { fontFamily: 'sans-serif', fontSize: '17px', fontStyle: 'bold', color: cleared >= 10 ? '#ffe14d' : '#ffffff' }).setOrigin(0.5));
       c.add(this.add.text(0, 88, `⭐ ${stars} / 30`, { fontFamily: 'sans-serif', fontSize: '16px', fontStyle: 'bold', color: '#fff3c8' }).setOrigin(0.5));
       if (open) {
         const hit = this.add.rectangle(0, 0, 212, 220, 0xffffff, 0.001).setInteractive({ useHandCursor: true });
@@ -244,7 +245,7 @@ export class StageSelectScene extends Phaser.Scene {
     }
 
     // 이름표
-    const name = boss ? `👑 보스 ${id}` : stage.name;
+    const name = boss ? tr('👑 보스 {0}', id) : stage.name;
     this.add
       .text(p.x, p.y + r + 22, name, { fontFamily: 'sans-serif', fontSize: '15px', fontStyle: 'bold', color: boss ? '#c0303a' : '#2a3a6a', backgroundColor: '#ffffffd0', padding: { x: 8, y: 3 } })
       .setOrigin(0.5);
