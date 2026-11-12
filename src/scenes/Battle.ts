@@ -1761,6 +1761,7 @@ export class BattleScene extends Phaser.Scene {
       energyMax: this.energy.max,
       food: this.usedFood(),
       foodMax: this.foodMax,
+      units: this.units.reduce((n, u) => (u.active ? n + 1 : n), 0), // 👥 지금 전장의 우리 유닛 수(지원군 포함, 영웅 제외)
       radar: {
         w: this.worldW,
         view: this.cameras.main.scrollX,

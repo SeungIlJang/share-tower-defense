@@ -20,6 +20,7 @@ export interface HudState {
   energyMax: number;
   food: number;
   foodMax: number;
+  units?: number; // 👥 전장의 우리 유닛 수
   radar?: RadarState; // 🗺️ 전장 지도(VS 막대 자리)
   afford: Record<string, boolean>; // 유닛별 지금 소환 가능 여부
   cd: Record<string, number>; // ⏱️ 유닛별 소환 대기 남은 비율(0~1)
@@ -651,7 +652,7 @@ export class Hud {
     this.energyFill.setSize(396 * Phaser.Math.Clamp(s.energy / s.energyMax, 0, 1), 18);
     this.energyText.setText(`${Math.floor(s.energy)} / ${s.energyMax}`);
     this.foodFill.setSize(396 * Phaser.Math.Clamp(s.food / s.foodMax, 0, 1), 18);
-    this.foodText.setText(`${s.food} / ${s.foodMax}`);
+    this.foodText.setText(s.units === undefined ? `${s.food} / ${s.foodMax}` : tr('👥 {0}명   ·   🍖 {1} / {2}', s.units, s.food, s.foodMax)); // 유닛 수 + 인구
     this.beatMark?.setX(this.beatX + this.beatW * Phaser.Math.Clamp(s.beat, 0, 1));
     // 특수 무기 게이지(위에서 시계 방향으로 채움) + 발사 가능 깜빡임
     this.weaponBtns.forEach((b) => {
