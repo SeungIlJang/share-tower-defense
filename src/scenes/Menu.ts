@@ -32,14 +32,14 @@ export class MenuScene extends Phaser.Scene {
     this.drawTitle();
 
     // 버튼
-    cuteButton(this, 640, 420, 260, 78, tr('▶  시작'), 0x4a8bff, 0x2a5fd0, '34px', () => this.scene.start('StageSelect'));
+    cuteButton(this, 640, 392, 260, 78, tr('▶  시작'), 0x4a8bff, 0x2a5fd0, '34px', () => this.scene.start('StageSelect'));
     if (meta.canFirstWin()) {
       // 🌅 오늘 첫 승리 상자 — 아직 안 받았으면 시작 버튼 아래에서 살랑살랑
       const fw = this.add
-        .text(640, 474, tr('🌅 오늘 첫 승리하면 🎁 은 상자!'), { fontFamily: 'sans-serif', fontSize: '18px', fontStyle: 'bold', color: '#3a2a10', backgroundColor: '#fff4c8', padding: { x: 12, y: 5 } })
+        .text(640, 464, tr('🌅 오늘 첫 승리하면 🎁 은 상자!'), { fontFamily: 'sans-serif', fontSize: '18px', fontStyle: 'bold', color: '#3a2a10', backgroundColor: '#fff4c8', padding: { x: 12, y: 5 } })
         .setOrigin(0.5)
         .setDepth(2);
-      this.tweens.add({ targets: fw, y: 470, duration: 700, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
+      this.tweens.add({ targets: fw, y: 460, duration: 700, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
     }
     cuteButton(this, 310, 520, 200, 58, tr('🔧 강화'), 0xffc94a, 0xd8962a, '24px', () => this.scene.start('Upgrade', {}));
     const reward = cuteButton(this, 530, 520, 200, 58, tr('🎁 보상'), 0x5cd88a, 0x2fa25a, '24px', () => this.openRewards());
