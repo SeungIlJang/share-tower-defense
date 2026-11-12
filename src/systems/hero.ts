@@ -48,7 +48,7 @@ export function heroStats(stageId: number, enemyMult = 1): UnitStats {
     def: Math.round(8 * g),
     atkSpeed: 1.1,
     range: 50,
-    speed: 110,
+    speed: 132, // 앞뒤 이동(110의 1.2배 — 느리게 느껴져서)
     cost: 0,
     pop: 0,
   };
