@@ -96,19 +96,25 @@ export function cuteButton(
     .setOrigin(0.5);
   const c = scene.add.container(x, y, [g, text]).setDepth(20).setSize(w, h + 6);
   c.setInteractive({ useHandCursor: true });
+  // 이 버튼 위에서 눌렀다 뗄 때만 — 위에 뜬 팝업 ✕를 눌러 닫으면 떼는 순간 뒤 버튼이 눌리던 문제
+  let pressed = false;
   c.on('pointerover', () => scene.tweens.add({ targets: c, scale: 1.06, duration: 120 }));
   c.on('pointerout', () => {
+    pressed = false;
     draw(false);
     text.y = 0;
     scene.tweens.add({ targets: c, scale: 1, duration: 120 });
   });
   c.on('pointerdown', () => {
+    pressed = true;
     draw(true);
     text.y = 5;
   });
   c.on('pointerup', () => {
     draw(false);
     text.y = 0;
+    if (!pressed) return;
+    pressed = false;
     sfx(scene, 'click');
     onClick();
   });
