@@ -148,6 +148,9 @@ const BASE_REACH = REACH + 40; // 커진 기지 앞에서 멈춤
 const BASE_STOP = 55; // 성을 이보다 더 넘어갈 수 없음(성 중심 기준)
 const BASE_FRONT = 75; // 성 앞(등장 위치·밀쳐내기 한계) — 성 중심에서 이만큼
 
+const PAUSE_HINT_RUNS = 3; // ⏸ 정지 버튼 안내를 보여 줄 판 수
+const PAUSE_HINT_MS = 6000; // 〃 보여 주는 시간
+
 export class BattleScene extends Phaser.Scene {
   private stage!: StageData;
   private energy!: ResourceSystem;
@@ -626,7 +629,9 @@ export class BattleScene extends Phaser.Scene {
       this.applySpeed();
     });
     topBtn(1068 + VIEW_OFF, tr('🛒 상점'), '#ffd34d').on('pointerdown', () => this.openShop());
-    topBtn(1170 + VIEW_OFF, tr('⏸ 정지'), '#cfe0ff').on('pointerdown', () => this.openPause());
+    const pauseBtn = topBtn(1170 + VIEW_OFF, tr('⏸ 정지'), '#cfe0ff');
+    pauseBtn.on('pointerdown', () => this.openPause());
+    this.pauseHint(pauseBtn);
     this.slowmo = 1;
     this.applySpeed();
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => (this.anims.globalTimeScale = 1));
@@ -2181,6 +2186,32 @@ export class BattleScene extends Phaser.Scene {
       const p = this.hud.beatPos();
       this.tip.show(k, p.x, p.y, t, { from: 'above', ring: 0, bubbleY: 300 });
     }
+  }
+
+  /** ⏸ 정지 버튼 안내 — 처음 몇 판은 시작할 때 버튼 아래 말풍선(몇 초 뒤 또는 누르면 사라짐) */
+  private pauseHint(btn: Phaser.GameObjects.Text): void {
+    const seen = meta.tips.filter((t) => t.startsWith('pauseHint')).length;
+    if (seen >= PAUSE_HINT_RUNS) return;
+    meta.markTip(`pauseHint${seen + 1}`);
+    const right = btn.x + btn.width / 2;
+    const msg = this.add
+      .text(right, btn.y + 46, tr('⏸ 누르면 게임이 잠깐 멈춰요\n소리 끄기·다시 시작·그만하기도 여기서!'), { fontFamily: 'sans-serif', fontSize: '17px', fontStyle: 'bold', color: '#3a2a10', backgroundColor: '#fff4c8', padding: { x: 12, y: 8 }, align: 'right', lineSpacing: 4 })
+      .setOrigin(1, 0)
+      .setDepth(106);
+    const arrow = this.add.triangle(btn.x, btn.y + 38, 0, 10, 10, 0, 20, 10, 0xfff4c8).setDepth(106);
+    const box = this.add.rectangle(btn.x, btn.y, btn.width + 8, btn.height + 8).setStrokeStyle(3, 0xffe680).setDepth(106);
+    const parts = [msg, arrow, box];
+    this.tweens.add({ targets: box, alpha: 0.2, duration: 450, yoyo: true, repeat: -1 });
+    this.tweens.add({ targets: [msg, arrow], y: '+=5', duration: 600, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
+    let gone = false;
+    const close = (): void => {
+      if (gone) return;
+      gone = true;
+      this.tweens.add({ targets: parts, alpha: 0, duration: 300, onComplete: () => parts.forEach((o) => o.destroy()) });
+    };
+    btn.once('pointerdown', close);
+    msg.setInteractive().once('pointerdown', close);
+    this.time.delayedCall(PAUSE_HINT_MS, close);
   }
 
   /** 🎓 안내한 행동을 했음 → 숨기고 다시 안 보여 줌 */
