@@ -51,9 +51,8 @@ export class DevScene extends Phaser.Scene {
     this.add.rectangle(640, 360, VIEW_W, 720, 0x0d1424);
     this.add.text(640, 40, '🛠️ 개발자 모드', { fontFamily: 'sans-serif', fontSize: '32px', fontStyle: 'bold', color: '#ffd34d' }).setOrigin(0.5);
     this.goldText = this.add.text(1180, 40, '', { fontFamily: 'sans-serif', fontSize: '22px', fontStyle: 'bold', color: '#ffe14d' }).setOrigin(1, 0.5);
-    // 휴대폰 가장자리(둥근 모서리·제스처 영역)에 가리지 않게 안쪽에 + 아래쪽에도 하나 더
+    // 휴대폰 가장자리(둥근 모서리·제스처 영역)에 가리지 않게 안쪽에 — 아래쪽 '메인으로'는 유닛 카드·도감 줄과 겹쳐서 뺌
     this.btn(150, 40, '← 메인', 0x3a7bff, () => this.scene.start('Menu'), 22);
-    this.btn(640, 690, '🏠 메인으로', 0x3a7bff, () => this.scene.start('Menu'), 20);
     TABS.forEach(([key, label], i) => {
       const t = this.add
         .text(640 + (i - 3.5) * 146, 96, label, { fontFamily: 'sans-serif', fontSize: '17px', fontStyle: 'bold', color: '#fff', padding: { x: 8, y: 8 }, fixedWidth: 138, align: 'center' })
@@ -190,7 +189,7 @@ export class DevScene extends Phaser.Scene {
       ['🐉 보스(20)', () => this.scene.start('Battle', { stageId: 20 }), 0x7a4ad8],
     ]);
     // 👑 주간 보스 · 📺 무료 상자 · 🏷️ 칭호
-    this.row(615, '👑 주간 보스 · 기타', `이번 주 ×${meta.weeklyTotal().toFixed(2)} · 최고 ${meta.weeklyBest}단계`, [
+    this.row(615, '👑 주간 보스 · 기타', `×${meta.weeklyTotal().toFixed(2)} · 최고 ${meta.weeklyBest}`, [
       ['주간 +1배', () => this.edit((m) => m.addWeekly(1))],
       ['주간 초기화', () => this.edit((m) => ((m.weekly = { week: -1, total: 0 }), (m.weeklyBest = 0))), 0x8a3a3a],
       ['무료 상자 다시', () => this.edit((m) => (m.freeChestDay = -1), '📺 무료 상자 다시 받기')],
