@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import enemies from '../src/data/enemies.json';
-import { FIRST_AT, SPAWN_GAP, WAVE_REST, spawnRank, structureStage, waveInfo } from '../src/systems/waveStructure';
+import { FIRST_AT, PACE, SPAWN_GAP, SQUAD, SQUAD_GAP, WAVE_REST, battleStage, spawnAt, spawnRank, structureStage, waveInfo } from '../src/systems/waveStructure';
 import { WaveSystem } from '../src/systems/waves';
 import { eventsFor, stageEvent } from '../src/systems/stageEvents';
 import { STAGES } from '../src/systems/worlds';
@@ -18,18 +18,33 @@ describe('🌊 웨이브 구조', () => {
       for (let i = 1; i < t.waves.length; i++) {
         const prev = t.waves[i - 1];
         const n = prev.enemies.reduce((a, g) => a + g.count, 0);
-        expect(t.waves[i].at).toBeCloseTo(prev.at + (n - 1) * SPAWN_GAP + WAVE_REST, 5);
+        expect(t.waves[i].at).toBeCloseTo(prev.at + spawnAt(n - 1) + WAVE_REST, 5);
       }
     }
   });
 
-  it('웨이브 안 순서 — 근접 → 원거리 → 큰 적 → 보스, 한 마리씩 일정한 간격', () => {
+  it('🐾 무리 — 3마리씩 붙어서 나오고 무리 사이는 띄움', () => {
+    expect(spawnAt(0)).toBe(0);
+    expect(spawnAt(SQUAD - 1)).toBeCloseTo((SQUAD - 1) * SPAWN_GAP, 5);
+    expect(spawnAt(SQUAD) - spawnAt(SQUAD - 1)).toBeCloseTo(SQUAD_GAP, 5);
+    expect(spawnAt(5, { ...PACE, squad: 0, gap: 0.5 })).toBeCloseTo(2.5, 5); // 무리 없이 일정한 간격
+  });
+
+  it('🍿 첫 3관문은 줄이지 않고 일정한 간격으로 빨리, 4관문부터는 줄이고 무리 지어', () => {
+    const early = battleStage(STAGES[0], E);
+    expect(count(early)).toBe(count(STAGES[0]));
+    const later = battleStage(STAGES[3], E);
+    expect(count(later)).toBeLessThan(count(STAGES[3]));
+    expect(count(battleStage(STAGES[0], E, true))).toBeLessThanOrEqual(count(STAGES[0])); // 도전 등 특수 모드는 첫 경험 조정 없음
+  });
+
+  it('웨이브 안 순서 — 근접 → 원거리 → 큰 적 → 보스, 무리 간격대로', () => {
     const s = structureStage(STAGES.find((x) => x.id === 10)!, E);
     for (const w of s.waves) {
       const times: { t: number; r: number }[] = [];
       for (const g of w.enemies) for (let i = 0; i < g.count; i++) times.push({ t: (g.delay ?? 0) + i * g.interval, r: g.elite ? -1 : spawnRank(g.type, E) });
       times.sort((a, b) => a.t - b.t);
-      for (let i = 1; i < times.length; i++) expect(times[i].t - times[i - 1].t).toBeCloseTo(SPAWN_GAP, 5);
+      for (let i = 0; i < times.length; i++) expect(times[i].t).toBeCloseTo(spawnAt(i), 5);
       const ranks = times.map((x) => x.r).filter((r) => r >= 0);
       expect([...ranks].sort((a, b) => a - b)).toEqual(ranks);
     }

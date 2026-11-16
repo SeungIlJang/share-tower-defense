@@ -6,6 +6,7 @@ export class Enemy extends Fighter {
   reward = 0;
   abilityT = 0; // 👾 능력 타이머(치유·소환)
   raged = false; // 😡 분노 발동함
+  halfKnocked = false; // 🌊 체력 절반에서 한 번 튕김
   constructor(scene: Phaser.Scene) {
     super(scene);
   }

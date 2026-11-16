@@ -1,15 +1,19 @@
 /**
  * 🌊 웨이브 구조 — 관문 웨이브를 '웨이브 1/4 → 휴식 → 웨이브 2/4 …'로 정리. 순수 로직(Vitest 검증).
- * - 웨이브는 하나씩 차례로. 웨이브 안에서는 SPAWN_GAP초마다 한 마리씩, 근접 → 원거리 → 큰 적 → 보스 순서
+ * - 웨이브는 하나씩 차례로. 웨이브 안에서는 SQUAD마리씩 뭉쳐서(안에서는 SPAWN_GAP초 간격, 무리 사이 SQUAD_GAP초), 근접 → 원거리 → 큰 적 → 보스 순서
+ *   (한 마리씩 1.3초마다 나오던 '메트로놈'을 없앰 — 몰려오는 순간과 숨 돌리는 순간이 번갈아 옴)
  * - 웨이브 사이 WAVE_REST초 휴식(적 성 생산도 멈춤 — Battle)
  * - 2관문부터 웨이브마다 마지막 보통 크기 적 1마리는 ⭐ 엘리트(무작위 대신 고정 · 큰 적·보스는 제외)
  * - 특수 이벤트는 마지막 웨이브 시작에 관문마다 정해진 것 하나
  */
 import type { StageData, WaveEnemy } from '../types';
 import { isBoss } from './bosses';
+import { earlyTune, thinStage } from './density';
 
-export const SPAWN_GAP = 1.3; // 웨이브 안 한 마리 간격(초)
-export const WAVE_REST = 7; // 웨이브 사이 휴식(초)
+export const SPAWN_GAP = 0.4; // 무리 안 한 마리 간격(초)
+export const SQUAD = 3; // 한 무리 마릿수
+export const SQUAD_GAP = 1.4; // 무리와 무리 사이(초)
+export const WAVE_REST = 4.5; // 웨이브 사이 휴식(초)
 export const FIRST_AT = 2; // 첫 웨이브 시작(초)
 export const ELITE_FROM = 2; // 이 관문부터 웨이브 마지막 적이 엘리트
 export const BIG_HP = 300; // 체력 이 이상이면 '큰 적'(뒤에 나옴)
@@ -26,8 +30,29 @@ export function spawnRank(type: string, stats: Record<string, Stat>): number {
   return s.range >= RANGED ? 1 : 0;
 }
 
+export interface Pace {
+  gap: number; // 무리 안 간격
+  rest: number; // 웨이브 사이 휴식
+  squad: number; // 한 무리 마릿수(0 = 무리 없이 gap마다 한 마리)
+  squadGap: number; // 무리 사이
+}
+export const PACE: Pace = { gap: SPAWN_GAP, rest: WAVE_REST, squad: SQUAD, squadGap: SQUAD_GAP };
+
+/** 웨이브 안 k번째(0부터) 적이 나오는 시각 */
+export function spawnAt(k: number, p: Pace = PACE): number {
+  if (p.squad <= 1) return k * p.gap;
+  return Math.floor(k / p.squad) * ((p.squad - 1) * p.gap + p.squadGap) + (k % p.squad) * p.gap;
+}
+
+/** ⚔️ 전투·출전 준비가 함께 쓰는 관문 구성 — 첫 3관문은 줄이지 않고 빨리, 그 뒤는 줄이고 무리 지어 */
+export function battleStage(stage: StageData, stats: Record<string, Stat>, special = false): StageData {
+  const early = earlyTune(stage.id, special);
+  return early ? structureStage(stage, stats, { gap: early.gap, rest: early.rest, squad: 0, squadGap: 0 }) : structureStage(thinStage(stage), stats);
+}
+
 /** 관문 웨이브를 차례 진행 구조로 바꿈(마릿수는 그대로) */
-export function structureStage(stage: StageData, stats: Record<string, Stat>, gap = SPAWN_GAP, rest = WAVE_REST): StageData {
+export function structureStage(stage: StageData, stats: Record<string, Stat>, pace: Pace = PACE): StageData {
+  const { gap, rest } = pace;
   const src = [...stage.waves].sort((a, b) => a.at - b.at);
   let t = FIRST_AT;
   const waves = src.map((w) => {
@@ -50,14 +75,21 @@ export function structureStage(stage: StageData, stats: Record<string, Stat>, ga
         } else groups[li] = elite;
       }
     }
+    // 무리 경계에서 묶음을 나눠 시각을 매김(묶음 안은 gap 간격)
+    const out: WaveEnemy[] = [];
     let n = 0;
     for (const g of groups) {
-      g.delay = n * gap;
-      n += g.count;
+      let left = g.count;
+      while (left > 0) {
+        const c = pace.squad > 1 ? Math.min(left, pace.squad - (n % pace.squad)) : left;
+        out.push({ ...g, count: c, delay: spawnAt(n, pace) });
+        n += c;
+        left -= c;
+      }
     }
     const at = t;
-    t = at + Math.max(0, n - 1) * gap + rest;
-    return { at, enemies: groups };
+    t = at + spawnAt(Math.max(0, n - 1), pace) + rest;
+    return { at, enemies: out };
   });
   return { ...stage, waves };
 }

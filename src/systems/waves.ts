@@ -24,7 +24,15 @@ export class WaveSystem {
 
   constructor(stage: StageData) {
     this.previews = [...stage.waves]
-      .map((w) => ({ at: w.at, groups: w.enemies.map((g) => ({ type: g.type, count: g.count })) }))
+      .map((w) => {
+        const groups: { type: string; count: number }[] = [];
+        for (const g of w.enemies) {
+          const hit = groups.find((x) => x.type === g.type); // 무리로 나뉜 묶음은 종류별로 합침
+          if (hit) hit.count += g.count;
+          else groups.push({ type: g.type, count: g.count });
+        }
+        return { at: w.at, groups };
+      })
       .sort((a, b) => a.at - b.at);
     // 웨이브 → 개별 소환 시각으로 평탄화
     for (const wave of stage.waves) {

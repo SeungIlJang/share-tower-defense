@@ -31,7 +31,7 @@ import { Hud } from '../ui/Hud';
 import { LevelUpOverlay } from '../ui/LevelUp';
 import { TipPointer } from '../ui/Tutorial';
 import { fxWarning, playFx, resetFx, type FxKey } from '../systems/fx';
-import { KNOCK_MS, KNOCK_PX, knockChance } from '../systems/knockdown';
+import { HALF_KNOCK, KNOCK_MS, KNOCK_PX, halfKnocks, knockChance } from '../systems/knockdown';
 import { HERO_WEAPONS, burnMult, chainCount, frostSec, goldMaceMult, ringMult, scepterHeal, weaponPower, type RingKey } from '../systems/equipment';
 import { TOTEMS, TOTEM_LIFE, isTotem, totemHeal, totemX } from '../systems/totems';
 import { VIEW_L, VIEW_OFF, VIEW_R, VIEW_W, uiX } from '../systems/view';
@@ -45,7 +45,7 @@ import { cuteButton } from '../ui/cute';
 import { DENSE_MULT, earlyTune, enemyPower, thinCount, thinStage, type EarlyTune } from '../systems/density';
 import { HIT_STOP_MS, KILL_SHOW_FROM, killColor, killRate, killScale, nextKillCombo } from '../systems/killCombo';
 import { stageGift } from '../systems/unlocks';
-import { structureStage, waveInfo, type WaveInfo } from '../systems/waveStructure';
+import { battleStage, structureStage, waveInfo, type WaveInfo } from '../systems/waveStructure';
 import { eventsFor, stageEvent, type StageEvent } from '../systems/stageEvents';
 import { CHAIN_SHOW_FROM, CHAIN_VOLLEY_PCT, chainRate, chainReward, chainScale, nextChain } from '../systems/perfectChain';
 import { REINFORCE_AD, REINFORCE_AD_COUNT, REINFORCE_FREE, reinforceCount } from '../systems/reinforce';
@@ -89,6 +89,8 @@ const EVENT_EVERY = 40; // 이후 간격(초)
 const STUN_TINT = 0x9a9a9a;
 
 const PERFECT_HINT_RUNS = 3; // ⏱️ PERFECT 안내 글씨를 보여 줄 판 수
+const CHARGE_SPEED = 1.8; // ⚔️ 웨이브를 다 막고 전장이 비면 아군이 적 성까지 달려감(걸어가는 빈 시간 줄임)
+const WALK_BOOST = 1.2; // 🏃 양쪽 모두 20% 빨리 걸음 — 소환한 유닛이 전선에 닿기까지 기다리는 시간을 줄임
 const KILL_HOLD_MS = 1900; // 💥 연속 처치 글씨가 남아 있는 시간
 const WAVE_LEAD = 5; // 📣 다음 무리 예고 — 몇 초 전에
 const DUEL_ZOOM = 1.45; // ⚔️ 일기토 카메라 확대
@@ -258,6 +260,7 @@ export class BattleScene extends Phaser.Scene {
   private killCombo = 0; // 💥 연속 처치
   private killAt = -99;
   private killText: Phaser.GameObjects.Text | null = null;
+  private chargeShown = false; // ⚔️ 마지막 돌격 배너를 띄웠나
   private hitStopUntil = 0; // 큰 적 처치 순간 잠깐 멈춤(실제 시각 ms)
   private lookX: number | null = null; // 둘러보는 중이면 카메라 왼쪽 끝
   private lookT = 0;
@@ -333,8 +336,8 @@ export class BattleScene extends Phaser.Scene {
     this.rule = data.mode === 'daily' ? dailyRule(meta.today()) : null;
     if (this.rule) this.stage = dailyStage(STAGES.find((s) => s.id === dailyStageId(meta.today(), meta.clearedMax)) ?? STAGES[2], this.rule);
     this.early = earlyTune(this.stage.id, this.endless || !!this.rule); // 🍿 첫 3관문은 수를 줄이지 않고 약하게·빨리
-    if (!this.early) this.stage = thinStage(this.stage); // 👥 적 수 줄이고 한 마리를 세게(spawnEnemy의 dense)
-    if (!this.endless) this.stage = this.early ? structureStage(this.stage, ENEMIES, this.early.gap, this.early.rest) : structureStage(this.stage, ENEMIES); // 🌊 웨이브 1/4 → 휴식 → 2/4 …
+    // 👥 적 수 줄이고 한 마리를 세게(spawnEnemy의 dense) · 🌊 웨이브 1/4 → 휴식 → 2/4 …(무한 모드는 줄이기만)
+    this.stage = this.endless ? thinStage(this.stage) : battleStage(this.stage, ENEMIES, !!this.rule);
   }
 
   /** 🖼️ 이 전투의 배경 그림(월드에 그림이 있으면) — 무한 모드는 코드 배경 */
@@ -463,7 +466,7 @@ export class BattleScene extends Phaser.Scene {
     // 🎥 전장 폭(1~3관문은 화면 한 장) · 카메라 범위 · 넓어진 만큼 이동 속도 보정
     const W = Math.max(VIEW_W, worldWidth(this.stage.id, this.endless, !!this.rule || !!this.weekly)); // 📱 넓은 휴대폰이면 작은 전장도 화면 폭만큼
     this.worldW = W;
-    this.walkK = walkMult(W) * (this.early?.walk ?? 1); // 🍿 첫 3관문은 더 빨리 걸어 금방 부딪힘
+    this.walkK = walkMult(W) * (this.early?.walk ?? WALK_BOOST); // 🍿 첫 3관문은 더 빨리 걸어 금방 부딪힘
     this.lookX = null;
     this.cameras.main.setBounds(0, 0, W, 720).setScroll(0, 0);
     this.setupUiCamera();
@@ -537,6 +540,7 @@ export class BattleScene extends Phaser.Scene {
     this.runGold = 0;
     this.battleUpg = {};
     this.waves = new WaveSystem(this.stage);
+    this.chargeShown = false;
     this.killCombo = 0;
     this.killAt = -99;
     this.killText = null;
@@ -1528,6 +1532,7 @@ export class BattleScene extends Phaser.Scene {
     e.setVariant(own ? null : hexColor(stats.tint), stats.scale ?? 1);
     e.abilityT = 0;
     e.raged = false;
+    e.halfKnocked = false;
     e.reward = Math.round(stats.reward * (this.rule?.reward ?? 1) * this.ring('ring_gold')); // 📅 도전 보상 배수 · 💍 황금의 반지
     e.maxHp = Math.round(e.maxHp * HERO_ENEMY_HP); // ⚖️ 영웅이 생긴 만큼 적 체력 +15%
     e.hp = e.maxHp;
@@ -1689,6 +1694,13 @@ export class BattleScene extends Phaser.Scene {
       }
     }
     this.updateEvents(dt);
+    // ⚔️ 마지막 돌격 — 웨이브가 다 나왔고 전장에 적이 없으면 적 성까지 달려감
+    const charge = !!wi && wi.phase === 'done' && this.sRule === 'normal' && !this.enemyBase.destroyed && !this.enemies.some((e) => e.active);
+    if (charge && !this.chargeShown) {
+      this.chargeShown = true;
+      this.banner(tr('⚔️ 돌격! 적 성을 부숴라!'), 0xffe14d);
+      sfx(this, 'alert');
+    }
     const allyTint = guard ? GUARD_TINT : berserk ? BERSERK_TINT : null;
     for (const u of this.units) {
       if (!u.active) continue;
@@ -1723,7 +1735,7 @@ export class BattleScene extends Phaser.Scene {
           u.idle();
         }
       } else {
-        u.moveBy(u.stats.speed * dt * this.walkK);
+        u.moveBy(u.stats.speed * dt * this.walkK * (charge ? CHARGE_SPEED : 1));
       }
     }
 
@@ -1738,6 +1750,14 @@ export class BattleScene extends Phaser.Scene {
       if (knocked) {
         e.idle();
         continue;
+      }
+      if (!e.halfKnocked && e.hp > 0 && e.hp <= e.maxHp * HALF_KNOCK) {
+        // 🌊 체력 절반 — 한 번 뒤로 튕김(전선이 밀고 밀리게)
+        e.halfKnocked = true;
+        if (halfKnocks(e.type)) {
+          this.knock(e, 1);
+          continue;
+        }
       }
       if (BOSS.has(e.type)) this.bossPattern(e, dt);
       else if (ENEMIES[e.type]?.ability) this.enemyAbility(e, dt); // 👾 치유·소환·분노

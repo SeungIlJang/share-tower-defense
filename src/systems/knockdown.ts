@@ -7,6 +7,12 @@ import { isBoss } from './bosses';
 
 export const KNOCK_PX = 42; // 튕겨 나가는 거리
 export const KNOCK_MS = 550; // 멈춤 시간
+export const HALF_KNOCK = 0.5; // 🌊 적은 체력이 이 비율 아래로 처음 떨어질 때 한 번 뒤로 튕김(전선이 출렁이게)
+
+/** 체력 절반에서 튕기는 적인가 — 보스·거대 적은 밀리지 않음 */
+export function halfKnocks(type: string): boolean {
+  return !isBoss(type) && enemyKind(type) !== 'giant';
+}
 
 /** 일반 공격 넉다운 확률 — 아군은 유닛별, 적은 보스·거대·중갑 우두머리 */
 const ALLY_KNOCK: Record<string, number> = { knight: 0.2, cavalry: 0.35, spear: 0.15, hero: 0.25 };

@@ -13,8 +13,7 @@ import { formatTime } from '../systems/pacing';
 import { cuteButton, cuteTitle, drawSky, type SkyTheme } from '../ui/cute';
 import { sfx } from '../systems/sound';
 import { preloadNeeded, stageEnemyTypes } from '../systems/assetLoad';
-import { thinStage } from '../systems/density';
-import { structureStage } from '../systems/waveStructure';
+import { battleStage } from '../systems/waveStructure';
 import { stageEvent } from '../systems/stageEvents';
 import { pickChampion } from '../systems/duel';
 import { WEAPONS, WEAPON_SLOTS } from '../systems/weapons';
@@ -47,7 +46,7 @@ export class PrepareScene extends Phaser.Scene {
   }
 
   create(): void {
-    const stage = structureStage(thinStage(STAGES.find((s) => s.id === this.stageId) ?? STAGES[0]), ENEMIES); // 👥 실제로 나오는 수 · 🌊 웨이브 구조
+    const stage = battleStage(STAGES.find((s) => s.id === this.stageId) ?? STAGES[0], ENEMIES); // 👥 실제로 나오는 수 · 🌊 웨이브 구조(전투와 같은 구성)
     drawSky(this, { theme: WORLDS[(stage.world ?? 1) - 1].theme as SkyTheme });
     const sr = stageRule(stage.id);
     const info = sr === 'normal' ? null : RULE_INFO[sr];

@@ -9,22 +9,26 @@ const lastSpawn = (s: typeof STAGES[number]): number => Math.max(...s.waves.flat
 
 describe('👥 적 밀도', () => {
   it('마릿수는 줄고 최소 1, 한 마리는 그만큼 셈', () => {
-    expect(thinCount(10)).toBe(5);
+    expect(thinCount(10)).toBe(8);
     expect(thinCount(1)).toBe(1);
-    expect(thinCount(2)).toBe(1);
+    expect(thinCount(2)).toBe(2);
     expect(DENSE_MULT * ENEMY_DENSITY).toBeCloseTo(1);
   });
   it('💪 난이도 — 1~3관문은 그대로, 4관문부터 세짐(보스는 덜)', () => {
     expect(enemyPower(1, false)).toBe(1);
     expect(enemyPower(3, false)).toBe(1);
     expect(enemyPower(4, false)).toBeGreaterThan(1);
+    expect(enemyPower(4, false)).toBeLessThan(enemyPower(5, false)); // 4~5관문은 계단
+    expect(enemyPower(5, false)).toBeLessThan(enemyPower(6, false));
+    expect(enemyPower(6, false)).toBe(enemyPower(60, false));
     expect(enemyPower(1, true)).toBeGreaterThan(1);
     expect(enemyPower(10, false, true)).toBeLessThan(enemyPower(10, false));
   });
-  it('관문마다 일반 적 약 60% · 보스 수는 그대로 · 마지막 적이 나오는 시각은 거의 그대로', () => {
+  it('관문마다 일반 적 약 80% · 보스 수는 그대로 · 마지막 적이 나오는 시각은 거의 그대로', () => {
     for (const s of STAGES) {
       const t = thinStage(s);
-      expect(total(t)).toBeLessThanOrEqual(Math.ceil(total(s) * 0.75));
+      expect(total(t)).toBeLessThanOrEqual(total(s));
+      expect(total(t)).toBeGreaterThanOrEqual(Math.floor(total(s) * 0.7));
       expect(total(t, true)).toBe(total(s, true));
       expect(lastSpawn(t)).toBeLessThanOrEqual(lastSpawn(s) + 1e-6); // 2마리 → 1마리 묶음은 두 번째 시각이 없어짐
       expect(lastSpawn(t)).toBeGreaterThan(lastSpawn(s) - 6);

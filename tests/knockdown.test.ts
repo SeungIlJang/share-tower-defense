@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { knockChance } from '../src/systems/knockdown';
+import { halfKnocks, knockChance } from '../src/systems/knockdown';
 
 describe('💫 넉다운', () => {
   it('아군 무거운 공격 — 기병 > 기사, 중갑은 절반, 보스·거대는 안 밀림', () => {
@@ -15,5 +15,11 @@ describe('💫 넉다운', () => {
     expect(knockChance('dragon', 'enemy', 'shield')).toBe(0);
     expect(knockChance('dragon', 'enemy', 'hero')).toBe(0);
     expect(knockChance('dragon', 'enemy', 'wagon')).toBe(0);
+  });
+  it('🌊 체력 절반 튕김 — 보통 적은 튕기고 보스·거대 적은 안 밀림', () => {
+    expect(halfKnocks('goblin')).toBe(true);
+    expect(halfKnocks('orc')).toBe(true);
+    expect(halfKnocks('ogre')).toBe(false);
+    expect(halfKnocks('king_slime')).toBe(false);
   });
 });
