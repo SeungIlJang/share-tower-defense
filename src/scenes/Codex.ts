@@ -8,6 +8,7 @@ import { KIND_INFO, UNIT_COUNTER, enemyKind } from '../systems/counters';
 import { isBoss } from '../systems/bosses';
 import { sfx } from '../systems/sound';
 import { cuteButton, cuteTitle, drawSky } from '../ui/cute';
+import { fitSprite } from '../ui/fitSprite';
 import { enemyPortrait } from '../ui/enemyArt';
 import { VIEW_W } from '../systems/view';
 import { allEnemyTypes, preloadNeeded } from '../systems/assetLoad';
@@ -169,7 +170,7 @@ export class CodexScene extends Phaser.Scene {
     const d = spriteOf(look);
     if (!d || !has(look)) return null;
     const spr = this.add.sprite(x, y, textureKey(look), d.anims.idle?.frames[0] ?? 0);
-    spr.setScale(Math.min(maxH / spr.height, maxW / spr.width));
+    fitSprite(spr, x, y, maxW, maxH); // 프레임 여백 말고 실제 그림 크기로 꽉 차게
     return spr;
   }
 
@@ -192,13 +193,13 @@ export class CodexScene extends Phaser.Scene {
       const grp = groupInfo(unitGroup(UNITS[k]));
       const card = this.add.rectangle(x, y, 218, 148, have ? 0xffffff : 0x2a3348, have ? 0.94 : 0.75).setStrokeStyle(3, have ? grade.color : 0x3a4560);
       const parts: Phaser.GameObjects.GameObject[] = [card];
-      const art = this.unitArt(k, x, y - 14, 120, 92);
+      const art = this.unitArt(k, x, y - 6, 150, 86);
       if (art) {
         if (!have) art.setTint(0x10141f).setAlpha(0.85); // 그림자
         parts.push(art);
-      } else parts.push(this.add.text(x, y - 14, have ? '🛡️' : '❓', { fontSize: '40px', padding: { top: 8, bottom: 2 } }).setOrigin(0.5));
+      } else parts.push(this.add.text(x, y - 6, have ? '🛡️' : '❓', { fontSize: '40px', padding: { top: 8, bottom: 2 } }).setOrigin(0.5));
       parts.push(
-        this.add.text(x, y + 46, UNITS[k].name, { fontFamily: 'sans-serif', fontSize: '17px', fontStyle: 'bold', color: have ? '#2a3350' : '#8a96b8' }).setOrigin(0.5),
+        this.add.text(x, y + 53, UNITS[k].name, { fontFamily: 'sans-serif', fontSize: '17px', fontStyle: 'bold', color: have ? '#2a3350' : '#8a96b8' }).setOrigin(0.5),
         this.add.text(x - 100, y - 60, grp.icon, { fontSize: '18px', padding: { top: 6, bottom: 2 } }).setOrigin(0, 0.5),
         this.add.text(x + 100, y - 60, have ? `Lv${meta.level(k)} ★${meta.tier(k) + 1}` : '🔒', { fontFamily: 'sans-serif', fontSize: '14px', fontStyle: 'bold', color: have ? '#c08a20' : '#8a96b8' }).setOrigin(1, 0.5)
       );
@@ -218,7 +219,7 @@ export class CodexScene extends Phaser.Scene {
     g.fillStyle(0xffffff, 0.97).fillRoundedRect(300, 110, 680, 500, 28);
     g.lineStyle(4, grade.color, 1).strokeRoundedRect(300, 110, 680, 500, 28);
     d.add([dim, g]);
-    const art = this.unitArt(k, 430, 270, 200, 190);
+    const art = this.unitArt(k, 430, 262, 210, 200);
     if (art) {
       if (!have) art.setTint(0x10141f).setAlpha(0.85);
       d.add(art);
