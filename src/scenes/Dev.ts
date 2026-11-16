@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import unitsData from '../data/units.json';
+import enemiesData from '../data/enemies.json';
 import type { UnitStats } from '../types';
 import { meta } from '../systems/upgrades';
 import { WEAPONS } from '../systems/weapons';
@@ -30,6 +31,7 @@ const TABS: [Tab, string][] = [
   ['reset', '🧹 초기화'],
 ];
 
+const ENEMIES = enemiesData as Record<string, unknown>;
 const clamp = (v: number, lo: number, hi: number): number => Math.max(lo, Math.min(hi, v));
 
 /** 🛠️ 개발자 모드 — 게임에서 바꿀 수 있는 값 전부(저장 데이터 + 전투 치트) */
@@ -193,6 +195,16 @@ export class DevScene extends Phaser.Scene {
       ['주간 초기화', () => this.edit((m) => ((m.weekly = { week: -1, total: 0 }), (m.weeklyBest = 0))), 0x8a3a3a],
       ['무료 상자 다시', () => this.edit((m) => (m.freeChestDay = -1), '📺 무료 상자 다시 받기')],
       ['칭호 새로 보기', () => this.edit((m) => (m.titlesSeen = []))],
+    ]);
+    // 📖 몬스터 도감 — 발견 = 처치 1마리 이상(★ 1·50·300마리)
+    const foes = Object.keys(ENEMIES);
+    const killAll = (n: number) => (): void => this.edit((m) => foes.forEach((k) => (m.kills[k] = Math.max(m.kills[k] ?? 0, n))), `📖 도감 전부 ${'★'.repeat(n >= 300 ? 3 : n >= 50 ? 2 : 1)}`);
+    this.row(680, '📖 몬스터 도감', `발견 ${meta.codexFound} / ${foes.length}`, [
+      ['모두 오픈', killAll(1), 0x2f7a4d],
+      ['모두 ★★', killAll(50)],
+      ['모두 ★★★', killAll(300), 0xd8962a],
+      ['보상 다시', () => this.edit((m) => ((m.codexClaimed = []), (m.codexSteps = [])), '📖 발견·수집 보상 다시 받기')],
+      ['도감 초기화', () => this.edit((m) => ((m.kills = {}), (m.codexClaimed = []), (m.codexSteps = [])), '📖 도감 초기화'), 0x8a3a3a],
     ]);
   }
 
