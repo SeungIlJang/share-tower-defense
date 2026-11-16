@@ -11,6 +11,11 @@ import { cuteButton, cuteTitle, drawSky } from '../ui/cute';
 import { enemyPortrait } from '../ui/enemyArt';
 import { VIEW_W } from '../systems/view';
 import { allEnemyTypes, preloadNeeded } from '../systems/assetLoad';
+import { spriteOf, textureKey } from '../systems/sprites';
+import { GRADE_INFO, UNIT_TIERS, evolvedKey, gradeOf, unitPreloadKeys } from '../systems/evolution';
+import { UNIT_SKILLS, type SkillKind } from '../systems/unitSkills';
+import { TOTEMS } from '../systems/totems';
+import { groupInfo, unitGroup } from '../systems/unitGroups';
 import { tr } from '../systems/i18n';
 
 const ENEMIES = enemiesData as Record<string, EnemyStats>;
@@ -25,21 +30,39 @@ const ABILITY: Record<string, string> = {
   summon: tr('💀 부하 소환'),
 };
 
-/** 📖 몬스터 도감 — 잡은 적은 그림·이름이 보이고, 못 잡은 적은 그림자. 발견 보상 · 수집 단계 보상 */
+/** ✨ 유닛 스킬 종류 설명 */
+const SKILL_KIND: Record<SkillKind, string> = {
+  aoe: tr('주변 적에게 범위 피해'),
+  pierce: tr('앞쪽 일직선 적 여러 마리 관통'),
+  single: tr('적 하나에게 큰 피해'),
+  heal: tr('주변 아군 회복'),
+  guard: tr('범위 피해 + 잠깐 받는 피해 절반'),
+  slow: tr('범위 피해 + 적 이동 느려짐'),
+  pull: tr('범위 피해 + 적을 한곳으로 끌어당김'),
+  push: tr('피해 + 적을 뒤로 밀어냄'),
+  dash: tr('앞으로 돌진하며 피해'),
+};
+
+type CodexTab = 'enemy' | 'unit';
+
+/** 📖 도감 — 👾 몬스터(잡은 적은 그림·이름, 못 잡은 적은 그림자 · 발견/수집 보상) · 🛡️ 유닛(능력치·스킬·상성·진화) */
 export class CodexScene extends Phaser.Scene {
+  private static tab: CodexTab = 'enemy';
   private layer!: Phaser.GameObjects.Container;
+  private title!: Phaser.GameObjects.Text;
 
   constructor() {
     super('Codex');
   }
 
   preload(): void {
-    preloadNeeded(this, allEnemyTypes());
+    const units = unitPreloadKeys(Object.keys(UNITS), (k) => !!spriteOf(k), (u) => meta.tier(u), () => null);
+    preloadNeeded(this, [...allEnemyTypes(), ...units]);
   }
 
   create(): void {
     drawSky(this, { stars: 10 });
-    cuteTitle(this, 640, 40, tr('📖 몬스터 도감'), 40);
+    this.title = cuteTitle(this, 640, 40, '', 40);
     this.layer = this.add.container(0, 0);
     this.render();
     cuteButton(this, 640, 676, 240, 54, tr('🏠 홈으로'), 0x4a8bff, 0x2a5fd0, '22px', () => this.scene.start('Menu'));
@@ -47,6 +70,31 @@ export class CodexScene extends Phaser.Scene {
 
   private render(): void {
     this.layer.removeAll(true);
+    const unitTab = CodexScene.tab === 'unit';
+    this.title.setText(unitTab ? tr('📖 유닛 도감') : tr('📖 몬스터 도감'));
+    // 👾 몬스터 · 🛡️ 유닛 탭(왼쪽 위)
+    const tabs: [CodexTab, string, number][] = [
+      ['enemy', tr('👾 몬스터'), 110],
+      ['unit', tr('🛡️ 유닛'), 260],
+    ];
+    tabs.forEach(([key, label, x]) => {
+      const on = CodexScene.tab === key;
+      const t = this.add
+        .text(x, 40, label, { fontFamily: 'sans-serif', fontSize: '20px', fontStyle: 'bold', color: on ? '#ffffff' : '#3a4a7a', backgroundColor: on ? '#4a8bff' : '#ffffffcc', padding: { x: 14, y: 8 } })
+        .setOrigin(0.5)
+        .setInteractive({ useHandCursor: true });
+      t.on('pointerdown', () => {
+        if (on) return;
+        sfx(this, 'click');
+        CodexScene.tab = key;
+        this.render();
+      });
+      this.layer.add(t);
+    });
+    if (unitTab) {
+      this.renderUnits();
+      return;
+    }
     const keys = Object.keys(ENEMIES);
     const found = meta.codexFound;
     // 수집 진행 + 다음 단계 보상
@@ -112,6 +160,93 @@ export class CodexScene extends Phaser.Scene {
       });
       this.layer.add(parts);
     });
+  }
+
+  /** 🛡️ 유닛 초상 — 지금 진화 단계 그림(없으면 기본) 첫 프레임 */
+  private unitArt(k: string, x: number, y: number, maxW: number, maxH: number): Phaser.GameObjects.Sprite | null {
+    const has = (key: string): boolean => !!spriteOf(key) && this.textures.exists(textureKey(key));
+    const look = (meta.ownsUnit(k) ? evolvedKey(k, meta.tier(k), false, has) : null) ?? k;
+    const d = spriteOf(look);
+    if (!d || !has(look)) return null;
+    const spr = this.add.sprite(x, y, textureKey(look), d.anims.idle?.frames[0] ?? 0);
+    spr.setScale(Math.min(maxH / spr.height, maxW / spr.width));
+    return spr;
+  }
+
+  /** 🛡️ 유닛 도감 — 15종 카드(보유하면 그림·레벨·별, 아니면 그림자) */
+  private renderUnits(): void {
+    const keys = Object.keys(UNITS);
+    const owned = keys.filter((k) => meta.ownsUnit(k)).length;
+    const bar = this.add.graphics();
+    bar.fillStyle(0x000000, 0.25).fillRoundedRect(400, 82, 480, 22, 11);
+    bar.fillStyle(0x4a8bff, 1).fillRoundedRect(400, 82, Math.max(22, 480 * Math.min(1, owned / keys.length)), 22, 11);
+    this.layer.add([
+      bar,
+      this.add.text(640, 93, tr('보유 {0} / {1}', owned, keys.length), { fontFamily: 'sans-serif', fontSize: '16px', fontStyle: 'bold', color: '#ffffff', stroke: '#000000', strokeThickness: 4 }).setOrigin(0.5),
+    ]);
+    keys.forEach((k, i) => {
+      const x = 640 + ((i % 5) - 2) * 232;
+      const y = 196 + Math.floor(i / 5) * 160;
+      const have = meta.ownsUnit(k);
+      const grade = GRADE_INFO[gradeOf(k)];
+      const grp = groupInfo(unitGroup(UNITS[k]));
+      const card = this.add.rectangle(x, y, 218, 148, have ? 0xffffff : 0x2a3348, have ? 0.94 : 0.75).setStrokeStyle(3, have ? grade.color : 0x3a4560);
+      const parts: Phaser.GameObjects.GameObject[] = [card];
+      const art = this.unitArt(k, x, y - 14, 120, 92);
+      if (art) {
+        if (!have) art.setTint(0x10141f).setAlpha(0.85); // 그림자
+        parts.push(art);
+      } else parts.push(this.add.text(x, y - 14, have ? '🛡️' : '❓', { fontSize: '40px', padding: { top: 8, bottom: 2 } }).setOrigin(0.5));
+      parts.push(
+        this.add.text(x, y + 46, UNITS[k].name, { fontFamily: 'sans-serif', fontSize: '17px', fontStyle: 'bold', color: have ? '#2a3350' : '#8a96b8' }).setOrigin(0.5),
+        this.add.text(x - 100, y - 60, grp.icon, { fontSize: '18px', padding: { top: 6, bottom: 2 } }).setOrigin(0, 0.5),
+        this.add.text(x + 100, y - 60, have ? `Lv${meta.level(k)} ★${meta.tier(k) + 1}` : '🔒', { fontFamily: 'sans-serif', fontSize: '14px', fontStyle: 'bold', color: have ? '#c08a20' : '#8a96b8' }).setOrigin(1, 0.5)
+      );
+      card.setInteractive({ useHandCursor: true }).on('pointerdown', () => this.unitDetail(k));
+      this.layer.add(parts);
+    });
+  }
+
+  /** 🛡️ 유닛 자세히 — 기본 능력치 · 스킬 · 강한 상대 · 진화 단계 */
+  private unitDetail(k: string): void {
+    const u = UNITS[k];
+    const have = meta.ownsUnit(k);
+    const grade = GRADE_INFO[gradeOf(k)];
+    const d = this.add.container(0, 0).setDepth(50);
+    const dim = this.add.rectangle(640, 360, VIEW_W, 720, 0x000000, 0.55).setInteractive();
+    const g = this.add.graphics();
+    g.fillStyle(0xffffff, 0.97).fillRoundedRect(300, 110, 680, 500, 28);
+    g.lineStyle(4, grade.color, 1).strokeRoundedRect(300, 110, 680, 500, 28);
+    d.add([dim, g]);
+    const art = this.unitArt(k, 430, 270, 200, 190);
+    if (art) {
+      if (!have) art.setTint(0x10141f).setAlpha(0.85);
+      d.add(art);
+    }
+    const status = have ? tr('Lv{0} · ★{1} {2}', meta.level(k), meta.tier(k) + 1, UNIT_TIERS[meta.tier(k)].name) : tr('🔒 아직 없어요\n강화 화면에서 영입!');
+    d.add(this.add.text(430, 390, status, { fontFamily: 'sans-serif', fontSize: '17px', fontStyle: 'bold', color: have ? '#c08a20' : '#8a96b8', align: 'center' }).setOrigin(0.5, 0));
+    const sk = UNIT_SKILLS[k];
+    const totem = TOTEMS[k];
+    const kind = UNIT_COUNTER[k];
+    const lines = [
+      `${u.name}  ·  ${grade.name}  ·  ${groupInfo(unitGroup(u)).label}`,
+      `❤️ ${u.hp}   ⚔️ ${u.atk}   🛡️ ${u.def}`,
+      u.speed > 0 ? tr('🎯 사거리 {0}   🏃 이동 {1}', u.range, u.speed) : tr('🎯 사거리 {0}   📍 그 자리에 설치', u.range),
+      tr('⚡ 소환 {0}   🍖 인구 {1}', u.cost, u.pop),
+      sk ? tr('✨ {0} — {1}', sk.name, SKILL_KIND[sk.kind]) : totem ? `✨ ${totem.desc}` : '',
+      kind ? tr('💪 강한 상대: {0} {1} (피해 ×1.5)', KIND_INFO[kind].icon, KIND_INFO[kind].name) : tr('💪 강한 상대: 없음 (지원형)'),
+    ].filter(Boolean);
+    d.add(this.add.text(560, 140, lines.join('\n'), { fontFamily: 'sans-serif', fontSize: '18px', fontStyle: 'bold', color: '#2a3350', lineSpacing: 10, wordWrap: { width: 400 } }).setOrigin(0, 0));
+    const evo = UNIT_TIERS.slice(0, 5)
+      .map((t, i) => (i === 0 ? `★1 ${t.name}` : `★${t.stars} ${t.name}(Lv${t.min})`))
+      .join(' → ');
+    d.add(this.add.text(640, 482, tr('⭐ 진화: {0} → 🌟 초월', evo), { fontFamily: 'sans-serif', fontSize: '14px', fontStyle: 'bold', color: '#7a4ad8', align: 'center', wordWrap: { width: 620 } }).setOrigin(0.5));
+    d.add(this.add.text(640, 520, tr('※ 능력치는 Lv0 기본값 — 강화·진화하면 올라가요'), { fontFamily: 'sans-serif', fontSize: '13px', color: '#8a96b8' }).setOrigin(0.5));
+    const close = this.add.text(640, 568, tr('닫기'), { fontFamily: 'sans-serif', fontSize: '20px', fontStyle: 'bold', color: '#fff', backgroundColor: '#4a8bff', padding: { x: 26, y: 8 } }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+    d.add(close);
+    const shut = (): void => d.destroy();
+    close.on('pointerdown', shut);
+    dim.on('pointerdown', shut);
   }
 
   /** 적 자세히 — 능력치 · 종류 · 상대하기 좋은 유닛 */
