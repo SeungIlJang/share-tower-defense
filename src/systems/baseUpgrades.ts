@@ -4,7 +4,7 @@ import { tr } from './i18n';
 export type BaseKey = 'pop' | 'energy';
 
 export const BASE_MAX_LV = 10;
-export const FOOD_BASE = 40; // 기본 최대 인구
+export const FOOD_BASE = 60; // 기본 최대 인구(40 → 60: 처음부터 아군이 8~10명 서게)
 export const ENERGY_RATE = 9; // 기본 에너지 충전(초당)
 export const ENERGY_MAX = 100; // 기본 에너지 상한
 

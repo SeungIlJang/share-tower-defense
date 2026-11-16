@@ -45,11 +45,12 @@ describe('🗺️ 관문 100개 · 월드 10개', () => {
     expect(bossOf(47)).toBeNull();
   });
 
-  it('🐣 1~3관문은 쉽게(1관문 보스 없음 · 2관문 보스 1)', () => {
+  it('🐣 1~3관문 — 1관문 보스 없음 · 2관문 보스 1 · 적 수는 원래보다 많게(약한 적 떼)', () => {
     const count = (id: number, boss: boolean): number =>
       STAGES[id - 1].waves.reduce((n, w) => n + w.enemies.filter((e) => (e.type === 'ogre') === boss).reduce((m, e) => m + e.count, 0), 0);
     expect(count(1, true)).toBe(0);
     expect(count(2, true)).toBe(1);
+    expect(count(1, false)).toBeGreaterThan(18); // 원래 18마리 → 늘림
     expect(count(1, false)).toBeLessThan(count(4, false));
     // 21관문 이상은 원래 1관문 구성 그대로(골렘 포함)
     expect(STAGES[20].waves.some((w) => w.enemies.some((e) => e.type === 'ogre'))).toBe(true);

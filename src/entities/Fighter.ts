@@ -340,7 +340,7 @@ export class Fighter {
   }
 
   /** 사망 연출 — death 애니가 있으면 그 자리에 1회용 스프라이트를 남김(풀과 무관) */
-  playDeath(): boolean {
+  playDeath(fling = 0): boolean {
     const d = this.spriteDef;
     if (!this.sprite || !d || !resolveState(d, 'death')) return false;
     const s = this.sprite;
@@ -353,6 +353,7 @@ export class Fighter {
     corpse.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => {
       this.scene.tweens.add({ targets: corpse, alpha: 0, duration: 250, onComplete: () => corpse.destroy() });
     });
+    if (fling) this.scene.tweens.add({ targets: corpse, x: corpse.x + (this.side === 'enemy' ? fling : -fling), duration: 260, ease: 'Quad.easeOut' }); // 💥 맞은 방향으로 날아감
     corpse.play(animKey(this.look, 'death'));
     return true;
   }

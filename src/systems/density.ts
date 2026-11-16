@@ -18,6 +18,31 @@ export function enemyPower(stageId: number, endless: boolean, boss = false): num
   return boss ? 1 + (p - 1) * 0.6 : p;
 }
 
+/**
+ * 🍿 첫 3관문 — 약한 적이 떼로(한두 방에 쓰러지는 맛). 수를 줄이지 않고(밀도 1), 한 마리는 약하게, 빨리 몰려나옴.
+ * 처음 하는 사람이 '적 한 마리를 17초 때리는' 화면을 보고 떠나지 않게. 보스는 그대로.
+ */
+export const EARLY_UNTIL = 3;
+export interface EarlyTune {
+  hp: number; // 적 체력 배수
+  atk: number; // 적 공격 배수
+  gap: number; // 웨이브 안 한 마리 간격(초)
+  rest: number; // 웨이브 사이 휴식(초)
+  castle: number; // 적 성 체력 배수(웨이브를 다 보기 전에 끝나지 않게)
+  xp: number; // 경험치 배수(적이 많아 레벨업 카드 창이 너무 자주 뜨지 않게 — 골드는 그대로)
+  walk: number; // 걷는 속도 배수(양쪽 모두 — 첫 충돌까지 기다리는 시간을 줄임)
+}
+const EARLY: Record<number, EarlyTune> = {
+  1: { hp: 0.45, atk: 1, gap: 0.55, rest: 5, castle: 5, xp: 0.35, walk: 1.35 },
+  2: { hp: 0.55, atk: 1.25, gap: 0.55, rest: 5, castle: 5, xp: 0.35, walk: 1.35 },
+  3: { hp: 0.65, atk: 1.5, gap: 0.6, rest: 5, castle: 5, xp: 0.35, walk: 1.35 },
+};
+
+/** 이 관문의 첫 경험 조정(일반 관문 1~3만 — 무한·도전·주간은 없음) */
+export function earlyTune(stageId: number, special = false): EarlyTune | null {
+  return special ? null : EARLY[stageId] ?? null;
+}
+
 /** n마리 → 줄인 마릿수(최소 1) */
 export function thinCount(n: number): number {
   return Math.max(1, Math.round(n * ENEMY_DENSITY));

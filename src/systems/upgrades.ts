@@ -1,7 +1,7 @@
 import type { UnitStats } from '../types';
 import { storageGet, storageSet } from './storage';
 import { WEAPONS, WEAPON_SLOTS, weaponUpgradeCost } from './weapons';
-import { STARTER_UNIT, STARTER_WEAPON, migrateOwned } from './unlocks';
+import { STARTER_UNIT, STARTER_UNITS, STARTER_WEAPON, migrateOwned } from './unlocks';
 import { addStats, dailyMissions, type Mission, type Stats } from './missions';
 import { pushRecord, type EndlessRecord } from './endless';
 import { BASE_MAX_LV, baseUpgradeCost, type BaseKey } from './baseUpgrades';
@@ -74,7 +74,7 @@ export class MetaProgress {
   heroOwned: string[] = ['mace']; // 👑 해금한 영웅 스킬
   stars: Record<string, number> = {}; // 스테이지별 최고 별(1~3)
   bestTimes: Record<string, number> = {}; // ⏱️ 스테이지별 최단 클리어 시간(초)
-  ownedUnits: string[] = [STARTER_UNIT]; // 구매한 유닛
+  ownedUnits: string[] = [...STARTER_UNITS]; // 구매한 유닛(병사·궁수는 기본)
   ownedWeapons: string[] = [STARTER_WEAPON]; // 구매한 특수 무기
   totals: Stats = {}; // 업적용 누적 기록
   daily: { day: number; stats: Stats; claimed: string[] } = { day: -1, stats: {}, claimed: [] }; // 오늘 미션 진행
@@ -323,6 +323,15 @@ export class MetaProgress {
     this.gold -= price;
     this.ownedUnits.push(key);
     if (this.deck.length && this.deck.length < DECK_SIZE && !this.deck.includes(key)) this.deck.push(key); // ⚔️ 덱에 자리가 있으면 바로 출전
+    this.save();
+    return true;
+  }
+
+  /** 🎁 선물 — 골드 없이 유닛을 받음(첫 3관문 클리어 선물). 이미 가졌으면 false */
+  grantUnit(key: string): boolean {
+    if (this.ownsUnit(key)) return false;
+    this.ownedUnits.push(key);
+    if (this.deck.length && this.deck.length < DECK_SIZE && !this.deck.includes(key)) this.deck.push(key);
     this.save();
     return true;
   }
@@ -711,6 +720,7 @@ export class MetaProgress {
       this.stars = obj.stars ?? {};
       this.bestTimes = obj.bestTimes ?? {};
       this.ownedUnits = obj.ownedUnits ?? migrateOwned(STARTER_UNIT, this.levels);
+      for (const k of STARTER_UNITS) if (!this.ownedUnits.includes(k)) this.ownedUnits.push(k); // 🎁 기본 유닛이 늘어남(궁수) — 예전 저장에도 지급
       this.ownedWeapons = obj.ownedWeapons ?? migrateOwned(STARTER_WEAPON, this.weaponLevels);
       this.totals = obj.totals ?? {};
       this.daily = obj.daily ?? { day: -1, stats: {}, claimed: [] };

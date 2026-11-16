@@ -802,5 +802,7 @@
  "💪 강한 상대: {0} {1} (피해 ×1.5)": "💪 Strong vs: {0} {1} (dmg ×1.5)",
  "💪 강한 상대: 없음 (지원형)": "💪 Strong vs: none (support)",
  "⭐ 진화: {0} → 🌟 초월": "⭐ Evolve: {0} → 🌟 Transcend",
- "※ 능력치는 Lv0 기본값 — 강화·진화하면 올라가요": "※ Base stats at Lv0 — upgrades & evolution raise them"
+ "※ 능력치는 Lv0 기본값 — 강화·진화하면 올라가요": "※ Base stats at Lv0 — upgrades & evolution raise them",
+ "🎁 새 동료!": "🎁 New Ally!",
+ "다음 관문에서 바로 써 보세요!": "Try them in the next stage!"
 }

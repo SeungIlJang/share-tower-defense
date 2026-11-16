@@ -42,7 +42,9 @@ import { showRewarded } from '../systems/ads';
 import { DUEL_LIMIT, LOSE_RAGE, LOSE_RAGE_SEC, SPECIAL_CD, SPECIAL_MULT, WIN_MORALE, duelFoeStats, duelPlanned, duelTime, pickChampion } from '../systems/duel';
 import { enemyPortrait } from '../ui/enemyArt';
 import { cuteButton } from '../ui/cute';
-import { DENSE_MULT, enemyPower, thinCount, thinStage } from '../systems/density';
+import { DENSE_MULT, earlyTune, enemyPower, thinCount, thinStage, type EarlyTune } from '../systems/density';
+import { HIT_STOP_MS, KILL_SHOW_FROM, killColor, killRate, killScale, nextKillCombo } from '../systems/killCombo';
+import { stageGift } from '../systems/unlocks';
 import { structureStage, waveInfo, type WaveInfo } from '../systems/waveStructure';
 import { eventsFor, stageEvent, type StageEvent } from '../systems/stageEvents';
 import { CHAIN_SHOW_FROM, CHAIN_VOLLEY_PCT, chainRate, chainReward, chainScale, nextChain } from '../systems/perfectChain';
@@ -87,6 +89,7 @@ const EVENT_EVERY = 40; // 이후 간격(초)
 const STUN_TINT = 0x9a9a9a;
 
 const PERFECT_HINT_RUNS = 3; // ⏱️ PERFECT 안내 글씨를 보여 줄 판 수
+const KILL_HOLD_MS = 1900; // 💥 연속 처치 글씨가 남아 있는 시간
 const WAVE_LEAD = 5; // 📣 다음 무리 예고 — 몇 초 전에
 const DUEL_ZOOM = 1.45; // ⚔️ 일기토 카메라 확대
 const BG_PARALLAX = 0.5; // 🖼️ 배경 그림이 카메라를 따라 움직이는 비율(원근감)
@@ -251,6 +254,11 @@ export class BattleScene extends Phaser.Scene {
   // 🎥 넓은 전장 + 카메라(영웅 따라가기 · 지도로 둘러보기 · 화면 밖 알림)
   private worldW = SCREEN_W;
   private walkK = 1;
+  private early: EarlyTune | null = null; // 🍿 첫 3관문 — 약한 적이 떼로
+  private killCombo = 0; // 💥 연속 처치
+  private killAt = -99;
+  private killText: Phaser.GameObjects.Text | null = null;
+  private hitStopUntil = 0; // 큰 적 처치 순간 잠깐 멈춤(실제 시각 ms)
   private lookX: number | null = null; // 둘러보는 중이면 카메라 왼쪽 끝
   private lookT = 0;
   private homeBtn!: Phaser.GameObjects.Text;
@@ -317,14 +325,16 @@ export class BattleScene extends Phaser.Scene {
       this.weekly = { boss: weeklyBoss(weekIndex(meta.today())), left: WEEKLY_SEC, unit: 1, foe: null, text: null };
       this.stage = structureStage(thinStage(weeklyStage(STAGES.find((s) => s.id === weeklyStageId(meta.clearedMax)) ?? STAGES[9])), ENEMIES); // 👥 · 🌊
       this.rule = null;
+      this.early = null;
       return;
     }
     this.stage = this.endless ? endlessStage() : STAGES.find((s) => s.id === data.stageId) ?? STAGES[0];
     // 📅 오늘의 도전 — 오늘 규칙 + 깬 관문 근처
     this.rule = data.mode === 'daily' ? dailyRule(meta.today()) : null;
     if (this.rule) this.stage = dailyStage(STAGES.find((s) => s.id === dailyStageId(meta.today(), meta.clearedMax)) ?? STAGES[2], this.rule);
-    this.stage = thinStage(this.stage); // 👥 적 수 줄이고 한 마리를 세게(spawnEnemy의 dense)
-    if (!this.endless) this.stage = structureStage(this.stage, ENEMIES); // 🌊 웨이브 1/4 → 휴식 → 2/4 …
+    this.early = earlyTune(this.stage.id, this.endless || !!this.rule); // 🍿 첫 3관문은 수를 줄이지 않고 약하게·빨리
+    if (!this.early) this.stage = thinStage(this.stage); // 👥 적 수 줄이고 한 마리를 세게(spawnEnemy의 dense)
+    if (!this.endless) this.stage = this.early ? structureStage(this.stage, ENEMIES, this.early.gap, this.early.rest) : structureStage(this.stage, ENEMIES); // 🌊 웨이브 1/4 → 휴식 → 2/4 …
   }
 
   /** 🖼️ 이 전투의 배경 그림(월드에 그림이 있으면) — 무한 모드는 코드 배경 */
@@ -453,7 +463,7 @@ export class BattleScene extends Phaser.Scene {
     // 🎥 전장 폭(1~3관문은 화면 한 장) · 카메라 범위 · 넓어진 만큼 이동 속도 보정
     const W = Math.max(VIEW_W, worldWidth(this.stage.id, this.endless, !!this.rule || !!this.weekly)); // 📱 넓은 휴대폰이면 작은 전장도 화면 폭만큼
     this.worldW = W;
-    this.walkK = walkMult(W);
+    this.walkK = walkMult(W) * (this.early?.walk ?? 1); // 🍿 첫 3관문은 더 빨리 걸어 금방 부딪힘
     this.lookX = null;
     this.cameras.main.setBounds(0, 0, W, 720).setScroll(0, 0);
     this.setupUiCamera();
@@ -473,7 +483,7 @@ export class BattleScene extends Phaser.Scene {
     // 무한 모드: 적 기지는 부서지지 않는 생산 기지(버틴 웨이브가 기록)
     this.sRule = this.endless || this.rule || this.weekly ? 'normal' : stageRule(this.stage.id);
     const tough = this.sRule === 'hold' || this.sRule === 'breach' || !!this.weekly; // 수성·돌파·주간 보스는 적 성을 부술 필요 없음
-    this.enemyBase = new Base(this, W - 105, LANE_Y - 10, this.endless || tough ? 1e9 : Math.round(this.stage.baseHp * enemyPower(this.stage.id, false)), 0xc0392b, [castleLook('enemy', this.enemyTier), 'base_enemy'], 1 + 0.04 * this.enemyTier); // 💪 적 성 체력도 난이도 배수
+    this.enemyBase = new Base(this, W - 105, LANE_Y - 10, this.endless || tough ? 1e9 : Math.round(this.stage.baseHp * enemyPower(this.stage.id, false) * (this.early?.castle ?? 1)), 0xc0392b, [castleLook('enemy', this.enemyTier), 'base_enemy'], 1 + 0.04 * this.enemyTier); // 💪 적 성 체력도 난이도 배수
     this.playerBase.setLevelLabel(`🏰 Lv${meta.castleLevel('castle')}`); // 성 강화 레벨(강화 화면 기지 탭과 같은 숫자)
     this.enemyBase.setLevelLabel(tr('☠️ {0}단계', this.enemyTier + 1), '#ffb0a0'); // 적 성 단계(관문으로 정해짐)
     this.allyGunT = 1;
@@ -527,7 +537,11 @@ export class BattleScene extends Phaser.Scene {
     this.runGold = 0;
     this.battleUpg = {};
     this.waves = new WaveSystem(this.stage);
-    this.prodInterval = Math.max(2.5, 4.5 - this.stage.id * 0.3) * DENSE_MULT; // 👥 적 성 생산도 덜 자주(대신 센 적)
+    this.killCombo = 0;
+    this.killAt = -99;
+    this.killText = null;
+    this.hitStopUntil = 0;
+    this.prodInterval = Math.max(2.5, 4.5 - this.stage.id * 0.3) * (this.early ? 1 : DENSE_MULT); // 👥 적 성 생산도 덜 자주(대신 센 적)
     this.prodTimer = this.prodInterval;
     this.prodIdx = 0;
     this.beat = 0;
@@ -1524,6 +1538,12 @@ export class BattleScene extends Phaser.Scene {
       e.stats = { ...e.stats, atk: Math.round(e.stats.atk * DENSE_MULT) };
       e.reward = Math.round(e.reward * DENSE_MULT);
     }
+    if (this.early && !BOSS.has(type)) {
+      // 🍿 첫 3관문 — 한두 방에 쓰러지는 약한 적(수는 많음)
+      e.maxHp = Math.max(1, Math.round(e.maxHp * this.early.hp));
+      e.hp = e.maxHp;
+      e.stats = { ...e.stats, atk: Math.max(1, Math.round(e.stats.atk * this.early.atk)) };
+    }
     // 💪 난이도 — 4관문부터 적 체력·공격 추가 배수(보상은 그대로)
     const pw = enemyPower(this.stage.id, this.endless, BOSS.has(type));
     if (pw !== 1) {
@@ -1590,6 +1610,7 @@ export class BattleScene extends Phaser.Scene {
 
   update(_time: number, deltaMs: number): void {
     if (this.over || this.picking || this.paused || this.reviving) return; // 정지 상태
+    if (performance.now() < this.hitStopUntil) return; // 💥 큰 적 처치 순간 잠깐 멈춤
     const dt = Math.min(0.05, deltaMs / 1000) * BattleScene.speed * this.slowmo; // ⏩ 배속
 
     // ⏱️ 리듬 바 진행(0↔1 핑퐁)
@@ -1627,7 +1648,7 @@ export class BattleScene extends Phaser.Scene {
     this.heroCd = this.heroCd.map((c) => Math.max(0, c - dt));
     this.updateHero(dt);
     this.updateCastles(dt);
-    if (this.sRule !== 'duel') for (const ev of this.waves.update(dt)) this.spawnEnemy(ev.type, !!ev.elite, undefined, false, true, ev.budget); // 👥 줄인 만큼 센 적 · ⭐ 웨이브 마지막은 엘리트 · 🗺️ 월드 적은 원래 자리 세기(⚔️ 일기토 관문은 없음)
+    if (this.sRule !== 'duel') for (const ev of this.waves.update(dt)) this.spawnEnemy(ev.type, !!ev.elite, undefined, false, !this.early, ev.budget); // 👥 줄인 만큼 센 적 · ⭐ 웨이브 마지막은 엘리트 · 🗺️ 월드 적은 원래 자리 세기(⚔️ 일기토 관문은 없음)
     const wi = this.endless ? null : waveInfo(this.stage, this.waves.now);
     if (wi && this.sRule !== 'duel') this.updateWaveHud(wi);
     if (!this.endless && !this.weekly && this.clock > 2) {
@@ -1643,7 +1664,7 @@ export class BattleScene extends Phaser.Scene {
         this.prodTimer = this.prodInterval;
         const pt = PROD_TYPES[this.prodIdx % PROD_TYPES.length];
         const wt = this.endless ? undefined : WORLD_ROSTER[this.stage.world ?? 1]?.[pt]; // 🗺️ 적 성도 그 월드 적을 뽑음(세기는 원래 자리)
-        this.spawnEnemy(wt ?? pt, false, undefined, false, true, wt ? pt : undefined);
+        this.spawnEnemy(wt ?? pt, false, undefined, false, !this.early, wt ? pt : undefined);
         this.prodIdx++;
       }
     }
@@ -3124,8 +3145,8 @@ ${info.desc}`, { fontFamily: 'sans-serif', fontSize: '24px', fontStyle: 'bold', 
 
   private runStageEvent(ev: StageEvent): void {
     const exact = (type: string, n: number, gap: number): void => {
-      const m = thinCount(n); // 👥
-      for (let i = 0; i < m; i++) this.time.delayedCall((i * gap * n) / m, () => !this.over && this.spawnEnemy(type, false, undefined, true, true));
+      const m = this.early ? n : thinCount(n); // 👥
+      for (let i = 0; i < m; i++) this.time.delayedCall((i * gap * n) / m, () => !this.over && this.spawnEnemy(type, false, undefined, true, !this.early));
     };
     sfx(this, 'alert');
     this.banner(ev.text, 0xff9a3c);
@@ -3211,8 +3232,8 @@ ${info.desc}`, { fontFamily: 'sans-serif', fontSize: '24px', fontStyle: 'bold', 
   }
 
   private burstSpawn(type: string, n: number, gapMs: number): void {
-    const m = thinCount(n); // 👥
-    for (let i = 0; i < m; i++) this.time.delayedCall((i * gapMs * n) / m, () => !this.over && this.spawnEnemy(type, false, undefined, false, true));
+    const m = this.early ? n : thinCount(n); // 👥
+    for (let i = 0; i < m; i++) this.time.delayedCall((i * gapMs * n) / m, () => !this.over && this.spawnEnemy(type, false, undefined, false, !this.early));
   }
 
   /** 👑 보스 패턴 — 골렘: 땅 내려치기(주변 기절) / 드래곤: 화염 숨결 + 박쥐 소환. 0.8초 전 경고 */
@@ -3540,8 +3561,8 @@ ${info.desc}`, { fontFamily: 'sans-serif', fontSize: '24px', fontStyle: 'bold', 
     for (const e of this.enemies) {
       if (e.active && e.hp <= 0) {
         this.runGold += e.reward;
-        this.gainXp(e.reward);
-        sfx(this, 'coin');
+        this.gainXp(e.reward * (this.early?.xp ?? 1));
+        this.onKill(e);
         this.track('kills');
         if (e.elite) this.track('elites');
         if (BOSS.has(e.type)) {
@@ -3550,7 +3571,7 @@ ${info.desc}`, { fontFamily: 'sans-serif', fontSize: '24px', fontStyle: 'bold', 
         }
         this.kills[e.type] = (this.kills[e.type] ?? 0) + 1; // 📖 도감
         this.onEnemyDeath(e); // 💥 폭발 · 🟢 분열
-        e.playDeath();
+        e.playDeath(46); // 뒤로 날아가며 쓰러짐
         this.puff(e.x, 0xff8a6a);
         this.enemyPool.release(e);
       }
@@ -3564,6 +3585,35 @@ ${info.desc}`, { fontFamily: 'sans-serif', fontSize: '24px', fontStyle: 'bold', 
     }
     this.enemies = this.enemies.filter((e) => e.active);
     this.units = this.units.filter((u) => u.active);
+  }
+
+  /** 💥 처치 손맛 — 연속 처치 숫자(음정↑) · 동전 튀기 · 큰 적은 잠깐 멈춤 */
+  private onKill(e: Enemy): void {
+    this.killCombo = nextKillCombo(this.killCombo, this.killAt, this.clock);
+    this.killAt = this.clock;
+    const n = this.killCombo;
+    sfxRate(this, 'coin', killRate(n));
+    const coin = this.add.text(e.x, LANE_Y - 50, '🪙', { fontSize: '20px' }).setOrigin(0.5).setDepth(86);
+    this.tweens.add({ targets: coin, x: e.x + (Math.random() * 50 - 25), y: LANE_Y - 120 - Math.random() * 30, duration: 300, ease: 'Quad.easeOut' });
+    this.tweens.add({ targets: coin, alpha: 0, delay: 300, duration: 220, onComplete: () => coin.destroy() });
+    if ((e.elite || BOSS.has(e.type)) && !this.finishing) {
+      this.hitStopUntil = performance.now() + HIT_STOP_MS;
+      this.cameras.main.shake(140, 0.006);
+    }
+    if (n < KILL_SHOW_FROM) return;
+    if (!this.killText || !this.killText.scene) {
+      this.killText = this.add
+        .text(640, 112, '', { fontFamily: 'sans-serif', fontSize: '30px', fontStyle: 'bold', color: '#ffe14d', stroke: '#3a2a00', strokeThickness: 7 })
+        .setOrigin(0.5)
+        .setDepth(120)
+        .setAngle(-6);
+    }
+    const t = this.killText;
+    this.tweens.killTweensOf(t);
+    const sc = killScale(n);
+    t.setText(`×${n} KILL!`).setColor(killColor(n)).setAlpha(1).setScale(sc * 1.35);
+    this.tweens.add({ targets: t, scale: sc, duration: 140, ease: 'Back.easeOut' });
+    this.tweens.add({ targets: t, alpha: 0, delay: KILL_HOLD_MS, duration: 300 });
   }
 
   private checkEnd(): void {
@@ -3735,6 +3785,11 @@ ${info.desc}`, { fontFamily: 'sans-serif', fontSize: '24px', fontStyle: 'bold', 
     const starGold = gained * STAR_GOLD;
     const earned = win ? Math.round((this.runGold + 60 + this.stage.id * 30) * goldMultFor(this.stage.id)) + starGold : 0; // 💰 깊은 월드일수록 골드 ↑
     const prevCleared = meta.clearedMax; // 🎓 결과 화면 '다음 관문에서 해금' 안내
+    const gift = win ? stageGift(this.stage.id, prevCleared, (k) => meta.ownsUnit(k)) : null; // 🎁 첫 3관문 클리어 선물 유닛
+    if (gift) {
+      meta.grantUnit(gift);
+      track('stage_gift', { stage: this.stage.id, unit: gift });
+    }
     if (win) {
       meta.addGold(earned); // 처치 골드 + 승리 보너스 + 새 별 보너스(강화용)
       meta.clearStage(this.stage.id); // 다음 스테이지 해금
@@ -3762,7 +3817,7 @@ ${info.desc}`, { fontFamily: 'sans-serif', fontSize: '24px', fontStyle: 'bold', 
     sfx(this, win ? 'win' : 'lose');
     this.slowmo = 1;
     this.time.delayedCall(600, () =>
-      this.scene.start('Result', { win, stageId: this.stage.id, earned, stars, prevStars, starGold, time, timeRec, prevCleared, chest, target, targetGold })
+      this.scene.start('Result', { win, stageId: this.stage.id, earned, stars, prevStars, starGold, time, timeRec, prevCleared, chest, target, targetGold, gift })
     );
   }
 }

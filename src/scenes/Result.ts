@@ -38,6 +38,7 @@ interface ResultData {
   time?: number; // ⏱️ 클리어 시간(초)
   timeRec?: 'first' | 'best' | null; // 첫 기록 / 신기록
   prevCleared?: number; // 🎓 이번 판 전 클리어 최고 관문
+  gift?: string | null; // 🎁 이번 클리어로 받은 유닛(이미 지급됨)
   chest?: ChestLoot | null; // 🎁 보물 상자(이미 지급됨 — 여는 연출만)
   target?: number | null; // ⏱️ 목표 시간(초)
   targetGold?: number; // 목표 시간 보너스(이미 지급됨)
@@ -89,7 +90,8 @@ export class ResultScene extends Phaser.Scene {
         .setAngle(8);
       this.tweens.add({ targets: nb, scale: 1.15, duration: 380, yoyo: true, repeat: -1 });
     }
-    this.nextUnitCard();
+    if (this.resultData.gift) this.giftCard(this.resultData.gift);
+    else this.nextUnitCard();
     // 🌅 오늘의 첫 승리 상자 — 관문 승리(도전·주간·무한 제외) 하루 1번
     if (win && !this.resultData.mode && meta.canFirstWin()) {
       meta.markFirstWin();
@@ -140,16 +142,16 @@ export class ResultScene extends Phaser.Scene {
         this.tweens.add({ targets: nw, alpha: 1, delay: 700 + i * 320, duration: 200 });
       }
     }
-    const unlock = win ? unlockedBy(stageId, this.resultData.prevCleared ?? stageId) : null;
+    const unlock = win ? unlockedBy(stageId, this.resultData.prevCleared ?? stageId) : [];
     if (daily) {
       const b = this.resultData.dailyBonus ?? 0;
       this.add
         .text(640, 300, !win ? tr('내일 규칙이 바뀌기 전에 다시 도전!') : b > 0 ? tr('🎉 오늘의 첫 승리 보너스 🪙 +{0}', b) : tr('오늘 보너스는 이미 받았어요 · 내일 새 도전!'), { fontFamily: 'sans-serif', fontSize: '22px', fontStyle: 'bold', color: b > 0 ? '#ff7a2a' : '#7a86a8' })
         .setOrigin(0.5);
-    } else if (unlock) {
+    } else if (unlock.length) {
       // 🎓 다음 관문에서 열리는 기능 — "조금만 더" 하게
       const u = this.add
-        .text(640, 350, tr('🔓 다음 관문에서 {0} 해금!', unlock.name), { fontFamily: 'sans-serif', fontSize: '22px', fontStyle: 'bold', color: '#ff7a2a', stroke: '#ffffff', strokeThickness: 4 })
+        .text(640, 350, tr('🔓 다음 관문에서 {0} 해금!', unlock.map((f) => f.name).join(' · ')), { fontFamily: 'sans-serif', fontSize: '22px', fontStyle: 'bold', color: '#ff7a2a', stroke: '#ffffff', strokeThickness: 4 })
         .setOrigin(0.5);
       this.tweens.add({ targets: u, scale: 1.08, duration: 500, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
     } else if (win) {
@@ -205,6 +207,23 @@ export class ResultScene extends Phaser.Scene {
   }
 
   /** 🔜 다음에 살 수 있는 유닛 미리보기(오른쪽 카드) → 강화 화면으로 */
+  /** 🎁 새 동료 — 첫 3관문을 깰 때마다 유닛 하나를 받음(다음 판에 바로 출전) */
+  private giftCard(key: string): void {
+    const x = 1110;
+    const y = 330;
+    const g = this.add.graphics();
+    g.fillStyle(0xfff6d8, 0.96).fillRoundedRect(x - 130, y - 150, 260, 300, 28);
+    g.lineStyle(5, 0xff7a2a, 1).strokeRoundedRect(x - 130, y - 150, 260, 300, 28);
+    const head = this.add.text(x, y - 118, tr('🎁 새 동료!'), { fontFamily: 'sans-serif', fontSize: '24px', fontStyle: 'bold', color: '#e0561a' }).setOrigin(0.5);
+    this.tweens.add({ targets: head, scale: 1.12, duration: 420, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
+    if (this.textures.exists(iconKey(key))) {
+      const face = this.add.image(x, y - 26, iconKey(key)).setDisplaySize(128, 128).setScale(0.01);
+      this.tweens.add({ targets: face, displayWidth: 128, displayHeight: 128, delay: 500, duration: 380, ease: 'Back.easeOut', onStart: () => sfx(this, 'coin', 2) });
+    }
+    this.add.text(x, y + 56, UNITS[key]?.name ?? key, { fontFamily: 'sans-serif', fontSize: '28px', fontStyle: 'bold', color: '#3a3a5a' }).setOrigin(0.5);
+    this.add.text(x, y + 96, tr('다음 관문에서 바로 써 보세요!'), { fontFamily: 'sans-serif', fontSize: '15px', fontStyle: 'bold', color: '#2fa25a' }).setOrigin(0.5);
+  }
+
   private nextUnitCard(): void {
     const keys = Object.keys(UNITS);
     const next = nextUnitToBuy(keys, (k) => meta.ownsUnit(k));

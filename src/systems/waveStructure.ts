@@ -27,7 +27,7 @@ export function spawnRank(type: string, stats: Record<string, Stat>): number {
 }
 
 /** 관문 웨이브를 차례 진행 구조로 바꿈(마릿수는 그대로) */
-export function structureStage(stage: StageData, stats: Record<string, Stat>): StageData {
+export function structureStage(stage: StageData, stats: Record<string, Stat>, gap = SPAWN_GAP, rest = WAVE_REST): StageData {
   const src = [...stage.waves].sort((a, b) => a.at - b.at);
   let t = FIRST_AT;
   const waves = src.map((w) => {
@@ -35,7 +35,7 @@ export function structureStage(stage: StageData, stats: Record<string, Stat>): S
       .filter((g) => g.count > 0)
       .map((g, i) => ({ g, i }))
       .sort((a, b) => spawnRank(a.g.type, stats) - spawnRank(b.g.type, stats) || a.i - b.i)
-      .map(({ g }) => ({ ...g, delay: undefined, interval: SPAWN_GAP }) as WaveEnemy);
+      .map(({ g }) => ({ ...g, delay: undefined, interval: gap }) as WaveEnemy);
     // ⭐ 마지막 보통 크기 적 1마리 → 엘리트(그 묶음에서 떼어 냄) — 큰 적·보스는 엘리트로 만들지 않음(너무 셈), 보통 적이 없을 때만 큰 적
     if (stage.id >= ELITE_FROM) {
       const ranks = groups.map((g) => spawnRank(g.type, stats));
@@ -43,7 +43,7 @@ export function structureStage(stage: StageData, stats: Record<string, Stat>): S
       if (li < 0) li = ranks.map((r) => r < 3).lastIndexOf(true);
       if (li >= 0) {
         const g = groups[li];
-        const elite: WaveEnemy = { ...g, count: 1, interval: SPAWN_GAP, elite: true };
+        const elite: WaveEnemy = { ...g, count: 1, interval: gap, elite: true };
         if (g.count > 1) {
           groups.splice(li + 1, 0, elite);
           g.count -= 1;
@@ -52,11 +52,11 @@ export function structureStage(stage: StageData, stats: Record<string, Stat>): S
     }
     let n = 0;
     for (const g of groups) {
-      g.delay = n * SPAWN_GAP;
+      g.delay = n * gap;
       n += g.count;
     }
     const at = t;
-    t = at + Math.max(0, n - 1) * SPAWN_GAP + WAVE_REST;
+    t = at + Math.max(0, n - 1) * gap + rest;
     return { at, enemies: groups };
   });
   return { ...stage, waves };

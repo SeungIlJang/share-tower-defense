@@ -17,7 +17,7 @@ describe('🏰 기지 강화', () => {
   });
 
   it('효과 설명', () => {
-    expect(BASE_UPGRADES.find((b) => b.key === 'pop')!.effect(2)).toBe('최대 인구 50');
+    expect(BASE_UPGRADES.find((b) => b.key === 'pop')!.effect(2)).toBe('최대 인구 70');
     expect(BASE_UPGRADES.find((b) => b.key === 'energy')!.effect(1)).toBe('에너지 초당 10 · 최대 110');
   });
 });
