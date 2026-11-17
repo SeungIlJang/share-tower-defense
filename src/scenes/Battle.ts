@@ -93,6 +93,8 @@ const STUN_TINT = 0x9a9a9a;
 const PERFECT_HINT_RUNS = 3; // ⏱️ PERFECT 안내 글씨를 보여 줄 판 수
 const CHARGE_SPEED = 1.8; // ⚔️ 웨이브를 다 막고 전장이 비면 아군이 적 성까지 달려감(걸어가는 빈 시간 줄임)
 const KILL_TEXT_X = 430; // 💥 연속 처치 글씨 — 명령·영웅 버튼 왼쪽
+const HOLD_FLAG_AHEAD = 64; // 🚩 깃발은 버팀선 바로 앞(앞줄 유닛과 겹치지 않게)
+const HOLD_FLAG_H = 110; // 깃대 높이
 const CHARGE_TINT = 0xffd9a0; // ⚔️ 명령 돌격 중 아군 색
 const AMBUSH_MIN = 380; // ⚠️ 기습 — 우리 성에서 최소 이만큼 떨어진 곳
 const AMBUSH_WARN_MS = 1200; // 튀어나오기 전 ❗ 경고
@@ -272,7 +274,7 @@ export class BattleScene extends Phaser.Scene {
   private holdT = 0; // 버틴 시간(초) → 돌격 게이지
   private cmdChargeUntil = 0; // ⚔️ 명령 돌격이 끝나는 시각(clock)
   private cmdBtn: { bg: Phaser.GameObjects.Arc; icon: Phaser.GameObjects.Text; label: Phaser.GameObjects.Text; ring: Phaser.GameObjects.Graphics; glow: Phaser.GameObjects.Arc; x: number; y: number } | null = null;
-  private holdFlag: Phaser.GameObjects.Text | null = null;
+  private holdFlag: Phaser.GameObjects.Container | null = null;
   private ambushAt = -99; // ⚠️ 마지막 기습 경고 시각
   private hitStopUntil = 0; // 큰 적 처치 순간 잠깐 멈춤(실제 시각 ms)
   private lookX: number | null = null; // 둘러보는 중이면 카메라 왼쪽 끝
@@ -980,16 +982,14 @@ export class BattleScene extends Phaser.Scene {
       this.holdT = 0;
       this.cmdChargeUntil = 0;
       this.holdFlag?.destroy();
-      this.holdFlag = this.add.text(this.holdX + 26, LANE_Y - 96, '🚩', { fontSize: '34px', padding: { top: 12, bottom: 4 } }).setOrigin(0.5).setDepth(60);
-      this.tweens.add({ targets: this.holdFlag, y: LANE_Y - 104, duration: 500, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
+      this.holdFlag = this.makeHoldFlag(this.holdX + HOLD_FLAG_AHEAD);
       this.banner(tr('🛡️ 버텨라! 힘을 모으는 중…'), 0x9ad8ff);
       sfx(this, 'spawn');
       track('command', { cmd: 'hold', stage: this.stage.id });
     } else {
       const sec = chargeSeconds(holdGauge(this.holdT));
       this.stance = 'advance';
-      this.holdFlag?.destroy();
-      this.holdFlag = null;
+      this.dropHoldFlag();
       if (sec <= 0) return void this.banner(tr('▶ 전진!'), 0xd8ecff);
       this.cmdChargeUntil = this.clock + sec;
       this.banner(tr('⚔️ 전군 돌격!'), 0xffb04a);
@@ -1002,6 +1002,39 @@ export class BattleScene extends Phaser.Scene {
       }
       track('command', { cmd: 'charge', sec: Math.round(sec), stage: this.stage.id });
     }
+  }
+
+  /** 🚩 버팀선 깃발 — 땅에 꽂힌 깃대 + 파란 방패 깃발 + 발밑 원(유닛 뒤에 그려 이름표·체력 바를 가리지 않음). 위에서 꽂히며 등장 */
+  private makeHoldFlag(x: number): Phaser.GameObjects.Container {
+    const foot = LANE_Y + 30;
+    const c = this.add.container(x, foot).setDepth(-1);
+    const ring = this.add.ellipse(0, 0, 70, 16, 0x6ab8ff, 0.35).setStrokeStyle(2, 0xbfe2ff, 0.9);
+    const pole = this.add.rectangle(0, 0, 6, HOLD_FLAG_H, 0x6b4a2a).setOrigin(0.5, 1).setStrokeStyle(1, 0x2a1a0a);
+    const knob = this.add.circle(0, -HOLD_FLAG_H, 5, 0xffd34d).setStrokeStyle(1, 0x7a5a10);
+    const cloth = this.add.container(2, -HOLD_FLAG_H + 6);
+    const banner = this.add.rectangle(0, 0, 58, 38, 0x3a7bff).setOrigin(0, 0).setStrokeStyle(2, 0xffffff);
+    const icon = this.add.text(29, 19, '🛡️', { fontSize: '22px', padding: { top: 6, bottom: 2 } }).setOrigin(0.5);
+    cloth.add([banner, icon]);
+    c.add([ring, pole, knob, cloth]);
+    this.tweens.add({ targets: cloth, scaleX: 0.82, duration: 420, yoyo: true, repeat: -1, ease: 'Sine.inOut' }); // 펄럭
+    this.tweens.add({ targets: ring, scaleX: 1.25, scaleY: 1.25, alpha: 0.15, duration: 700, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
+    // 위에서 꽂힘 + 흙먼지
+    c.y = foot - 60;
+    c.setAlpha(0);
+    this.tweens.add({ targets: c, y: foot, alpha: 1, duration: 220, ease: 'Quad.easeIn', onComplete: () => {
+      const dust = this.add.ellipse(x, foot, 40, 12, 0xd8c8a0, 0.7).setDepth(-2);
+      this.tweens.add({ targets: dust, scaleX: 2.2, alpha: 0, duration: 380, onComplete: () => dust.destroy() });
+    } });
+    return c;
+  }
+
+  /** 🚩 깃발 거두기 — 쓰러지며 사라짐 */
+  private dropHoldFlag(): void {
+    const f = this.holdFlag;
+    this.holdFlag = null;
+    if (!f) return;
+    this.tweens.killTweensOf(f);
+    this.tweens.add({ targets: f, angle: 70, alpha: 0, duration: 320, ease: 'Quad.easeIn', onComplete: () => f.destroy(true) });
   }
 
   /** 🚩 명령 버튼 모습 — 버티는 중엔 둘레에 게이지, 돌격 중엔 남은 시간 */
