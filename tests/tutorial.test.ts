@@ -11,6 +11,8 @@ describe('🎓 첫 경험 — 기능 단계 해금', () => {
     expect(featureOn('volley', reachedStage(3, 2))).toBe(true);
     expect(featureOn('perfect', reachedStage(3, 2))).toBe(false);
     expect(featureOn('perfect', reachedStage(4, 3))).toBe(true);
+    expect(featureOn('command', reachedStage(4, 3))).toBe(false); // 🚩 부대 명령은 5관문부터(웨이브 모양과 함께)
+    expect(featureOn('command', reachedStage(5, 4))).toBe(true);
   });
 
   it('더 멀리 간 사람·무한 모드는 1관문을 다시 해도 전부 열림', () => {

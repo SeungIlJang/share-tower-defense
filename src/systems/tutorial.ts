@@ -6,7 +6,7 @@ import { tr } from './i18n';
  * 이미 더 멀리 간 사람(clearedMax)·무한 모드는 전부 열림.
  */
 
-export type Feature = 'heroSkill' | 'weapon' | 'prepare' | 'volley' | 'levelup' | 'perfect' | 'duel';
+export type Feature = 'heroSkill' | 'weapon' | 'prepare' | 'volley' | 'levelup' | 'perfect' | 'command' | 'duel';
 
 export interface FeatureDef {
   key: Feature;
@@ -21,6 +21,7 @@ export const FEATURES: FeatureDef[] = [
   { key: 'volley', stage: 3, name: tr('🏰 성 특수 공격') },
   { key: 'levelup', stage: 2, name: tr('🃏 레벨업 카드') },
   { key: 'perfect', stage: 4, name: tr('⏱️ PERFECT 소환') },
+  { key: 'command', stage: 5, name: tr('🚩 부대 명령(버티기 → 돌격)') },
   { key: 'duel', stage: 9, name: tr('⚔️ 일기토(적장과 1:1 결투)') },
 ];
 
@@ -41,7 +42,7 @@ export function unlockedBy(stageId: number, prevClearedMax: number): FeatureDef[
 }
 
 /** 👆 안내 단계 — 순서대로 하나씩, 조건이 맞을 때 보여 주고 그 행동을 하면 끝 */
-export type TipKey = 'summon' | 'hero' | 'upgrade' | 'mace' | 'weapon' | 'volley' | 'levelup' | 'perfect';
+export type TipKey = 'summon' | 'hero' | 'upgrade' | 'mace' | 'weapon' | 'volley' | 'levelup' | 'perfect' | 'command';
 
 export const TIP_TEXT: Record<TipKey, string> = {
   summon: tr('👆 카드를 눌러 아군을 소환하세요!'),
@@ -52,6 +53,7 @@ export const TIP_TEXT: Record<TipKey, string> = {
   volley: tr('👆 우리 성을 눌러 성 특수 공격!'),
   levelup: tr('🃏 카드 1장을 골라 이번 판에서 강해져요!'),
   perfect: tr('⏱️ 화살표가 초록에 있을 때 소환 = PERFECT 강화!'),
+  command: tr('🚩 버티기로 아군을 모았다가\n⚔️ 돌격으로 한 번에 밀어붙여요!'),
 };
 
 /** 이 안내가 필요한 기능(없으면 항상) */
@@ -61,6 +63,7 @@ export const TIP_FEATURE: Partial<Record<TipKey, Feature>> = {
   volley: 'volley',
   levelup: 'levelup',
   perfect: 'perfect',
+  command: 'command',
 };
 
 /** 영웅 안내는 2관문부터(1관문은 소환에만 집중) */
@@ -71,7 +74,7 @@ export function nextTip(
   seen: readonly string[],
   ready: Partial<Record<TipKey, boolean>>
 ): TipKey | null {
-  const order: TipKey[] = ['summon', 'hero', 'upgrade', 'mace', 'weapon', 'volley', 'perfect'];
+  const order: TipKey[] = ['summon', 'hero', 'upgrade', 'mace', 'weapon', 'volley', 'perfect', 'command'];
   return order.find((k) => !seen.includes(k) && ready[k]) ?? null;
 }
 

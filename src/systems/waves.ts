@@ -4,6 +4,7 @@ export interface SpawnEvent {
   type: string;
   elite?: boolean; // ⭐ 웨이브 마지막 적
   budget?: string; // 🗺️ 원래 자리 적(체력·공격·보상은 이 적 것)
+  ambush?: boolean; // ⚠️ 뒤에서 기습
 }
 
 /**
@@ -13,11 +14,12 @@ export interface SpawnEvent {
 export interface WavePreview {
   at: number; // 발동 시각(초)
   groups: { type: string; count: number }[];
+  shape?: string; // 🌊 웨이브 모양
 }
 
 export class WaveSystem {
   private elapsed = 0;
-  private queue: { time: number; type: string; elite?: boolean; budget?: string }[] = [];
+  private queue: { time: number; type: string; elite?: boolean; budget?: string; ambush?: boolean }[] = [];
   private cursor = 0;
   private previews: WavePreview[] = []; // 📣 예고용 웨이브 목록(시각순)
   private announced = 0;
@@ -31,14 +33,14 @@ export class WaveSystem {
           if (hit) hit.count += g.count;
           else groups.push({ type: g.type, count: g.count });
         }
-        return { at: w.at, groups };
+        return { at: w.at, groups, shape: w.shape };
       })
       .sort((a, b) => a.at - b.at);
     // 웨이브 → 개별 소환 시각으로 평탄화
     for (const wave of stage.waves) {
       for (const group of wave.enemies) {
         for (let i = 0; i < group.count; i++) {
-          this.queue.push({ time: wave.at + (group.delay ?? 0) + i * group.interval, type: group.type, elite: group.elite, budget: group.budget });
+          this.queue.push({ time: wave.at + (group.delay ?? 0) + i * group.interval, type: group.type, elite: group.elite, budget: group.budget, ambush: group.ambush });
         }
       }
     }
@@ -51,7 +53,7 @@ export class WaveSystem {
     const out: SpawnEvent[] = [];
     while (this.cursor < this.queue.length && this.queue[this.cursor].time <= this.elapsed) {
       const q = this.queue[this.cursor];
-      out.push({ type: q.type, elite: q.elite, budget: q.budget });
+      out.push({ type: q.type, elite: q.elite, budget: q.budget, ambush: q.ambush });
       this.cursor++;
     }
     return out;

@@ -23,7 +23,7 @@ import { HERO_TYPE, HERO_TIERS, HERO_FALLBACK_LOOKS, heroTier, heroBodyScale, HE
 import { HERO_PANEL_X, HERO_BTN_R, HERO_BTN_Y } from '../ui/Hud';
 import { Pool } from '../utils/pool';
 import { ResourceSystem } from '../systems/resources';
-import { WaveSystem, type WavePreview } from '../systems/waves';
+import { WaveSystem, type SpawnEvent, type WavePreview } from '../systems/waves';
 import { computeDamage, attackCooldown, inRange } from '../systems/combat';
 import { meta, applyUpgrade } from '../systems/upgrades';
 import { xpToNext, hasteMult, mimicMult, magicMult, supplyBonus, anyUpgradable, rollChoices, awakened, SKILL_BY_KEY, vigorMult, rechargeMult, powerMult, critChance, chargeMult, type SkillDef } from '../systems/skills';
@@ -44,6 +44,8 @@ import { enemyPortrait } from '../ui/enemyArt';
 import { cuteButton } from '../ui/cute';
 import { DENSE_MULT, earlyTune, enemyPower, thinCount, thinStage, type EarlyTune } from '../systems/density';
 import { HIT_STOP_MS, KILL_SHOW_FROM, killColor, killRate, killScale, nextKillCombo } from '../systems/killCombo';
+import { CHARGE_ATK, CHARGE_HASTE, CHARGE_MOVE, HOLD_GUARD, chargeSeconds, holdGauge, holdLine, holdsHere, type Stance } from '../systems/command';
+import { SHAPE_INFO, type WaveShape } from '../systems/waveShapes';
 import { stageGift } from '../systems/unlocks';
 import { battleStage, structureStage, waveInfo, type WaveInfo } from '../systems/waveStructure';
 import { eventsFor, stageEvent, type StageEvent } from '../systems/stageEvents';
@@ -90,6 +92,10 @@ const STUN_TINT = 0x9a9a9a;
 
 const PERFECT_HINT_RUNS = 3; // ⏱️ PERFECT 안내 글씨를 보여 줄 판 수
 const CHARGE_SPEED = 1.8; // ⚔️ 웨이브를 다 막고 전장이 비면 아군이 적 성까지 달려감(걸어가는 빈 시간 줄임)
+const KILL_TEXT_X = 430; // 💥 연속 처치 글씨 — 명령·영웅 버튼 왼쪽
+const CHARGE_TINT = 0xffd9a0; // ⚔️ 명령 돌격 중 아군 색
+const AMBUSH_MIN = 380; // ⚠️ 기습 — 우리 성에서 최소 이만큼 떨어진 곳
+const AMBUSH_WARN_MS = 1200; // 튀어나오기 전 ❗ 경고
 const WALK_BOOST = 1.2; // 🏃 양쪽 모두 20% 빨리 걸음 — 소환한 유닛이 전선에 닿기까지 기다리는 시간을 줄임
 const KILL_HOLD_MS = 1900; // 💥 연속 처치 글씨가 남아 있는 시간
 const WAVE_LEAD = 5; // 📣 다음 무리 예고 — 몇 초 전에
@@ -216,7 +222,7 @@ export class BattleScene extends Phaser.Scene {
   private picking = false;
   private levelUp!: LevelUpOverlay;
   // 🎓 첫 경험 — 관문마다 하나씩 열리는 기능 + 👆 손가락 안내
-  private feat: Record<Feature, boolean> = { heroSkill: true, weapon: true, prepare: true, volley: true, levelup: true, perfect: true, duel: true };
+  private feat: Record<Feature, boolean> = { heroSkill: true, weapon: true, prepare: true, volley: true, levelup: true, perfect: true, command: true, duel: true };
   // ⚔️ 일기토 — 진행 중이면 다른 전투는 멈추고 둘만 싸움
   private duel: {
     phase: 'offer' | 'intro' | 'fight' | 'finish';
@@ -261,6 +267,13 @@ export class BattleScene extends Phaser.Scene {
   private killAt = -99;
   private killText: Phaser.GameObjects.Text | null = null;
   private chargeShown = false; // ⚔️ 마지막 돌격 배너를 띄웠나
+  private stance: Stance = 'advance'; // 🚩 부대 명령 — 전진 / 버티기
+  private holdX = 0; // 버팀선(전장 x)
+  private holdT = 0; // 버틴 시간(초) → 돌격 게이지
+  private cmdChargeUntil = 0; // ⚔️ 명령 돌격이 끝나는 시각(clock)
+  private cmdBtn: { bg: Phaser.GameObjects.Arc; icon: Phaser.GameObjects.Text; label: Phaser.GameObjects.Text; ring: Phaser.GameObjects.Graphics; glow: Phaser.GameObjects.Arc; x: number; y: number } | null = null;
+  private holdFlag: Phaser.GameObjects.Text | null = null;
+  private ambushAt = -99; // ⚠️ 마지막 기습 경고 시각
   private hitStopUntil = 0; // 큰 적 처치 순간 잠깐 멈춤(실제 시각 ms)
   private lookX: number | null = null; // 둘러보는 중이면 카메라 왼쪽 끝
   private lookT = 0;
@@ -541,6 +554,12 @@ export class BattleScene extends Phaser.Scene {
     this.battleUpg = {};
     this.waves = new WaveSystem(this.stage);
     this.chargeShown = false;
+    this.stance = 'advance';
+    this.holdT = 0;
+    this.cmdChargeUntil = 0;
+    this.cmdBtn = null;
+    this.holdFlag = null;
+    this.ambushAt = -99;
     this.killCombo = 0;
     this.killAt = -99;
     this.killText = null;
@@ -575,6 +594,7 @@ export class BattleScene extends Phaser.Scene {
     this.looks = Object.fromEntries(Object.keys(UNITS).map((k) => [k, ensureSkin(this, k, meta.equippedSkin(k), meta.tier(k))]));
     this.hud = this.makeHud();
     this.makeReinforceBtn();
+    this.makeCommandBtn();
     this.tip = new TipPointer(this);
     this.setupCameraUi();
     // 키보드 1~6 = 특수 무기 칸
@@ -584,6 +604,7 @@ export class BattleScene extends Phaser.Scene {
       else if (k === 'd' || k === 'arrowright') this.heroDir = 1;
       const hs = HERO_SKILLS.findIndex((s) => s.hotkey.toLowerCase() === k);
       if (hs >= 0) this.castHeroSkill(hs);
+      if (k === ' ') this.toggleCommand(); // 🚩 스페이스 = 버티기 ↔ 돌격
     });
     this.input.keyboard?.on('keyup', (ev: KeyboardEvent) => {
       const k = ev.key.toLowerCase();
@@ -595,7 +616,7 @@ export class BattleScene extends Phaser.Scene {
       this.heroDrag = null;
       if (this.over || this.picking || this.paused || this.reviving || !this.hero?.active) return;
       if (p.y < 60 || p.y > 405) return;
-      if (uiX(p.x) > HERO_PANEL_X - (HERO_SKILLS.length + 1) * (HERO_BTN_R * 2 + 14) - 10 && p.y < HERO_BTN_Y + HERO_BTN_R + 10) return; // 영웅 스킬·📣 지원군 버튼·마나 바
+      if (uiX(p.x) > HERO_PANEL_X - (HERO_SKILLS.length + 2) * (HERO_BTN_R * 2 + 14) - 10 && p.y < HERO_BTN_Y + HERO_BTN_R + 10) return; // 영웅 스킬·📣 지원군 버튼·마나 바
       this.heroDrag = { px: p.x, hx: this.hero.x };
     });
     this.input.on('pointermove', (p: Phaser.Input.Pointer) => {
@@ -929,6 +950,106 @@ export class BattleScene extends Phaser.Scene {
     this.refreshReinforceBtn();
   }
 
+  /** 🚩 부대 명령 버튼 — 📣 지원군 왼쪽. 전진 중엔 '버티기', 버티는 중엔 '돌격'(둘레 게이지 = 모은 힘) */
+  private makeCommandBtn(): void {
+    if (!this.feat.command || this.sRule === 'duel') return;
+    const x = HERO_PANEL_X - (HERO_SKILLS.length + 1) * (HERO_BTN_R * 2 + 14);
+    const y = HERO_BTN_Y;
+    const glow = this.add.circle(x, y, HERO_BTN_R + 6).setStrokeStyle(4, 0xffb04a, 1).setDepth(119).setVisible(false);
+    this.tweens.add({ targets: glow, scale: 1.15, alpha: 0.25, duration: 450, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
+    const bg = this.add.circle(x, y, HERO_BTN_R, 0x1a2a44, 0.92).setStrokeStyle(4, 0x6ab8ff).setDepth(120).setInteractive({ useHandCursor: true });
+    const ring = this.add.graphics().setDepth(121);
+    const icon = this.add.text(x, y - 6, '🛡️', { fontSize: '30px', padding: { top: 12, bottom: 4 } }).setOrigin(0.5).setDepth(122);
+    const label = this.add.text(x, y + 27, tr('버티기'), { fontFamily: 'sans-serif', fontSize: '14px', fontStyle: 'bold', color: '#d8ecff', stroke: '#000000', strokeThickness: 4 }).setOrigin(0.5).setDepth(122);
+    bg.on('pointerdown', () => {
+      this.tweens.add({ targets: bg, scale: 0.88, duration: 70, yoyo: true });
+      this.toggleCommand();
+    });
+    this.cmdBtn = { bg, icon, label, ring, glow, x, y };
+  }
+
+  /** 🚩 버티기 ↔ 돌격 */
+  private toggleCommand(): void {
+    if (this.over || this.picking || this.paused || this.reviving || this.duel || !this.cmdBtn) return;
+    this.tipDone('command');
+    if (this.stance === 'advance') {
+      let front: number | null = null;
+      for (const u of this.units) if (u.active && !isTotem(u.type) && u.type !== 'cleric' && (front === null || u.x > front)) front = u.x;
+      this.holdX = Math.min(holdLine(front, this.playerBase.x), this.enemyBase.x - BASE_FRONT);
+      this.stance = 'hold';
+      this.holdT = 0;
+      this.cmdChargeUntil = 0;
+      this.holdFlag?.destroy();
+      this.holdFlag = this.add.text(this.holdX + 26, LANE_Y - 96, '🚩', { fontSize: '34px', padding: { top: 12, bottom: 4 } }).setOrigin(0.5).setDepth(60);
+      this.tweens.add({ targets: this.holdFlag, y: LANE_Y - 104, duration: 500, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
+      this.banner(tr('🛡️ 버텨라! 힘을 모으는 중…'), 0x9ad8ff);
+      sfx(this, 'spawn');
+      track('command', { cmd: 'hold', stage: this.stage.id });
+    } else {
+      const sec = chargeSeconds(holdGauge(this.holdT));
+      this.stance = 'advance';
+      this.holdFlag?.destroy();
+      this.holdFlag = null;
+      if (sec <= 0) return void this.banner(tr('▶ 전진!'), 0xd8ecff);
+      this.cmdChargeUntil = this.clock + sec;
+      this.banner(tr('⚔️ 전군 돌격!'), 0xffb04a);
+      sfx(this, 'alert');
+      this.cameras.main.shake(260, 0.008);
+      for (const u of this.units) {
+        if (!u.active || isTotem(u.type)) continue;
+        const dust = this.add.ellipse(u.x - 16, LANE_Y + 30, 46, 14, 0xd8c8a0, 0.7).setDepth(-2);
+        this.tweens.add({ targets: dust, x: dust.x - 40, scaleX: 2.4, alpha: 0, duration: 520, onComplete: () => dust.destroy() });
+      }
+      track('command', { cmd: 'charge', sec: Math.round(sec), stage: this.stage.id });
+    }
+  }
+
+  /** 🚩 명령 버튼 모습 — 버티는 중엔 둘레에 게이지, 돌격 중엔 남은 시간 */
+  private refreshCommandBtn(dt: number): void {
+    const b = this.cmdBtn;
+    if (!b) return;
+    const hold = this.stance === 'hold';
+    if (hold) this.holdT += dt;
+    const left = this.cmdChargeUntil - this.clock;
+    const g = hold ? holdGauge(this.holdT) : 0;
+    b.icon.setText(hold ? '⚔️' : '🛡️');
+    b.label.setText(hold ? tr('돌격!') : left > 0 ? `${Math.ceil(left)}` : tr('버티기'));
+    b.bg.setStrokeStyle(4, hold ? 0xffb04a : left > 0 ? 0xff7a3a : 0x6ab8ff);
+    b.glow.setVisible(hold && g >= 1);
+    b.ring.clear();
+    if (hold && g > 0) {
+      b.ring.lineStyle(6, g >= 1 ? 0xffe14d : 0xffb04a, 1);
+      b.ring.beginPath();
+      b.ring.arc(b.x, b.y, HERO_BTN_R + 1, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * g, false);
+      b.ring.strokePath();
+    }
+  }
+
+  /** ⚠️ 뒤에서 기습 — 우리 전선과 성 사이에서 튀어나옴(전선이 성 가까이면 평소처럼 적 성에서) */
+  private ambushSpawn(ev: SpawnEvent): void {
+    let front = -Infinity;
+    for (const u of this.units) if (u.active && u.x > front) front = u.x;
+    const base = this.playerBase.x;
+    const x = base + Math.max(AMBUSH_MIN, (front - base) * 0.5) + Math.random() * 90 - 45;
+    if (!(front > x + 120)) return this.spawnEnemy(ev.type, !!ev.elite, undefined, false, !this.early, ev.budget);
+    if (this.clock - this.ambushAt > 3) {
+      this.ambushAt = this.clock;
+      this.banner(tr('⚠️ 뒤에서 기습!'), 0xff7a5a);
+      sfx(this, 'alert');
+    }
+    const mark = this.add.text(x, LANE_Y - 60, '❗', { fontSize: '36px', padding: { top: 12, bottom: 4 } }).setOrigin(0.5).setDepth(72);
+    this.tweens.add({ targets: mark, alpha: 0.2, duration: 200, yoyo: true, repeat: -1 });
+    const hole = this.add.ellipse(x, LANE_Y + 30, 30, 10, 0x2a1a10, 0.7).setDepth(-2);
+    this.tweens.add({ targets: hole, scaleX: 2.2, scaleY: 1.6, duration: AMBUSH_WARN_MS });
+    this.time.delayedCall(AMBUSH_WARN_MS, () => {
+      mark.destroy();
+      hole.destroy();
+      if (this.over) return;
+      this.puff(x, 0x8a6a4a);
+      this.spawnEnemy(ev.type, !!ev.elite, x, false, !this.early, ev.budget);
+    });
+  }
+
   private refreshReinforceBtn(): void {
     const b = this.reinforceBtn;
     if (!b) return;
@@ -1081,6 +1202,7 @@ export class BattleScene extends Phaser.Scene {
   /** 📣 다음 무리 예고 — 몇 초 뒤 누가 오는지 + 덱에 있는 유리한 유닛 */
   private announceWave(w: WavePreview): void {
     const secs = Math.max(0, Math.ceil(w.at - this.waves.now));
+    const shape = w.shape && w.shape !== 'squad' ? SHAPE_INFO[w.shape as Exclude<WaveShape, 'squad'>] : null; // 🌊 웨이브 모양
     const names = w.groups.slice(0, 3).map((g) => `${ENEMIES[g.type]?.name ?? g.type} ×${g.count}`).join(' · ');
     const kinds = [...new Set(w.groups.map((g) => enemyKind(g.type)).filter((k): k is EnemyKind => !!k))];
     const good = this.deck.find((u) => kinds.includes(UNIT_COUNTER[u] as EnemyKind));
@@ -1089,7 +1211,7 @@ export class BattleScene extends Phaser.Scene {
     const tip = good ? tr('  →  🎯 {0} 유리', UNITS[good].name) : kinds.length ? `  (${kinds.map((k) => KIND_INFO[k].icon + KIND_INFO[k].name).join(' ')})` : '';
     this.waveBanner?.destroy();
     const c = this.add.container(560, 64).setDepth(106); // 상단 바 바로 아래, 📣 지원군·영웅 체력 바 왼쪽
-    const txt = this.add.text(0, 0, `⚠️ ${head}: ${names}${tip}`, { fontFamily: 'sans-serif', fontSize: '19px', fontStyle: 'bold', color: boss ? '#ffb0b0' : '#ffe680', stroke: '#000000', strokeThickness: 4 }).setOrigin(0.5);
+    const txt = this.add.text(0, 0, shape ? `${shape.icon} ${shape.name}! ${head}: ${names}${tip}` : `⚠️ ${head}: ${names}${tip}`, { fontFamily: 'sans-serif', fontSize: '19px', fontStyle: 'bold', color: boss ? '#ffb0b0' : '#ffe680', stroke: '#000000', strokeThickness: 4 }).setOrigin(0.5);
     const bg = this.add.rectangle(0, 0, txt.width + 28, 36, boss ? 0x5a1020 : 0x0d1424, 0.88).setStrokeStyle(2, boss ? 0xff5a6e : 0xffd34d, 0.8);
     c.add([bg, txt]);
     c.setAlpha(0).setY(50);
@@ -1653,7 +1775,12 @@ export class BattleScene extends Phaser.Scene {
     this.heroCd = this.heroCd.map((c) => Math.max(0, c - dt));
     this.updateHero(dt);
     this.updateCastles(dt);
-    if (this.sRule !== 'duel') for (const ev of this.waves.update(dt)) this.spawnEnemy(ev.type, !!ev.elite, undefined, false, !this.early, ev.budget); // 👥 줄인 만큼 센 적 · ⭐ 웨이브 마지막은 엘리트 · 🗺️ 월드 적은 원래 자리 세기(⚔️ 일기토 관문은 없음)
+    this.refreshCommandBtn(dt);
+    if (this.sRule !== 'duel')
+      for (const ev of this.waves.update(dt)) {
+        if (ev.ambush) this.ambushSpawn(ev); // ⚠️ 뒤에서 기습
+        else this.spawnEnemy(ev.type, !!ev.elite, undefined, false, !this.early, ev.budget);
+      } // 👥 줄인 만큼 센 적 · ⭐ 웨이브 마지막은 엘리트 · 🗺️ 월드 적은 원래 자리 세기(⚔️ 일기토 관문은 없음)
     const wi = this.endless ? null : waveInfo(this.stage, this.waves.now);
     if (wi && this.sRule !== 'duel') this.updateWaveHud(wi);
     if (!this.endless && !this.weekly && this.clock > 2) {
@@ -1696,12 +1823,15 @@ export class BattleScene extends Phaser.Scene {
     this.updateEvents(dt);
     // ⚔️ 마지막 돌격 — 웨이브가 다 나왔고 전장에 적이 없으면 적 성까지 달려감
     const charge = !!wi && wi.phase === 'done' && this.sRule === 'normal' && !this.enemyBase.destroyed && !this.enemies.some((e) => e.active);
+    if (charge && this.stance === 'hold') this.toggleCommand(); // 🛡️ 버티는 중이었으면 풀고 달려감
     if (charge && !this.chargeShown) {
       this.chargeShown = true;
       this.banner(tr('⚔️ 돌격! 적 성을 부숴라!'), 0xffe14d);
       sfx(this, 'alert');
     }
-    const allyTint = guard ? GUARD_TINT : berserk ? BERSERK_TINT : null;
+    const cmdCharge = this.clock < this.cmdChargeUntil; // ⚔️ 명령 돌격 중
+    const holding = this.stance === 'hold'; // 🛡️ 버티는 중
+    const allyTint = guard ? GUARD_TINT : berserk ? BERSERK_TINT : cmdCharge ? CHARGE_TINT : null;
     for (const u of this.units) {
       if (!u.active) continue;
       const stunned = u.stunned;
@@ -1734,8 +1864,10 @@ export class BattleScene extends Phaser.Scene {
         } else {
           u.idle();
         }
+      } else if (holding && holdsHere(u.x, this.holdX, u.stats.range >= BattleScene.RANGED, target ? Math.abs(target.x - u.x) : null, u.stats.range + REACH)) {
+        u.idle(); // 🛡️ 버팀선에서 대기(가까이 온 적은 맞으러 나감)
       } else {
-        u.moveBy(u.stats.speed * dt * this.walkK * (charge ? CHARGE_SPEED : 1));
+        u.moveBy(u.stats.speed * dt * this.walkK * (charge ? CHARGE_SPEED : cmdCharge ? CHARGE_MOVE : 1));
       }
     }
 
@@ -1896,17 +2028,19 @@ export class BattleScene extends Phaser.Scene {
       }
     }
     const ally = att.side === 'ally';
+    const cmdCharge = ally && this.clock < this.cmdChargeUntil; // ⚔️ 명령 돌격 — 세게·빨리
     const crit = ally && Math.random() < critChance(this.skills.crit ?? 0) + (this.ring('ring_luck') - 1) + meta.perks(att.type).crit; // 💥 치명타(🎯 스킬 · 💍 행운의 반지 · 🔥 각성)
     const critMul = awakened(this.skills, 'power') ? CRIT_MULT_AWAKE : CRIT_MULT; // 💪 일격필살
     const attInAura = ally && this.inHeroAura(att.x);
     const lowHp = attInAura && att.hp / att.maxHp < 0.3 && (this.skills.auraBerserk ?? 0) > 0; // 😡 광폭 오라
     const auraAtk = attInAura ? AURA_ATK * (lowHp ? 1 + 0.4 * (this.skills.auraBerserk ?? 0) : 1) : 1; // ⭕ 오라
     const synAtk = ally ? synergyMult(this.synergies, att.type, 'atk') * powerMult(this.skills.power ?? 0) * auraAtk : 1; // 🤝 조합 · 💪 공격력
-    let dmg = computeDamage(att.stats.atk * (berserk ? BERSERK_ATK : 1) * (crit ? critMul : 1) * synAtk, def.stats.def);
+    let dmg = computeDamage(att.stats.atk * (berserk ? BERSERK_ATK : 1) * (cmdCharge ? CHARGE_ATK : 1) * (crit ? critMul : 1) * synAtk, def.stats.def);
     if (!ally && !(this.duel && att === this.duel.foe)) dmg = Math.max(1, Math.round(dmg * this.enemyMorale * (this.clock < this.enemyRageUntil ? LOSE_RAGE : 1))); // ⚔️ 일기토 결과
     if (def.side === 'ally') {
       dmg = Math.max(1, Math.round(dmg * synergyMult(this.synergies, def.type, 'guard')));
       if (awakened(this.skills, 'vigor')) dmg = Math.max(1, Math.round(dmg * 0.85)); // ❤️ 강철 피부
+      if (this.stance === 'hold' && def !== this.hero) dmg = Math.max(1, Math.round(dmg * HOLD_GUARD)); // 🛡️ 버티기
       if (this.inHeroAura(def.x)) dmg = Math.max(1, Math.round(dmg * AURA_GUARD * (1 - 0.06 * (this.skills.auraGuard ?? 0)))); // ⭕ 오라 · 🛡️ 수호 오라
     }
     if (ally && counterMult(att.type, def.type) > 1) {
@@ -1950,6 +2084,7 @@ export class BattleScene extends Phaser.Scene {
     let cd = attackCooldown(att.stats.atkSpeed);
     if (att.side === 'ally') cd *= hasteMult(this.skills.haste ?? 0); // 신속 오라
     if (berserk) cd *= BERSERK_COOLDOWN;
+    if (cmdCharge) cd /= CHARGE_HASTE;
     if (att.side === 'ally') cd *= synergyMult(this.synergies, att.type, 'speed');
     if (attInAura && this.clock < this.rallyUntil) cd /= RALLY_SPEED; // 📯 돌격 함성
     if (lowHp && awakened(this.skills, 'auraBerserk')) cd *= 0.5; // 😡 최후의 발악
@@ -2201,6 +2336,7 @@ export class BattleScene extends Phaser.Scene {
       weapon: this.feat.weapon && wi >= 0 && live.length > 0,
       volley: this.feat.volley && this.volleyT <= 0 && live.some((e) => e.x - this.playerBase.x <= 520),
       perfect: this.feat.perfect && this.clock > 4,
+      command: this.feat.command && !!this.cmdBtn && this.clock > 8 && this.units.filter((u) => u.active).length >= 3,
     };
     const k = nextTip(meta.tips, ready);
     if (!k) return;
@@ -2226,7 +2362,7 @@ export class BattleScene extends Phaser.Scene {
     else if (k === 'perfect') {
       const p = this.hud.beatPos();
       this.tip.show(k, p.x, p.y, t, { from: 'above', ring: 0, bubbleY: 300 });
-    }
+    } else if (k === 'command' && this.cmdBtn) this.tip.show(k, this.cmdBtn.x, this.cmdBtn.y, t, { ring: 50, bubbleY: 230 });
   }
 
   /** ⏸ 정지 버튼 안내 — 처음 몇 판은 시작할 때 버튼 아래 말풍선(몇 초 뒤 또는 누르면 사라짐) */
@@ -3623,7 +3759,7 @@ ${info.desc}`, { fontFamily: 'sans-serif', fontSize: '24px', fontStyle: 'bold', 
     if (n < KILL_SHOW_FROM) return;
     if (!this.killText || !this.killText.scene) {
       this.killText = this.add
-        .text(640, 112, '', { fontFamily: 'sans-serif', fontSize: '30px', fontStyle: 'bold', color: '#ffe14d', stroke: '#3a2a00', strokeThickness: 7 })
+        .text(KILL_TEXT_X, 118, '', { fontFamily: 'sans-serif', fontSize: '30px', fontStyle: 'bold', color: '#ffe14d', stroke: '#3a2a00', strokeThickness: 7 })
         .setOrigin(0.5)
         .setDepth(120)
         .setAngle(-6);

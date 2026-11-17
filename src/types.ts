@@ -40,10 +40,12 @@ export interface WaveEnemy {
   delay?: number; // 🌊 웨이브 시작 후 이 묶음이 나오기 시작하는 시각(초) — 웨이브 구조(waveStructure.ts)
   elite?: boolean; // ⭐ 엘리트로 나옴(웨이브 마지막 적)
   budget?: string; // 🗺️ 월드 고유 적으로 바뀐 자리 — 원래 적의 체력·공격·보상을 그대로 씀(난이도 유지)
+  ambush?: boolean; // ⚠️ 우리 전선 뒤에서 튀어나옴(웨이브 모양 '뒤에서 기습')
 }
 
 export interface Wave {
   at: number; // 스테이지 시작 후 발동 시각(초)
+  shape?: string; // 🌊 웨이브 모양(waveShapes.ts) — 없으면 보통(무리 지어)
   enemies: WaveEnemy[];
 }
 

@@ -8,7 +8,9 @@
  */
 import type { StageData, WaveEnemy } from '../types';
 import { isBoss } from './bosses';
+import { enemyKind } from './counters';
 import { earlyTune, thinStage } from './density';
+import { arrange, pickShape, type Slot, type Trait, type WaveShape } from './waveShapes';
 
 export const SPAWN_GAP = 0.4; // 무리 안 한 마리 간격(초)
 export const SQUAD = 3; // 한 무리 마릿수
@@ -19,7 +21,7 @@ export const ELITE_FROM = 2; // 이 관문부터 웨이브 마지막 적이 엘�
 export const BIG_HP = 300; // 체력 이 이상이면 '큰 적'(뒤에 나옴)
 const RANGED = 100;
 
-type Stat = { hp: number; range: number };
+type Stat = { hp: number; range: number; speed?: number };
 
 /** 나오는 순서 — 0 근접 · 1 원거리 · 2 큰 적 · 3 보스 */
 export function spawnRank(type: string, stats: Record<string, Stat>): number {
@@ -47,15 +49,20 @@ export function spawnAt(k: number, p: Pace = PACE): number {
 /** ⚔️ 전투·출전 준비가 함께 쓰는 관문 구성 — 첫 3관문은 줄이지 않고 빨리, 그 뒤는 줄이고 무리 지어 */
 export function battleStage(stage: StageData, stats: Record<string, Stat>, special = false): StageData {
   const early = earlyTune(stage.id, special);
-  return early ? structureStage(stage, stats, { gap: early.gap, rest: early.rest, squad: 0, squadGap: 0 }) : structureStage(thinStage(stage), stats);
+  return early ? structureStage(stage, stats, { gap: early.gap, rest: early.rest, squad: 0, squadGap: 0 }) : structureStage(thinStage(stage), stats, PACE, special);
 }
 
 /** 관문 웨이브를 차례 진행 구조로 바꿈(마릿수는 그대로) */
-export function structureStage(stage: StageData, stats: Record<string, Stat>, pace: Pace = PACE): StageData {
+export function structureStage(stage: StageData, stats: Record<string, Stat>, pace: Pace = PACE, special = false): StageData {
   const { gap, rest } = pace;
   const src = [...stage.waves].sort((a, b) => a.at - b.at);
+  const traitOf = (type: string): Trait => {
+    const k = enemyKind(type);
+    return { rank: spawnRank(type, stats), speed: stats[type]?.speed ?? 0, flying: k === 'flying', armored: k === 'armored' };
+  };
   let t = FIRST_AT;
-  const waves = src.map((w) => {
+  const used: WaveShape[] = []; // 이 관문에서 이미 쓴 모양
+  const waves = src.map((w, wi) => {
     const groups = w.enemies
       .filter((g) => g.count > 0)
       .map((g, i) => ({ g, i }))
@@ -74,6 +81,16 @@ export function structureStage(stage: StageData, stats: Record<string, Stat>, pa
           g.count -= 1;
         } else groups[li] = elite;
       }
+    }
+    // 🌊 웨이브 모양 — 무리 짓는 관문 중 SHAPE_FROM부터. 모양이 있으면 한 마리씩 시각을 매김
+    const slots: Slot[] = groups.flatMap((g) => Array.from({ length: g.count }, () => ({ type: g.type, elite: g.elite, budget: g.budget })));
+    const shape = pace.squad > 1 ? pickShape(stage.id, wi, src.length, slots, traitOf, special, used) : 'squad';
+    used.push(shape);
+    if (shape !== 'squad') {
+      const timed = arrange(shape, slots, traitOf, pace);
+      const at = t;
+      t = at + (timed.length ? timed[timed.length - 1].t : 0) + rest;
+      return { at, shape, enemies: timed.map((s) => ({ type: s.type, count: 1, interval: gap, delay: s.t, elite: s.elite, budget: s.budget, ambush: s.ambush }) as WaveEnemy) };
     }
     // 무리 경계에서 묶음을 나눠 시각을 매김(묶음 안은 gap 간격)
     const out: WaveEnemy[] = [];

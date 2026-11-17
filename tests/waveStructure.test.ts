@@ -6,7 +6,8 @@ import { eventsFor, stageEvent } from '../src/systems/stageEvents';
 import { STAGES } from '../src/systems/worlds';
 import type { StageData } from '../src/types';
 
-const E = enemies as Record<string, { hp: number; range: number }>;
+const E = enemies as Record<string, { hp: number; range: number; speed: number }>;
+const lastAt = (w: StageData['waves'][number]): number => Math.max(0, ...w.enemies.map((g) => (g.delay ?? 0) + (g.count - 1) * g.interval));
 const count = (s: StageData): number => s.waves.reduce((a, w) => a + w.enemies.reduce((b, g) => b + g.count, 0), 0);
 
 describe('🌊 웨이브 구조', () => {
@@ -18,7 +19,8 @@ describe('🌊 웨이브 구조', () => {
       for (let i = 1; i < t.waves.length; i++) {
         const prev = t.waves[i - 1];
         const n = prev.enemies.reduce((a, g) => a + g.count, 0);
-        expect(t.waves[i].at).toBeCloseTo(prev.at + spawnAt(n - 1) + WAVE_REST, 5);
+        expect(t.waves[i].at).toBeCloseTo(prev.at + lastAt(prev) + WAVE_REST, 5); // 마지막 적이 나온 뒤 휴식
+        if (!prev.shape) expect(lastAt(prev)).toBeCloseTo(spawnAt(n - 1), 5); // 모양 없는 웨이브는 무리 간격대로
       }
     }
   });
@@ -38,9 +40,10 @@ describe('🌊 웨이브 구조', () => {
     expect(count(battleStage(STAGES[0], E, true))).toBeLessThanOrEqual(count(STAGES[0])); // 도전 등 특수 모드는 첫 경험 조정 없음
   });
 
-  it('웨이브 안 순서 — 근접 → 원거리 → 큰 적 → 보스, 무리 간격대로', () => {
-    const s = structureStage(STAGES.find((x) => x.id === 10)!, E);
-    for (const w of s.waves) {
+  it('웨이브 안 순서(모양 없는 웨이브) — 근접 → 원거리 → 큰 적 → 보스, 무리 간격대로', () => {
+    const plain = STAGES.slice(0, 40).flatMap((x) => structureStage(x, E).waves.filter((w) => !w.shape));
+    expect(plain.length).toBeGreaterThan(10);
+    for (const w of plain) {
       const times: { t: number; r: number }[] = [];
       for (const g of w.enemies) for (let i = 0; i < g.count; i++) times.push({ t: (g.delay ?? 0) + i * g.interval, r: g.elite ? -1 : spawnRank(g.type, E) });
       times.sort((a, b) => a.t - b.t);
@@ -57,7 +60,7 @@ describe('🌊 웨이브 구조', () => {
       expect(elites.length).toBe(1);
       expect(elites[0].count).toBe(1);
       const after = w.enemies.slice(w.enemies.indexOf(elites[0]) + 1);
-      expect(after.every((g) => spawnRank(g.type, E) >= 2)).toBe(true); // 뒤에는 큰 적·보스만
+      if (!w.shape) expect(after.every((g) => spawnRank(g.type, E) >= 2)).toBe(true); // 뒤에는 큰 적·보스만(모양이 있으면 순서가 바뀜)
       if (w.enemies.some((g) => spawnRank(g.type, E) < 2)) expect(spawnRank(elites[0].type, E)).toBeLessThan(2);
     }
   });
