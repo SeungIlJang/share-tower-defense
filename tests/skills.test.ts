@@ -1,9 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { xpToNext, hasteMult, mimicMult, magicMult, supplyBonus, anyUpgradable, SKILLS, rollChoices, awakened, SKILL_BY_KEY, critChance } from '../src/systems/skills';
+import { xpToNext, cardLevel, CARD_EVERY, hasteMult, mimicMult, magicMult, supplyBonus, anyUpgradable, SKILLS, rollChoices, awakened, SKILL_BY_KEY, critChance } from '../src/systems/skills';
 
 describe('skills', () => {
   it('필요 경험치는 레벨마다 증가', () => {
     expect(xpToNext(1)).toBe(25);
+    expect(CARD_EVERY).toBe(3); // 카드 선택은 3의 배수 레벨에만
+    expect([1, 2, 3, 4, 5, 6, 9].map(cardLevel)).toEqual([false, false, true, false, false, true, true]);
     expect(xpToNext(2)).toBe(34);
     expect(xpToNext(1)).toBeLessThan(xpToNext(5));
   });

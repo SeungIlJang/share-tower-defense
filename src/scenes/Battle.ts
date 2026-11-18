@@ -26,7 +26,7 @@ import { ResourceSystem } from '../systems/resources';
 import { WaveSystem, type SpawnEvent, type WavePreview } from '../systems/waves';
 import { computeDamage, attackCooldown, inRange } from '../systems/combat';
 import { meta, applyUpgrade } from '../systems/upgrades';
-import { xpToNext, hasteMult, mimicMult, magicMult, supplyBonus, anyUpgradable, rollChoices, awakened, SKILL_BY_KEY, vigorMult, rechargeMult, powerMult, critChance, chargeMult, type SkillDef } from '../systems/skills';
+import { xpToNext, cardLevel, hasteMult, mimicMult, magicMult, supplyBonus, anyUpgradable, rollChoices, awakened, SKILL_BY_KEY, vigorMult, rechargeMult, powerMult, critChance, chargeMult, type SkillDef } from '../systems/skills';
 import { Hud } from '../ui/Hud';
 import { LevelUpOverlay } from '../ui/LevelUp';
 import { TipPointer } from '../ui/Tutorial';
@@ -1641,7 +1641,7 @@ export class BattleScene extends Phaser.Scene {
       this.level++;
       this.xpNext = xpToNext(this.level);
       this.levelUpBurst();
-      if (this.feat.levelup && anyUpgradable(this.skills)) {
+      if (this.feat.levelup && cardLevel(this.level) && anyUpgradable(this.skills)) {
         this.picking = true;
         sfx(this, 'levelup');
         this.choices = rollChoices(this.skills, Math.random);

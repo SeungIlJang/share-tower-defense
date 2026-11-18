@@ -53,6 +53,12 @@ export const SKILLS: SkillDef[] = [
 export const SKILL_BY_KEY: Record<string, SkillDef> = Object.fromEntries(SKILLS.map((s) => [s.key, s]));
 
 /** 다음 레벨까지 필요 경험치 */
+/** 🃏 카드 선택은 이 배수 레벨에만(3·6·9…) — 매 레벨마다 뜨면 전투 흐름이 끊김. 나머지 레벨은 보너스(에너지·회복·밀치기)만 */
+export const CARD_EVERY = 3;
+export function cardLevel(level: number): boolean {
+  return level > 0 && level % CARD_EVERY === 0;
+}
+
 export function xpToNext(level: number): number {
   return Math.round(25 * Math.pow(1.35, level - 1));
 }
