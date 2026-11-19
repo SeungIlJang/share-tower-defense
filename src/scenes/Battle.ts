@@ -76,7 +76,7 @@ import { endlessStage, endlessWaveAt, endlessMult, endlessReward } from '../syst
 import { grantNewChest } from '../systems/chestGrant';
 import { WEEKLY_HP, WEEKLY_SEC, WEEKLY_STEPS, newSteps, weekIndex, weeklyBoss, weeklyStage, weeklyStageId, weeklyStepOf } from '../systems/weekly';
 import { track } from '../systems/analytics';
-import { allEnemyTypes, castleTypes, preloadNeeded, stageEnemyTypes } from '../systems/assetLoad';
+import { WAGON_TYPE, allEnemyTypes, castleTypes, preloadNeeded, stageEnemyTypes } from '../systems/assetLoad';
 import { unitPreloadKeys } from '../systems/evolution';
 
 /** 배경 색(하늘 · 레인 · 레인 선) — 월드·모드별 */
@@ -425,7 +425,8 @@ export class BattleScene extends Phaser.Scene {
     // 🏰 성: 우리 성 지금·다음 단계, 적 성은 이 관문 단계(무한 모드는 웨이브마다 바뀌어 전부)
     const castles = castleTypes(allyCastleTier(meta.castleLevel('castle')), this.endless ? [0, 1, 2, 3, 4] : [enemyCastleTier(false, this.stage.id, 0)]);
     const prod = PROD_TYPES.map((t) => (this.endless ? t : WORLD_ROSTER[this.stage.world ?? 1]?.[t] ?? t)); // 🗺️ 적 성이 뽑는 월드 적
-    preloadNeeded(this, [...enemies, ...prod, ...units, ...castles], { fx: true, battleBgm: true });
+    const escort = !this.endless && !this.rule && !this.weekly && stageRule(this.stage.id) === 'escort'; // 🛒 짐마차 그림은 호위 관문에서만 받음
+    preloadNeeded(this, [...enemies, ...prod, ...units, ...castles, ...(escort ? [WAGON_TYPE] : [])], { fx: true, battleBgm: true });
     const bg = this.bgKey();
     if (bg && !this.textures.exists(bg)) this.load.image(bg, `backgrounds/${bg}.webp`); // 🖼️ 월드 배경(약 50KB)
   }
@@ -2590,6 +2591,17 @@ ${info.desc}`, { fontFamily: 'sans-serif', fontSize: '24px', fontStyle: 'bold', 
       const w = new Unit(this);
       const hp = Math.round(wagonHp(this.stage.baseHp, this.stage.enemyMult ?? 1) * this.catchupGuard()); // 🔥 마차도 적 공격이 오른 만큼
       w.spawn(this.playerBase.x + BASE_FRONT + 10, LANE_Y, { name: tr('짐마차'), hp, atk: 0, def: 4, atkSpeed: 1, range: 0, speed: WAGON_SPEED }, 'wagon', 'ally');
+      this.wagon = w;
+      if (w.hasSprite) {
+        // 🛒 조랑말 짐마차 그림 — 맞으면 흔들리는 동작(피격 칸)
+        const hit = w.takeDamage.bind(w);
+        w.takeDamage = (dmg: number, crit = false): void => {
+          hit(dmg, crit);
+          if (w.active && w.hp > 0) w.lunge();
+        };
+        return;
+      }
+      // 그림을 못 받았을 때만 도형으로
       const g = this.add.graphics();
       g.fillStyle(0xf4e6c0, 1).fillEllipse(0, -6, 58, 34); // 천 덮개
       g.lineStyle(2, 0x8a6a3a, 1).strokeEllipse(0, -6, 58, 34);
@@ -2598,7 +2610,6 @@ ${info.desc}`, { fontFamily: 'sans-serif', fontSize: '24px', fontStyle: 'bold', 
       g.fillStyle(0xff4a4a, 1).fillTriangle(24, -38, 24, -26, 36, -32); // 깃발
       g.lineStyle(2, 0x5a3a1a, 1).lineBetween(24, -38, 24, -12);
       w.attach(g);
-      this.wagon = w;
     }
   }
 
@@ -3834,6 +3845,7 @@ ${info.desc}`, { fontFamily: 'sans-serif', fontSize: '24px', fontStyle: 'bold', 
     if (this.sRule === 'escort' && this.wagon) {
       if (this.wagon.hp <= 0) {
         this.puff(this.wagon.x, 0x9a6a3a);
+        this.wagon.playDeath(); // 🛒 바퀴가 빠지고 무너짐(그림이 있을 때)
         this.wagon.deactivate();
         this.banner(tr('🛒 마차가 부서졌어요…'), 0xff7a8a);
         return this.end(false);

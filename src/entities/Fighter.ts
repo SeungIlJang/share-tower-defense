@@ -204,6 +204,11 @@ export class Fighter {
     this.updateHp();
   }
 
+  /** 그림(스프라이트)으로 그려지고 있나 — 아니면 도형 */
+  get hasSprite(): boolean {
+    return !!this.sprite;
+  }
+
   /** 공격 모션 — 스프라이트는 attack 애니(없으면 찌르기), 벡터는 앞으로 살짝 찌르기 */
   lunge(): void {
     if (this.sprite && this.spriteDef?.anims.attack) {

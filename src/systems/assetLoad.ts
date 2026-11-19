@@ -30,9 +30,12 @@ export function castleTierType(t: string): boolean {
   return /^base_(ally|enemy)_t\d+$/.test(t);
 }
 
-/** 나중에 받아도 되는 그림(적·보스 — 행진하는 적 제외 · 성 진화 단계) */
+/** 🛒 마차 호위 관문에서만 쓰는 그림 */
+export const WAGON_TYPE = 'wagon';
+
+/** 나중에 받아도 되는 그림(적·보스 — 행진하는 적 제외 · 성 진화 단계 · 짐마차) */
 export function deferredType(t: string): boolean {
-  return (isEnemyType(t) && !PARADE_ENEMY.includes(t)) || castleTierType(t);
+  return (isEnemyType(t) && !PARADE_ENEMY.includes(t)) || castleTierType(t) || t === WAGON_TYPE;
 }
 
 /** 성 그림 이름 — 우리 성 지금 단계(+다음 단계: 전투 중 상점 강화) · 적 성 단계들 */
