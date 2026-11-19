@@ -1,7 +1,8 @@
 import { tr } from './i18n';
+import { introAt } from './roster';
 /**
  * ⚠️ 특수 이벤트 목록 — 단계(관문·무한 웨이브)에 따라 열림. 순수 로직(Vitest 검증).
- * 관문은 마지막 웨이브 시작에 관문 번호로 정해진 이벤트 하나(무작위 아님 · 출전 준비에서 미리 보여 줌).
+ * 관문은 마지막 웨이브 시작에 관문 번호로 정해진 이벤트 하나(무작위 아님 · 출전 준비에서 미리 보여 줌). 그 관문까지 소개된 적만.
  * 무한 모드는 지금처럼 일정 시간마다 무작위.
  */
 export type StageEventKey = 'bats' | 'wolves' | 'elites' | 'ghosts' | 'bombers' | 'poison' | 'skelArchers' | 'kingSlime' | 'necro' | 'babyDragons';
@@ -30,9 +31,23 @@ export function eventsFor(lv: number): StageEvent[] {
   return STAGE_EVENTS.filter((e) => lv >= e.minLv);
 }
 
-/** 관문의 이벤트(정해져 있음) — 1관문은 없음 */
+/** 이벤트에 나오는 적(엘리트 부대는 그 관문 명단에서 뽑아 따로 없음) */
+export const EVENT_TYPES: Record<StageEventKey, string[]> = {
+  bats: ['bat'],
+  wolves: ['wolf'],
+  elites: [],
+  ghosts: ['ghost'],
+  bombers: ['goblin_bomber'],
+  poison: ['poison_slime', 'toxic_mushroom'],
+  skelArchers: ['skeleton_archer'],
+  kingSlime: ['king_slime'],
+  necro: ['necromancer', 'skeleton_knight'],
+  babyDragons: ['baby_dragon'],
+};
+
+/** 관문의 이벤트(정해져 있음) — 1관문은 없음. 🪜 아직 소개되지 않은 적이 나오는 이벤트는 빼고 고름 */
 export function stageEvent(stageId: number): StageEvent | null {
   if (stageId < 2) return null;
-  const list = eventsFor(stageId);
+  const list = eventsFor(stageId).filter((e) => EVENT_TYPES[e.key].every((t) => introAt(t) <= stageId));
   return list[(stageId * 7) % list.length];
 }

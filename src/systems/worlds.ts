@@ -1,6 +1,6 @@
 /**
  * 🗺️ 월드 10개 · 관문 100개 — 1~20은 stages.json(직접 만든 관문), 21~100은 자동 생성. 순수 로직(Vitest 검증).
- * 21관문부터: 같은 자리(1~10번째) 관문의 웨이브 구성을 바탕으로 적 수·배율을 올리고, 월드마다 테마 적을 섞음.
+ * 21관문부터: 같은 자리(1~10번째) 관문의 웨이브 구성을 바탕으로 적 수·배율을 올림. 실제로 나오는 적 종류는 관문별 명단(roster.ts)이 정함.
  */
 import baseStages from '../data/stages.json';
 import type { StageData, Wave } from '../types';
@@ -8,6 +8,7 @@ import { statMult } from './upgrades';
 import { bossForStage, isBoss } from './bosses';
 import { EASY_STAGE } from './tutorial';
 import { tr } from './i18n';
+import { castRoster } from './roster';
 
 export interface WorldDef {
   id: number;
@@ -18,7 +19,7 @@ export interface WorldDef {
   battle: [number, number, number]; // 전투 배경 [하늘, 레인, 레인 선]
   bg?: string; // 🖼️ 전투 배경 그림(public/backgrounds/<bg>.webp) — 없으면 코드로 그림(하늘·언덕)
   bgGround?: number; // 🖼️ 그 그림 속 땅 윗선 높이(그림 높이 대비) — 원본에서 잼, 유닛 발을 여기에 맞춤
-  themed: string[]; // 이 월드에 더 나오는 적(웨이브에 섞음)
+  themed: string[]; // 웨이브 틀의 추가 병력 자리(마릿수용) — 실제로 나오는 종류는 roster.ts 명단이 정함
 }
 
 export const WORLDS: WorldDef[] = [
@@ -89,41 +90,8 @@ export function makeStage(id: number, base: StageData[]): StageData {
   };
 }
 
-/**
- * 🗺️ 월드 고유 적 — 1월드 기본 적(고블린·오크·늑대·슬라임·박쥐·해골·버섯·유령)을 월드 테마 적으로 바꿈.
- * 바뀐 적은 원래 자리 적의 체력·공격·보상(budget)을 그대로 써서 난이도·수입은 같고, 모습·이름·사거리·능력·상성만 달라짐.
- * 보스(골렘 두목 포함)는 그대로. 1월드는 기본 적 소개라 바꾸지 않음.
- */
-export const WORLD_ROSTER: Record<number, Partial<Record<string, string>>> = {
-  2: { goblin: 'goblin_archer', slime: 'goblin_bomber', mushroom: 'goblin_bomber', ghost: 'skeleton_archer' }, // 🏜️ 사막 — 고블린 부대·해골
-  3: { wolf: 'frost_wolf', orc: 'orc_shield', bat: 'wisp', ghost: 'wisp' }, // ❄️ 설원 — 서리·얼음
-  4: { slime: 'poison_slime', mushroom: 'toxic_mushroom', ghost: 'goblin_shaman', bat: 'vampire_bat' }, // 🌿 늪 — 독
-  5: { goblin: 'goblin_bomber', orc: 'orc_berserker', wolf: 'dire_wolf', mushroom: 'toxic_mushroom', bat: 'baby_dragon' }, // 🌋 화산 — 폭발·불
-  6: { goblin: 'skeleton_archer', orc: 'skeleton_knight', wolf: 'ghost', bat: 'wisp', slime: 'skeleton', mushroom: 'banshee', ghost: 'banshee' }, // 🪦 묘지 — 언데드
-  7: { goblin: 'goblin_archer', orc: 'orc_shield', wolf: 'wisp', bat: 'vampire_bat', skeleton: 'skeleton_archer', ghost: 'wisp' }, // 💎 수정 동굴
-  8: { goblin: 'banshee', orc: 'baby_dragon', wolf: 'wisp', bat: 'vampire_bat', slime: 'ghost', skeleton: 'banshee', mushroom: 'ghost', ghost: 'banshee' }, // ☁️ 하늘 섬 — 하늘을 나는 적만
-  9: { goblin: 'goblin_shaman', orc: 'orc_berserker', wolf: 'dire_wolf', slime: 'poison_slime', bat: 'vampire_bat', skeleton: 'skeleton_knight', mushroom: 'toxic_mushroom' }, // 🌑 그림자 숲
-  10: { goblin: 'goblin_bomber', orc: 'orc_berserker', wolf: 'dire_wolf', slime: 'poison_slime', bat: 'baby_dragon', skeleton: 'skeleton_knight', mushroom: 'toxic_mushroom', ghost: 'banshee' }, // 👹 마왕의 땅 — 센 적 총집합
-};
-
-/** 관문의 기본 적을 그 월드 적으로(원래 적은 budget에) */
-export function applyRoster(s: StageData): StageData {
-  const map = WORLD_ROSTER[s.world ?? Math.ceil(s.id / 10)];
-  if (!map) return s;
-  return {
-    ...s,
-    waves: s.waves.map((w) => ({
-      ...w,
-      enemies: w.enemies.map((e) => {
-        const to = map[e.type];
-        return to ? { ...e, type: to, budget: e.budget ?? e.type } : e;
-      }),
-    })),
-  };
-}
-
 /** 전체 관문 100개 */
-export function buildStages(base: StageData[]): StageData[] {
+export function buildStages(base: StageData[], roster = true): StageData[] {
   // 1~20관문: 보스 자리를 그 관문 보스로 — 10 = 고대 나무 거인(드래곤 자리), 15 = 고대 나무 거인(마지막 골렘 자리), 20 = 레드 드래곤
   const out = base.map((s) => {
     const boss = bossForStage(s.id);
@@ -139,7 +107,8 @@ export function buildStages(base: StageData[]): StageData[] {
     };
   });
   for (let id = base.length + 1; id <= MAX_STAGE; id++) out.push(makeStage(id, base)); // 21~ 관문은 원래 구성(쉽게 하기 전)으로
-  return out.map(easeStage).map(applyRoster); // 🗺️ 월드마다 고유 적
+  const eased = out.map(easeStage);
+  return roster ? eased.map(castRoster) : eased; // 🪜 관문마다 정해진 적 명단(종류가 차례로 늘어남)
 }
 
 /** 🐣 1~3관문 쉽게 — 적 수 줄이기, 1관문은 보스 없음 · 2~3관문은 보스 1마리(첫 승리를 2분 안에) */

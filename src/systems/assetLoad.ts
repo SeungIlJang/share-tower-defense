@@ -10,7 +10,6 @@ import type { StageData } from '../types';
 import { iconKey, sprites, textureKey } from './sprites';
 import { registerSpriteAnims } from './skinTextures';
 import { fxReady, loadFx, registerFx } from './fx';
-import { WORLDS } from './worlds';
 import { BOSSES } from './bosses';
 import { castleLook } from './castle';
 import { tr } from './i18n';
@@ -59,12 +58,13 @@ export function stageEnemyTypes(stage: StageData, extraBoss?: string | null): st
   const set = new Set<string>();
   for (const w of stage.waves) for (const e of w.enemies) set.add(e.type);
   if (extraBoss) set.add(extraBoss);
-  // 👾 무작위 변종은 무한 모드만(관문은 월드 고유 적이 웨이브에 이미 들어 있음) — 무한은 allEnemyTypes로 전부 받음
+  // 👾 무작위 변종은 무한 모드만(관문은 정해진 명단의 적이 웨이브에 이미 들어 있음) — 무한은 allEnemyTypes로 전부 받음
   for (const t of [...set]) {
     const s = BOSSES[t]?.summon?.type;
     if (s) set.add(s); // 👑 보스 졸개(버섯·해골 등)
+    const e = ENEMIES[t] as { summon?: string; split?: string } | undefined;
+    for (const k of [e?.summon, e?.split]) if (k) set.add(k); // 🧙 적이 부르는 부하·갈라져 나오는 적
   }
-  for (const t of WORLDS[(stage.world ?? 1) - 1]?.themed ?? []) set.add(t); // 🎭 월드 테마 적
   return withLooks(set);
 }
 

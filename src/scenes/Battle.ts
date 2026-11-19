@@ -13,7 +13,8 @@ import { anyDevFlag, devFlags } from '../systems/dev';
 import { UNIT_TIERS, tierBodyScale } from '../systems/evolution';
 import { milestoneBonus, milestoneCost, type MilestoneBonus } from '../systems/milestones';
 import { enemyLevel, hexColor, pickVariant, variantTable } from '../systems/enemyVariants';
-import { STAGES, WORLDS, WORLD_ROSTER, goldMultFor } from '../systems/worlds';
+import { STAGES, WORLDS, goldMultFor } from '../systems/worlds';
+import { eliteRoster, prodRoster } from '../systems/roster';
 import { CATCHUP_SHOW, catchupMult, catchupParts } from '../systems/catchup';
 import { BOSSES, BOSS_KEYS, bossForStage, isBoss } from '../systems/bosses';
 import { COUNTER_MULT, DECK_SIZE, KIND_INFO, counterMult, enemyKind, UNIT_COUNTER, type EnemyKind } from '../systems/counters';
@@ -424,7 +425,7 @@ export class BattleScene extends Phaser.Scene {
     const units = [...unitPreloadKeys(owned, (k) => !!spriteOf(k), (u) => meta.tier(u), (u) => meta.equippedSkin(u))];
     // 🏰 성: 우리 성 지금·다음 단계, 적 성은 이 관문 단계(무한 모드는 웨이브마다 바뀌어 전부)
     const castles = castleTypes(allyCastleTier(meta.castleLevel('castle')), this.endless ? [0, 1, 2, 3, 4] : [enemyCastleTier(false, this.stage.id, 0)]);
-    const prod = PROD_TYPES.map((t) => (this.endless ? t : WORLD_ROSTER[this.stage.world ?? 1]?.[t] ?? t)); // 🗺️ 적 성이 뽑는 월드 적
+    const prod = this.endless ? PROD_TYPES : prodRoster(this.stage.id); // 🪜 적 성이 뽑는 적도 이 관문 명단에서
     const escort = !this.endless && !this.rule && !this.weekly && stageRule(this.stage.id) === 'escort'; // 🛒 짐마차 그림은 호위 관문에서만 받음
     preloadNeeded(this, [...enemies, ...prod, ...units, ...castles, ...(escort ? [WAGON_TYPE] : [])], { fx: true, battleBgm: true });
     const bg = this.bgKey();
@@ -1678,7 +1679,7 @@ export class BattleScene extends Phaser.Scene {
 
   /** 적 등장 — at: 위치(없으면 적 기지 앞) · exact: 변종으로 바꾸지 않음(소환·분열) */
   private spawnEnemy(type: string, elite = false, at?: number, exact = false, dense = false, budget?: string): void {
-    // 👾 무작위 변종은 무한 모드만 — 관문은 월드 고유 적(WORLD_ROSTER)으로 정해짐
+    // 👾 무작위 변종은 무한 모드만 — 관문은 정해진 적 명단(roster.ts)
     if (this.endless && !exact && !BOSS.has(type)) type = pickVariant(type, enemyLevel(this.endless, this.stage.id, this.waveNo), VARIANTS, Math.random); // 👾 변종
     const own0 = ENEMIES[type];
     if (!own0) return;
@@ -1849,9 +1850,8 @@ export class BattleScene extends Phaser.Scene {
       this.prodTimer -= dt * (this.sRule === 'hold' ? 1 / holdProdMult(holdSeconds(this.stage.id) - this.holdLeft, holdSeconds(this.stage.id)) : 1); // 🏰 수성: 점점 빨리
       if (this.prodTimer <= 0) {
         this.prodTimer = this.prodInterval;
-        const pt = PROD_TYPES[this.prodIdx % PROD_TYPES.length];
-        const wt = this.endless ? undefined : WORLD_ROSTER[this.stage.world ?? 1]?.[pt]; // 🗺️ 적 성도 그 월드 적을 뽑음(세기는 원래 자리)
-        this.spawnEnemy(wt ?? pt, false, undefined, false, !this.early, wt ? pt : undefined);
+        const pool = this.endless ? PROD_TYPES : prodRoster(this.stage.id); // 🪜 적 성도 이 관문 명단의 가벼운 적만 뽑음
+        this.spawnEnemy(pool[this.prodIdx % pool.length], false, undefined, false, !this.early);
         this.prodIdx++;
       }
     }
@@ -3374,7 +3374,7 @@ ${info.desc}`, { fontFamily: 'sans-serif', fontSize: '24px', fontStyle: 'bold', 
     switch (ev.key) {
       case 'bats': return this.burstSpawn('bat', 8, 260);
       case 'wolves': return this.burstSpawn('wolf', 6, 320);
-      case 'elites': return ['goblin', 'orc', 'skeleton'].forEach((t, i) => this.time.delayedCall(i * 700, () => this.spawnEnemy(t, true)));
+      case 'elites': return (this.endless ? ['goblin', 'orc', 'skeleton'] : eliteRoster(this.stage.id)).forEach((t, i) => this.time.delayedCall(i * 700, () => this.spawnEnemy(t, true))); // 🪜 관문은 그 관문 명단의 적
       case 'ghosts': return this.burstSpawn('ghost', 6, 360);
       case 'bombers': return exact('goblin_bomber', 5, 420);
       case 'poison': return (exact('poison_slime', 3, 600), exact('toxic_mushroom', 3, 700));
