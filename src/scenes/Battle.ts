@@ -14,6 +14,7 @@ import { UNIT_TIERS, tierBodyScale } from '../systems/evolution';
 import { milestoneBonus, milestoneCost, type MilestoneBonus } from '../systems/milestones';
 import { enemyLevel, hexColor, pickVariant, variantTable } from '../systems/enemyVariants';
 import { STAGES, WORLDS, WORLD_ROSTER, goldMultFor } from '../systems/worlds';
+import { CATCHUP_SHOW, catchupMult, catchupParts } from '../systems/catchup';
 import { BOSSES, BOSS_KEYS, bossForStage, isBoss } from '../systems/bosses';
 import { COUNTER_MULT, DECK_SIZE, KIND_INFO, counterMult, enemyKind, UNIT_COUNTER, type EnemyKind } from '../systems/counters';
 import { dailyBonus, dailyRule, dailyStage, dailyStageId, dailyUnits, type DailyRule } from '../systems/daily';
@@ -264,6 +265,7 @@ export class BattleScene extends Phaser.Scene {
   // 🎥 넓은 전장 + 카메라(영웅 따라가기 · 지도로 둘러보기 · 화면 밖 알림)
   private worldW = SCREEN_W;
   private walkK = 1;
+  private catchup = 1; // 🔥 따라오는 적 — 권장보다 센 덱이면 적 체력·공격 추가 배수
   private early: EarlyTune | null = null; // 🍿 첫 3관문 — 약한 적이 떼로
   private killCombo = 0; // 💥 연속 처치
   private killAt = -99;
@@ -467,6 +469,10 @@ export class BattleScene extends Phaser.Scene {
     this.usedUnits = {};
     this.deck = this.rule ? dailyUnits(this.rule, Object.keys(UNITS).filter((k) => meta.ownsUnit(k))).slice(0, DECK_SIZE) : meta.activeDeck(Object.keys(UNITS));
     this.counterFxT = 0;
+    // 🔥 따라오는 적 — 일반 관문에서 덱(설치물 제외)이 권장보다 세면 적도 그 절반만큼 강해짐
+    const normalRun = !this.endless && !this.rule && !this.weekly;
+    this.catchup = normalRun ? catchupMult(this.stage.id, this.stage.enemyMult ?? 1, this.deck.filter((k) => !isTotem(k)).map((k) => ({ level: meta.level(k), tier: meta.tier(k) }))) : 1;
+    if (this.catchup >= CATCHUP_SHOW) this.time.delayedCall(1800, () => this.banner(tr('🔥 강해진 적 +{0}% — 내 유닛이 이 관문보다 강해요', Math.round((this.catchup - 1) * 100)), 0xffb04a));
     this.kills = {};
     this.metNew = new Set();
     this.reached = reachedStage(this.endless ? 99 : this.stage.id, meta.clearedMax);
@@ -496,12 +502,12 @@ export class BattleScene extends Phaser.Scene {
 
     // 🏰 우리 성: 성 레벨로 체력·단계 / 적 성: 관문(무한=웨이브)으로 단계
     const ct = allyCastleTier(meta.castleLevel('castle'));
-    this.playerBase = new Base(this, 105, LANE_Y - 10, Math.round(this.stage.baseHp * castleHpMult(meta.castleLevel('castle'))), 0x2f6fe0, [castleLook('ally', ct), 'base_ally'], 1 + 0.04 * ct);
+    this.playerBase = new Base(this, 105, LANE_Y - 10, Math.round(this.stage.baseHp * castleHpMult(meta.castleLevel('castle')) * this.catchupGuard()), 0x2f6fe0, [castleLook('ally', ct), 'base_ally'], 1 + 0.04 * ct);
     this.enemyTier = enemyCastleTier(this.endless, this.stage.id, 0);
     // 무한 모드: 적 기지는 부서지지 않는 생산 기지(버틴 웨이브가 기록)
     this.sRule = this.endless || this.rule || this.weekly ? 'normal' : stageRule(this.stage.id);
     const tough = this.sRule === 'hold' || this.sRule === 'breach' || !!this.weekly; // 수성·돌파·주간 보스는 적 성을 부술 필요 없음
-    this.enemyBase = new Base(this, W - 105, LANE_Y - 10, this.endless || tough ? 1e9 : Math.round(this.stage.baseHp * enemyPower(this.stage.id, false) * (this.early?.castle ?? 1)), 0xc0392b, [castleLook('enemy', this.enemyTier), 'base_enemy'], 1 + 0.04 * this.enemyTier); // 💪 적 성 체력도 난이도 배수
+    this.enemyBase = new Base(this, W - 105, LANE_Y - 10, this.endless || tough ? 1e9 : Math.round(this.stage.baseHp * enemyPower(this.stage.id, false) * (this.early?.castle ?? 1) * this.catchup), 0xc0392b, [castleLook('enemy', this.enemyTier), 'base_enemy'], 1 + 0.04 * this.enemyTier); // 💪 적 성 체력도 난이도 배수
     this.playerBase.setLevelLabel(`🏰 Lv${meta.castleLevel('castle')}`); // 성 강화 레벨(강화 화면 기지 탭과 같은 숫자)
     this.enemyBase.setLevelLabel(tr('☠️ {0}단계', this.enemyTier + 1), '#ffb0a0'); // 적 성 단계(관문으로 정해짐)
     this.allyGunT = 1;
@@ -822,7 +828,7 @@ export class BattleScene extends Phaser.Scene {
       const hm = heroLvMult(meta.heroLevel('hero'));
       const ratio = h.hp / h.maxHp;
       h.stats = { ...h.stats, atk: Math.round(base.atk * hm) };
-      h.maxHp = Math.round(base.hp * hm);
+      h.maxHp = Math.round(base.hp * hm * this.catchupGuard());
       h.hp = h.maxHp * ratio;
       h.heal(0);
       h.setHeadLabel(`👑 Lv${meta.heroLevel('hero')}`);
@@ -915,6 +921,14 @@ export class BattleScene extends Phaser.Scene {
         .setDepth(70);
       this.tweens.add({ targets: t, y: LANE_Y - 112, alpha: 0, duration: 700, onComplete: () => t.destroy() });
     }
+  }
+
+  /**
+   * 🔥 따라오는 적 — 영웅·우리 성 체력도 적 공격이 오른 만큼. 적이 따라오는 건 '유닛을 많이 강화한 것' 때문인데
+   * 영웅·성은 유닛 강화와 무관해서, 그대로 두면 한참 앞선 사람이 영웅이 쓰러져 옛 관문에서 짐(측정: 14관문 Lv10 · 8관문 Lv5 패배).
+   */
+  private catchupGuard(): number {
+    return catchupParts(this.catchup).atk;
   }
 
   /** 유닛 기본 능력치 — 영구 강화 · ⭐ 진화(단계·등급·갈래) · 🃏 카드 랭크 · 🎁 진화 사이 보상 */
@@ -1705,6 +1719,13 @@ export class BattleScene extends Phaser.Scene {
       e.stats = { ...e.stats, atk: Math.max(1, Math.round(e.stats.atk * this.early.atk)) };
     }
     // 💪 난이도 — 4관문부터 적 체력·공격 추가 배수(보상은 그대로)
+    // 🔥 따라오는 적 — 체력·공격 함께, 보스는 60%만
+    if (this.catchup > 1) {
+      const cu = catchupParts(this.catchup, BOSS.has(type));
+      e.maxHp = Math.round(e.maxHp * cu.hp);
+      e.hp = e.maxHp;
+      e.stats = { ...e.stats, atk: Math.round(e.stats.atk * cu.atk) };
+    }
     const pw = enemyPower(this.stage.id, this.endless, BOSS.has(type));
     if (pw !== 1) {
       e.maxHp = Math.round(e.maxHp * pw);
@@ -2339,7 +2360,7 @@ export class BattleScene extends Phaser.Scene {
     this.hero = new Unit(this);
     const base = heroStats(this.stage.id, this.endless ? 1 : this.stage.enemyMult ?? 1);
     const hm = heroLvMult(meta.heroLevel('hero')); // 👑 영구 강화
-    this.hero.spawn(this.playerBase.x + BASE_FRONT + 40, LANE_Y, { ...base, hp: Math.round(base.hp * hm * this.ring('ring_life')), atk: Math.round(base.atk * hm) }, HERO_TYPE, 'ally', look); // 💍 생명의 반지
+    this.hero.spawn(this.playerBase.x + BASE_FRONT + 40, LANE_Y, { ...base, hp: Math.round(base.hp * hm * this.ring('ring_life') * this.catchupGuard()), atk: Math.round(base.atk * hm) }, HERO_TYPE, 'ally', look); // 💍 생명의 반지
     this.rallyUntil = 0;
     this.hero.setBodyScale(heroBodyScale(tier));
     this.hero.setHeadLabel(`👑 Lv${meta.heroLevel('hero')}`); // 영웅 영구 레벨(강화 화면 영웅 탭과 같은 숫자)
@@ -2567,7 +2588,7 @@ ${info.desc}`, { fontFamily: 'sans-serif', fontSize: '24px', fontStyle: 'bold', 
     if (this.sRule === 'breach') this.goalNeed = breachGoal(this.stage.id);
     if (this.sRule === 'escort') {
       const w = new Unit(this);
-      const hp = wagonHp(this.stage.baseHp, this.stage.enemyMult ?? 1);
+      const hp = Math.round(wagonHp(this.stage.baseHp, this.stage.enemyMult ?? 1) * this.catchupGuard()); // 🔥 마차도 적 공격이 오른 만큼
       w.spawn(this.playerBase.x + BASE_FRONT + 10, LANE_Y, { name: tr('짐마차'), hp, atk: 0, def: 4, atkSpeed: 1, range: 0, speed: WAGON_SPEED }, 'wagon', 'ally');
       const g = this.add.graphics();
       g.fillStyle(0xf4e6c0, 1).fillEllipse(0, -6, 58, 34); // 천 덮개
@@ -2667,7 +2688,7 @@ ${info.desc}`, { fontFamily: 'sans-serif', fontSize: '24px', fontStyle: 'bold', 
     }
     if (!this.enemyBase.destroyed || this.endless) {
       const mult = this.endless ? endlessMult(this.waveNo) : this.stage.enemyMult ?? 1;
-      const gun = enemyCastleGun(this.enemyTier, mult * enemyPower(this.stage.id, this.endless)); // 💪 적 성 공격도 난이도 배수
+      const gun = enemyCastleGun(this.enemyTier, mult * enemyPower(this.stage.id, this.endless) * catchupParts(this.catchup).atk); // 💪 적 성 공격도 난이도 배수
       this.enemyGunT -= dt;
       if (this.enemyGunT <= 0) {
         const targets: Unit[] = this.hero?.active ? [...this.units, this.hero] : this.units;
