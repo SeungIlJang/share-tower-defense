@@ -15,7 +15,7 @@ import { milestoneBonus, milestoneCost, type MilestoneBonus } from '../systems/m
 import { enemyLevel, hexColor, pickVariant, variantTable } from '../systems/enemyVariants';
 import { STAGES, WORLDS, goldMultFor } from '../systems/worlds';
 import { eliteRoster, prodRoster } from '../systems/roster';
-import { CATCHUP_SHOW, catchupMult, catchupParts } from '../systems/catchup';
+import { CATCHUP_SHOW, catchupHero, catchupMult, catchupParts } from '../systems/catchup';
 import { BOSSES, BOSS_KEYS, bossForStage, isBoss } from '../systems/bosses';
 import { COUNTER_MULT, DECK_SIZE, KIND_INFO, counterMult, enemyKind, UNIT_COUNTER, type EnemyKind } from '../systems/counters';
 import { dailyBonus, dailyRule, dailyStage, dailyStageId, dailyUnits, type DailyRule } from '../systems/daily';
@@ -471,10 +471,10 @@ export class BattleScene extends Phaser.Scene {
     this.usedUnits = {};
     this.deck = this.rule ? dailyUnits(this.rule, Object.keys(UNITS).filter((k) => meta.ownsUnit(k))).slice(0, DECK_SIZE) : meta.activeDeck(Object.keys(UNITS));
     this.counterFxT = 0;
-    // 🔥 따라오는 적 — 일반 관문에서 덱(설치물 제외)이 권장보다 세면 적도 그 절반만큼 강해짐
+    // 🔥 따라오는 적 — 일반 관문에서 덱(설치물 제외)과 영웅·성·기지 강화가 권장보다 세면 적도 그만큼(90%) 강해짐
     const normalRun = !this.endless && !this.rule && !this.weekly;
-    this.catchup = normalRun ? catchupMult(this.stage.id, this.stage.enemyMult ?? 1, this.deck.filter((k) => !isTotem(k)).map((k) => ({ level: meta.level(k), tier: meta.tier(k) }))) : 1;
-    if (this.catchup >= CATCHUP_SHOW) this.time.delayedCall(1800, () => this.banner(tr('🔥 강해진 적 +{0}% — 내 유닛이 이 관문보다 강해요', Math.round((this.catchup - 1) * 100)), 0xffb04a));
+    this.catchup = normalRun ? catchupMult(this.stage.id, this.stage.enemyMult ?? 1, this.deck.filter((k) => !isTotem(k)).map((k) => ({ level: meta.level(k), tier: meta.tier(k) })), { hero: meta.heroLevel('hero'), castle: meta.castleLevel('castle'), pop: meta.baseLevel('pop'), energy: meta.baseLevel('energy') }) : 1;
+    if (this.catchup >= CATCHUP_SHOW) this.time.delayedCall(1800, () => this.banner(tr('🔥 강해진 적 +{0}% — 내 군대가 이 관문보다 강해요', Math.round((this.catchup - 1) * 100)), 0xffb04a));
     this.kills = {};
     this.metNew = new Set();
     this.reached = reachedStage(this.endless ? 99 : this.stage.id, meta.clearedMax);
@@ -829,8 +829,8 @@ export class BattleScene extends Phaser.Scene {
       const base = heroStats(this.stage.id, this.endless ? 1 : this.stage.enemyMult ?? 1);
       const hm = heroLvMult(meta.heroLevel('hero'));
       const ratio = h.hp / h.maxHp;
-      h.stats = { ...h.stats, atk: Math.round(base.atk * hm) };
-      h.maxHp = Math.round(base.hp * hm * this.catchupGuard());
+      h.stats = { ...h.stats, atk: Math.round(base.atk * hm * this.catchupGuard()), def: Math.round(base.def * this.catchupGuard()) }; // 🔥 방어는 빼기라, 적 공격만 오르고 방어가 그대로면 영웅이 체력 배수보다 더 아프게 맞음
+      h.maxHp = Math.round(base.hp * hm * catchupHero(this.catchup));
       h.hp = h.maxHp * ratio;
       h.heal(0);
       h.setHeadLabel(`👑 Lv${meta.heroLevel('hero')}`);
@@ -2361,7 +2361,7 @@ export class BattleScene extends Phaser.Scene {
     this.hero = new Unit(this);
     const base = heroStats(this.stage.id, this.endless ? 1 : this.stage.enemyMult ?? 1);
     const hm = heroLvMult(meta.heroLevel('hero')); // 👑 영구 강화
-    this.hero.spawn(this.playerBase.x + BASE_FRONT + 40, LANE_Y, { ...base, hp: Math.round(base.hp * hm * this.ring('ring_life') * this.catchupGuard()), atk: Math.round(base.atk * hm) }, HERO_TYPE, 'ally', look); // 💍 생명의 반지
+    this.hero.spawn(this.playerBase.x + BASE_FRONT + 40, LANE_Y, { ...base, hp: Math.round(base.hp * hm * this.ring('ring_life') * catchupHero(this.catchup)), atk: Math.round(base.atk * hm * this.catchupGuard()), def: Math.round(base.def * this.catchupGuard()) }, HERO_TYPE, 'ally', look); // 💍 생명의 반지
     this.rallyUntil = 0;
     this.hero.setBodyScale(heroBodyScale(tier));
     this.hero.setHeadLabel(`👑 Lv${meta.heroLevel('hero')}`); // 영웅 영구 레벨(강화 화면 영웅 탭과 같은 숫자)
