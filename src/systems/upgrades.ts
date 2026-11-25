@@ -15,6 +15,7 @@ import { earnedTitles, type TitleCtx } from './titles';
 import { weekIndex, weeklyStepOf } from './weekly';
 import { BRANCH_CHANGE_GOLD, BRANCH_TIER, evoCost, levelCap, migrateTier, readyToEvolve, unitPerks, type Branch } from './evolution';
 import { track, trackUser } from './analytics';
+import { stageToUnlock } from './progressCap';
 
 /** 강화 순수 계산 (Vitest 검증) */
 
@@ -250,12 +251,17 @@ export class MetaProgress {
   }
 
   canUpgrade(type: string): boolean {
-    return this.gold >= this.nextCost(type) && !this.atCap(type);
+    return this.gold >= this.nextCost(type) && !this.atCap(type) && this.lockedUntil(type) === null;
   }
 
   /** ⭐ 진화 단계(0~4) — 예전 저장은 레벨로 정해 둠 */
   tier(type: string): number {
     return this.evo[type] ?? migrateTier(this.level(type));
+  }
+
+  /** 🔒 진행도 상한 — 이 유닛을 더 강화하려면 깨야 하는 관문(강화할 수 있으면 null) */
+  lockedUntil(type: string): number | null {
+    return stageToUnlock(this.level(type), this.clearedMax);
   }
 
   /** 🔓 이 단계 최고 레벨에 닿음 → 진화해야 더 강화 */
@@ -302,7 +308,7 @@ export class MetaProgress {
 
   upgrade(type: string): boolean {
     const cost = this.nextCost(type);
-    if (this.gold < cost || this.atCap(type)) return false;
+    if (this.gold < cost || this.atCap(type) || this.lockedUntil(type) !== null) return false;
     this.gold -= cost;
     this.levels[type] = this.level(type) + 1;
     this.save();

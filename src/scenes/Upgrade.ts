@@ -270,6 +270,7 @@ export class UpgradeScene extends Phaser.Scene {
       // ⭐ 돌파 — 이 단계 최고 레벨이면 강화 대신 진화(골드 + 그 유닛 카드 조각)
       const next = nextUnitTier(tier);
       const evo = owned && readyToEvolve(lv, tier);
+      const gate = owned && !evo ? meta.lockedUntil(key) : null; // 🔒 진행도 상한 — 이 관문을 깨야 더 강화
       const pk = meta.perks(key); // ⭐ 진화(단계·등급·갈래)
       const grp = unitGroup(u);
       const st = (base: number, l: number, m: number, hp = false): number => Math.round(scaleStat(base, l) * m * milestoneBonus(l, grp).stats * (hp ? milestoneBonus(l, grp).hp : 1)); // ⭐ 진화 · 🎁 보상 포함(근접 체력 보상)
@@ -287,7 +288,7 @@ export class UpgradeScene extends Phaser.Scene {
         icon,
         `${u.name} ${starText(tier)} Lv.${lv}`,
         desc,
-        locked ? tr('🔒 잠김') : !owned ? tr('🛒 영입\n🪙{0}', price) : evo && cost ? tr('⭐ 진화\n🪙{0}', cost.gold) : tr('강화 🪙{0}', meta.nextCost(key)),
+        locked ? tr('🔒 잠김') : !owned ? tr('🛒 영입\n🪙{0}', price) : evo && cost ? tr('⭐ 진화\n🪙{0}', cost.gold) : gate !== null ? tr('🔒 관문 {0}\n클리어 후', gate) : tr('강화 🪙{0}', meta.nextCost(key)),
         locked ? false : !owned ? meta.gold >= price : evo ? meta.canEvolve(key) : meta.canUpgrade(key),
         !owned,
         () => {
@@ -318,6 +319,10 @@ export class UpgradeScene extends Phaser.Scene {
             };
             if (tier + 1 === BRANCH_TIER) this.openBranchPicker(key, done); // 🔀 ★4 — 갈래 고르고 진화
             else done();
+            return;
+          }
+          if (gate !== null) {
+            this.toast(tr('🔒 관문 {0}을(를) 깨면 더 강화할 수 있어요 — 지금은 다른 유닛을 키워 보세요', gate));
             return;
           }
           const got = milestonesAt(meta.level(key));

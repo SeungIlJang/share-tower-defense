@@ -61,8 +61,12 @@ describe('🔥 따라오는 적', () => {
   it('한두 기만 몰아 키워도 잡힘 · 상한', () => {
     const lop = [...deck(12, 3), ...deck(0, 2)];
     expect(catchupMult(12, em(12), lop)).toBe(catchupMult(12, em(12), deck(12)));
+    // 한 기만 몰아 키워도 거의 그대로 잡힘(그 유닛만 뽑으면 되니까) — 12관문 병사 Lv21 ★4 + 나머지 Lv0
+    const solo = [...deck(21, 1), ...deck(0, 4)];
+    expect(deckPower(solo)).toBeGreaterThan(deckPower(deck(21)) * 0.8);
+    expect(catchupMult(12, em(12), solo)).toBe(CATCHUP_MAX); // 평균으로 셀 땐 4.7배였음
     expect(catchupMult(1, 1, deck(100))).toBe(CATCHUP_MAX);
-    expect(CATCHUP_MAX).toBe(6);
+    expect(CATCHUP_MAX).toBe(6.5);
     expect(catchupParts(2)).toEqual({ hp: 2, atk: 2 }); // 체력·공격 함께
     expect(catchupParts(2, true)).toEqual({ hp: 1.6, atk: 1.6 }); // 보스는 60%만
     expect(catchupParts(1)).toEqual({ hp: 1, atk: 1 });

@@ -17,8 +17,9 @@ import { heroLvMult } from './hero';
 
 export const CATCHUP_SHARE = 1; // 넘친 만큼 전부(80%일 땐 남는 우위 13~25%가 승부가 기우는 선과 같았고, 90%에서도 12·14관문 Lv10이 60초 압승)
 export const CATCHUP_SLACK = 1; // 봐주는 폭 없음(10%였을 땐 그만큼이 그대로 우위로 남음)
-export const CATCHUP_TOP = 3; // 덱에서 센 유닛 몇 기로 재나(한두 기만 몰아 키워도 잡힘)
-export const CATCHUP_MAX = 6; // 상한 — 2.5였을 땐 초반 관문에서 Lv10(★3)이면 닿아, 그 뒤 강화는 전부 그대로 우위가 됨(1관문 Lv20 = 남는 우위 4.8배). 영웅·성·마차 체력은 catchupGuard가 같이 올림
+export const CATCHUP_TOP = 3; // 덱에서 센 유닛 몇 기로 재나
+export const CATCHUP_WEIGHTS = [0.8, 0.1, 0.1]; // 그 비중 — 가장 센 유닛이 80%
+export const CATCHUP_MAX = 6.5; // 측정(12관문 병사만 Lv21 ★4, 자동 전투): ×4 = 62초 압승 · ×5.5 = 81초 승 · ×7 = 4판 중 2승(109~112초)·2패 · ×8.5·×10.7 = 영웅이 쓰러져 패배. 진행도 상한(progressCap) 뒤로는 예전 저장에서만 닿음 — 상한 — 2.5였을 땐 초반 관문에서 Lv10(★3)이면 닿아, 그 뒤 강화는 전부 그대로 우위가 됨(1관문 Lv20 = 남는 우위 4.8배). 영웅·성·마차 체력은 catchupGuard가 같이 올림
 export const CATCHUP_ATK = 1; // 공격도 체력만큼(측정: 60%만 올리면 아군이 안 죽어 압승 그대로 — 12관문 Lv8 61초 vs 전부 올리면 112초)
 export const CATCHUP_BOSS = 0.6; // 보스는 60%만(난이도 배수와 같은 규칙)
 export const SKILL_WEIGHT = 1; // 스킬 화력을 세기에 넣는 정도(0.5 = 제곱근 · 1 = 전부)
@@ -55,10 +56,16 @@ export function expectedPower(stageId: number, enemyMult: number): number {
   return unitPower(lv, tierFromLevel(lv));
 }
 
-/** 덱 세기 — 센 순서로 CATCHUP_TOP기 평균(덱이 비면 1) */
+/**
+ * 덱 세기 — 센 순서로 CATCHUP_TOP기를 CATCHUP_WEIGHTS 비중으로(덱이 비면 1).
+ * 가장 센 유닛이 대부분: 한 유닛만 몰아 키우면 그 유닛만 계속 뽑으면 되기 때문(12관문 병사 Lv21 + 나머지 Lv0 = 군대는 권장의 13배인데 평균으론 4.7배로만 잡혔음).
+ */
 export function deckPower(units: DeckUnit[]): number {
   const p = units.map((u) => unitPower(u.level, u.tier)).sort((a, b) => b - a).slice(0, CATCHUP_TOP);
-  return p.length ? p.reduce((a, b) => a + b, 0) / p.length : 1;
+  if (!p.length) return 1;
+  const w = CATCHUP_WEIGHTS.slice(0, p.length);
+  const sum = w.reduce((a, b) => a + b, 0);
+  return p.reduce((a, b, i) => a + b * w[i], 0) / sum;
 }
 
 /** 🏰 유닛 말고 골드로 올리는 것 — 영웅·성·인구·소환 에너지 강화 레벨 */
